@@ -1,0 +1,14 @@
+[project]
+name = "vent-minmax"
+version = "0.1.0"
+description = "Ventilation Min/Max API (MVP)"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi",
+    "uvicorn[standard]",
+    "pydantic>=2",
+]
+
+[tool.uvicorn]
+factory = false
+

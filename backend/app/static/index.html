@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ventilation Min/Max — MVP</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <main class="container">
+    <h1>Ventilation Min/Max — MVP</h1>
+    <div style="margin:8px 0;">
+      <a class="btn btn-secondary" href="/settings.html">Настройки профиля 42 дня</a>
+    </div>
+
+    <section>
+      <div id="tabs" class="tabs"></div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button id="addTab" class="btn btn-secondary">+ Добавить птичник</button>
+        <button id="delTab" class="btn btn-secondary">Удалить птичник</button>
+      </div>
+    </section>
+
+    <section class="grid">
+      <div class="card">
+        <h2>Ввод</h2>
+        <label>Птичник (ID)
+          <input id="house" type="text" placeholder="например: Дом A-1" />
+        </label>
+        <label>Число птиц
+          <input id="birds" type="number" min="1" max="60000" />
+        </label>
+        <label>Сезон
+          <select id="season">
+            <option value="winter">Зима</option>
+            <option value="spring_autumn">Осень/Весна</option>
+            <option value="summer" selected>Лето</option>
+            <option value="tropical">Тропики</option>
+          </select>
+        </label>
+        <label class="inline"><input id="heater" type="checkbox" /> Обогрев включён</label>
+        <label>Макс. производительность системы (м³/ч)
+          <input id="cap" type="number" min="0" placeholder="не задано" />
+        </label>
+        <button id="sumBtn" class="btn">Сводка 7 точек</button>
+      </div>
+
+      <div class="card">
+        <h2>Результат</h2>
+        <div id="result" class="result muted">Заполните поля слева и нажмите «Сводка 7 точек», чтобы получить таблицу по 1,7,14,21,28,35,42 дням.</div>
+        <div id="summary"></div>
+        <div style="margin-top:10px">
+          <label>Режим отображения
+            <select id="viewMode">
+              <option value="total">м³/ч на стадо</option>
+              <option value="percent">% от стада</option>
+              <option value="per_bird">м³/ч на голову</option>
+              <option value="per_kg">м³/ч на кг ЖМ</option>
+            </select>
+          </label>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <small>API: <code>/calc/minmax</code>. Данные профиля берутся из <code>data/vent_profile_seed.json</code> (если заполнен) или демо‑профиля.</small>
+    </footer>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>

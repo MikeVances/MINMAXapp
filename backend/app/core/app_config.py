@@ -1,0 +1,40 @@
+from __future__ import annotations
+
+import json
+import os
+from dataclasses import dataclass, asdict
+
+APP_CONFIG_PATH = os.getenv("APP_CONFIG_JSON", "data/app_config.json")
+
+
+@dataclass
+class AppConfig:
+    # Общий падёж за цикл (1..42 дни), в % (по умолчанию ~4%)
+    total_mortality_pct: float = 4.0
+    # Нижние пороги минимальной вентиляции (м³/ч на голову)
+    min_floor_0_7: float = 0.15
+    min_floor_7_14: float = 0.25
+
+
+def load_app_config(path: str = APP_CONFIG_PATH) -> AppConfig:
+    if not os.path.exists(path):
+        return AppConfig()
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            raw = json.load(f)
+        # Back-compat: если раньше хранили daily_mortality_pct
+        if raw and "daily_mortality_pct" in raw and "total_mortality_pct" not in raw:
+            # Преобразуем условно, как 0.1%/сутки ≈ 4% за цикл
+            daily = float(raw.get("daily_mortality_pct", 0)) / 100.0
+            total = 1.0 - (1.0 - daily) ** 41
+            raw["total_mortality_pct"] = round(total * 100.0, 4)
+        defaults = asdict(AppConfig())
+        return AppConfig(**{**defaults, **(raw or {})})
+    except Exception:
+        return AppConfig()
+
+
+def save_app_config(cfg: AppConfig, path: str = APP_CONFIG_PATH) -> None:
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(asdict(cfg), f, ensure_ascii=False, indent=2)

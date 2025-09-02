@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Настройки — Профиль 42 дня</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <main class="container">
+    <h1>Настройки: профиль 42 дня</h1>
+    <p class="muted">Редактируйте массу одной головы (г), минимальную температуру и RH для каждого дня. Сохраните изменения и вернитесь на главную.</p>
+    <div style="margin:8px 0; display:flex; gap:10px; flex-wrap:wrap;">
+      <a class="btn btn-secondary" href="/">← На главную</a>
+      <button id="saveBtn" class="btn">Сохранить</button>
+      <span id="status" class="muted"></span>
+    </div>
+    <div id="table"></div>
+  </main>
+  <script src="/settings.js"></script>
+</body>
+</html>
+
