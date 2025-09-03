@@ -90,6 +90,15 @@ def compute(profile: VentProfile, ci: CalcInput) -> CalcResult:
     per_kg_min = p.min_per_kg
     per_kg_max = p.max_per_kg
 
+    # Учёт метаболической массы для минимальной вентиляции: W^0.75
+    try:
+        if per_kg_min and float(per_kg_min) > 0:
+            per_bird_from_kg = float(per_kg_min) * (weight_kg ** 0.75)
+            if per_bird_from_kg > per_bird_min:
+                per_bird_min = per_bird_from_kg
+    except Exception:
+        pass
+
     # Минимальная вентиляция — нижние пороги (per broiler) из правил 0–7 и 7–14
     if ci.age_days <= 7:
         per_bird_min = max(per_bird_min, cfg.min_floor_0_7)
@@ -108,9 +117,15 @@ def compute(profile: VentProfile, ci: CalcInput) -> CalcResult:
     # Qmin всегда считаем по эффективной ставке per broiler (после порогов/коррекций)
     q_min = birds_eff * per_bird_min
 
-    # Qmax — считаем инвариантно к представлению: по ставке «на голову»
-    # Представления (на кг/%) производим на уровне UI, делением тотала.
-    q_max = birds_eff * per_bird_max
+    # Qmax — по сезонной формуле Excel: фиксированная ставка м³/ч на кг живой массы
+    season_factor = {
+        "winter": getattr(cfg, "max_per_kg_winter", 2.0),
+        "spring_autumn": getattr(cfg, "max_per_kg_spring_autumn", 3.0),
+        "summer": getattr(cfg, "max_per_kg_summer", 4.0),
+        "tropical": getattr(cfg, "max_per_kg_tropical", 5.0),
+    }.get(ci.mode, getattr(cfg, "max_per_kg_summer", 4.0))
+    total_kg = birds_eff * weight_kg
+    q_max = total_kg * season_factor
     basis = "per_bird"
 
     return CalcResult(

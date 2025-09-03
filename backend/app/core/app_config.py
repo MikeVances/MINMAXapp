@@ -14,6 +14,11 @@ class AppConfig:
     # Нижние пороги минимальной вентиляции (м³/ч на голову)
     min_floor_0_7: float = 0.15
     min_floor_7_14: float = 0.25
+    # Максимальная вентиляция по сезонам (м³/ч на кг живой массы)
+    max_per_kg_winter: float = 2.0
+    max_per_kg_spring_autumn: float = 3.0
+    max_per_kg_summer: float = 4.0
+    max_per_kg_tropical: float = 5.0
 
 
 def load_app_config(path: str = APP_CONFIG_PATH) -> AppConfig:

@@ -28,12 +28,20 @@ const elAddTab = document.getElementById('addTab');
 const elDelTab = document.getElementById('delTab');
 const elHouse = document.getElementById('house');
 const elBirds = document.getElementById('birds');
-const elSeason = document.getElementById('season');
+const elSeasonRes = document.getElementById('seasonResult');
 const elCap = document.getElementById('cap');
 const elHeater = document.getElementById('heater');
 const elSum = document.getElementById('sumBtn');
 const elResult = document.getElementById('result');
 const elSummary = document.getElementById('summary');
+const elView = document.getElementById('viewMode');
+let lastSummary = null;
+// modal elements
+const elModal = document.getElementById('modal');
+const elModalText = document.getElementById('modalText');
+const elModalOk = document.getElementById('modalOk');
+const elModalCancel = document.getElementById('modalCancel');
+let pendingDeleteIndex = null;
 
 function renderTabs() {
   elTabs.innerHTML = '';
@@ -50,7 +58,7 @@ function fillForm() {
   const t = tabs[active];
   elHouse.value = t.id;
   elBirds.value = t.birds;
-  elSeason.value = t.season || 'summer';
+  if (elSeasonRes) elSeasonRes.value = t.season || 'summer';
   elCap.value = t.cap ?? '';
   elHeater.checked = !!t.heater_on;
   (document.querySelector(`input[name="unit"][value="${t.unit || 'per_bird'}"]`)||{}).checked = true;
@@ -61,7 +69,7 @@ function readFormToTab() {
   const idVal = (elHouse.value || '').trim();
   t.id = idVal !== '' ? idVal : t.id;
   t.birds = Number(elBirds.value || t.birds);
-  t.season = elSeason.value;
+  t.season = elSeasonRes ? elSeasonRes.value : (t.season || 'summer');
   const capVal = elCap.value === '' ? null : Number(elCap.value);
   t.cap = capVal;
   t.heater_on = !!elHeater.checked;
@@ -108,7 +116,7 @@ async function summary7() {
   const payload = {
     house: t.id,
     birds: t.birds,
-    mode_id: t.season || 'summer',
+    mode_id: (elSeasonRes ? elSeasonRes.value : (t.season || 'summer')),
     user_max_m3h: (t.cap === null || t.cap === undefined || t.cap === '') ? null : Number(t.cap),
     heater_on: !!t.heater_on,
     display_unit: t.unit,
@@ -124,6 +132,7 @@ async function summary7() {
       throw new Error(`${r.status} ${r.statusText}: ${txt}`);
     }
     const data = await r.json();
+    lastSummary = data;
     renderSummary(data);
   } catch (e) {
     elSummary.innerHTML = `<div class="danger">Ошибка запроса: ${String(e)}</div>`;
@@ -136,22 +145,42 @@ function renderSummary(d) {
   const head = `<div class="kv"><span>Сезон</span><span>${d.mode_id}</span></div>
                 <div class="kv"><span>Птичник/Птица</span><span>${d.house} / ${d.birds}</span></div>
                 <div class="kv"><span>Макс. производительность</span><span>${d.user_max_m3h ?? '—'} м³/ч</span></div>`;
-  const rows = d.rows.map(r => `
-    <tr>
-      <td>${r.day}</td>
-      <td>${r.min_temp_c ?? '—'}</td>
-      <td>${r.weight_g != null ? Math.round(r.weight_g) : '—'}</td>
-      <td>${Math.round(r.q_min_m3h)}</td>
-      <td>${r.q_min_pct != null ? (r.q_min_pct.toFixed(1) + '%') : '—'}</td>
-      <td>${Math.round(r.q_max_m3h)}</td>
-      <td>${r.q_max_pct != null ? (r.q_max_pct.toFixed(1) + '%') : '—'}</td>
-    </tr>`).join('');
+  if (elSeasonRes) elSeasonRes.value = d.mode_id;
+  const mode = elView ? elView.value : 'total';
+  const headerByMode = {
+    total: ['Qmin, м³/ч', 'Qmax, м³/ч'],
+    percent: ['Qmin, %', 'Qmax, %'],
+    per_bird: ['Qmin, м³/ч/бр', 'Qmax, м³/ч/бр'],
+    per_kg: ['Qmin, м³/ч/кг', 'Qmax, м³/ч/кг']
+  };
+  const headCols = headerByMode[mode] || headerByMode.total;
+  const rows = d.rows.map(r => {
+    let c1 = '—', c2 = '—';
+    if (mode === 'total') {
+      c1 = Math.round(r.q_min_m3h).toString();
+      c2 = Math.round(r.q_max_m3h).toString();
+    } else if (mode === 'percent') {
+      c1 = (r.q_min_pct != null) ? (r.q_min_pct.toFixed(1) + '%') : '—';
+      c2 = (r.q_max_pct != null) ? (r.q_max_pct.toFixed(1) + '%') : '—';
+    } else if (mode === 'per_bird') {
+      const be = r.birds_eff || d.birds; if (be > 0) { c1 = (r.q_min_m3h / be).toFixed(4); c2 = (r.q_max_m3h / be).toFixed(4); }
+    } else if (mode === 'per_kg') {
+      const be = r.birds_eff || d.birds; const wkg = (r.weight_g || 0)/1000.0; const totalKg = be*wkg; if (totalKg > 0) { c1 = (r.q_min_m3h/totalKg).toFixed(4); c2 = (r.q_max_m3h/totalKg).toFixed(4); }
+    }
+    return `
+      <tr>
+        <td>${r.day}</td>
+        <td>${r.min_temp_c ?? '—'}</td>
+        <td>${r.weight_g != null ? Math.round(r.weight_g) : '—'}</td>
+        <td>${c1}</td>
+        <td>${c2}</td>
+      </tr>`;
+  }).join('');
   elSummary.innerHTML = `${head}
     <table>
       <thead><tr>
         <th>День</th><th>Min Temp, °C</th><th>Вес, г</th>
-        <th>Qmin, м³/ч</th><th>Qmin, %</th>
-        <th>Qmax, м³/ч</th><th>Qmax, %</th>
+        <th>${headCols[0]}</th><th>${headCols[1]}</th>
       </tr></thead>
       <tbody>${rows}</tbody>
     </table>`;
@@ -187,18 +216,60 @@ elAddTab.onclick = () => {
   renderTabs(); fillForm();
 };
 elDelTab.onclick = () => {
+  const t = tabs[active];
+  const name = t?.id ?? (active + 1);
+  pendingDeleteIndex = active;
+  if (elModal && elModalText) {
+    elModalText.textContent = `Удалить птичник «${name}»? Это действие удалит локально сохранённые данные этой вкладки и не может быть отменено.`;
+    elModal.classList.remove('hidden');
+    // inline fallback styles (на случай кеша CSS)
+    elModal.style.position = 'fixed';
+    elModal.style.top = '0';
+    elModal.style.left = '0';
+    elModal.style.right = '0';
+    elModal.style.bottom = '0';
+    elModal.style.background = 'rgba(0,0,0,0.5)';
+    elModal.style.display = 'flex';
+    elModal.style.alignItems = 'center';
+    elModal.style.justifyContent = 'center';
+    elModal.style.zIndex = '1000';
+    const card = elModal.querySelector('.modal-card');
+    if (card) {
+      card.style.background = getComputedStyle(document.body).getPropertyValue('--card') || '#15161a';
+      card.style.border = '1px solid ' + (getComputedStyle(document.body).getPropertyValue('--border') || '#26272c');
+      card.style.borderRadius = '12px';
+      card.style.padding = '16px';
+      card.style.width = '420px';
+      card.style.maxWidth = '90vw';
+      card.style.boxShadow = '0 10px 30px rgba(0,0,0,0.4)';
+    }
+  }
+};
+
+function applyDelete(index){
+  if (index == null) return;
   if (tabs.length <= 1) {
-    // reset to single default tab
     tabs = [{ id: '1', birds: 30000, age_days: 21, outside_t: 10, cap: null, unit: 'per_bird' }];
     active = 0;
   } else {
-    tabs.splice(active, 1);
+    tabs.splice(index, 1);
     if (active >= tabs.length) active = tabs.length - 1;
   }
   saveTabs(tabs);
   renderTabs(); fillForm();
-};
+}
+
+if (elModalOk) elModalOk.addEventListener('click', ()=>{ applyDelete(pendingDeleteIndex); pendingDeleteIndex = null; elModal.classList.add('hidden'); elModal.removeAttribute('style'); const c = elModal.querySelector('.modal-card'); if (c){ c.removeAttribute('style'); } });
+if (elModalCancel) elModalCancel.addEventListener('click', ()=>{ pendingDeleteIndex = null; elModal.classList.add('hidden'); elModal.removeAttribute('style'); const c = elModal.querySelector('.modal-card'); if (c){ c.removeAttribute('style'); } });
 elSum.onclick = summary7;
+const elViewCtl = document.getElementById('viewMode');
+if (elViewCtl) {
+  elViewCtl.addEventListener('change', ()=>{ if (lastSummary) renderSummary(lastSummary); });
+}
+const elSeasonCtl = document.getElementById('seasonResult');
+if (elSeasonCtl) {
+  elSeasonCtl.addEventListener('change', ()=>{ summary7(); });
+}
 
 renderTabs();
 fillForm();

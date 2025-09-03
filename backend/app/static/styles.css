@@ -39,3 +39,8 @@ code { background: #0e1013; padding: 2px 6px; border-radius: 6px; border: 1px so
 @media (max-width: 860px) {
   .grid { grid-template-columns: 1fr; }
 }
+
+/* Modal */
+.modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: grid; place-items: center; z-index: 1000; }
+.modal.hidden { display: none; }
+.modal-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; width: min(420px, 90vw); box-shadow: 0 10px 30px rgba(0,0,0,0.4); }

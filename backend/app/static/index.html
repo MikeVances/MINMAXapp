@@ -30,23 +30,25 @@
         <label>Число птиц
           <input id="birds" type="number" min="1" max="60000" />
         </label>
-        <label>Сезон
-          <select id="season">
-            <option value="winter">Зима</option>
-            <option value="spring_autumn">Осень/Весна</option>
-            <option value="summer" selected>Лето</option>
-            <option value="tropical">Тропики</option>
-          </select>
-        </label>
         <label class="inline"><input id="heater" type="checkbox" /> Обогрев включён</label>
         <label>Макс. производительность системы (м³/ч)
           <input id="cap" type="number" min="0" placeholder="не задано" />
         </label>
-        <button id="sumBtn" class="btn">Сводка 7 точек</button>
+        <button id="sumBtn" class="btn">Рассчитать профиль</button>
       </div>
 
       <div class="card">
         <h2>Результат</h2>
+        <div style="margin-bottom:10px">
+          <label>Сезон
+            <select id="seasonResult">
+              <option value="winter">Зима</option>
+              <option value="spring_autumn">Осень/Весна</option>
+              <option value="summer" selected>Лето</option>
+              <option value="tropical">Тропики</option>
+            </select>
+          </label>
+        </div>
         <div id="result" class="result muted">Заполните поля слева и нажмите «Сводка 7 точек», чтобы получить таблицу по 1,7,14,21,28,35,42 дням.</div>
         <div id="summary"></div>
         <div style="margin-top:10px">
@@ -66,6 +68,18 @@
       <small>API: <code>/calc/minmax</code>. Данные профиля берутся из <code>data/vent_profile_seed.json</code> (если заполнен) или демо‑профиля.</small>
     </footer>
   </main>
+
+  <!-- Confirm delete modal -->
+  <div id="modal" class="modal hidden">
+    <div class="modal-card">
+      <h3 style="margin:0 0 8px;">Удалить птичник?</h3>
+      <p class="muted" id="modalText">Вы уверены, что хотите удалить птичник?</p>
+      <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:12px;">
+        <button id="modalCancel" class="btn btn-secondary">Отмена</button>
+        <button id="modalOk" class="btn" style="background:#ff7a7a; color:#1b0b0b;">Удалить</button>
+      </div>
+    </div>
+  </div>
 
   <script src="/app.js"></script>
 </body>
