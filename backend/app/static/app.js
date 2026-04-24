@@ -22,13 +22,14 @@ function saveTabs(tabs) {
 
 let tabs = loadTabs();
 let active = 0;
+let activeHouseTab = 'calc'; // calc, diary, analytics
 
 const elTabs = document.getElementById('tabs');
 const elAddTab = document.getElementById('addTab');
 const elDelTab = document.getElementById('delTab');
 const elHouse = document.getElementById('house');
 const elBirds = document.getElementById('birds');
-const elSeasonRes = document.getElementById('seasonResult');
+const elOutsideTemp = document.getElementById('outsideTemp');
 const elCap = document.getElementById('cap');
 const elHeater = document.getElementById('heater');
 const elSum = document.getElementById('sumBtn');
@@ -42,6 +43,13 @@ const elModalText = document.getElementById('modalText');
 const elModalOk = document.getElementById('modalOk');
 const elModalCancel = document.getElementById('modalCancel');
 let pendingDeleteIndex = null;
+// house tabs and flock info
+const elHouseTabs = document.getElementById('houseTabs');
+const elFlockInfo = document.getElementById('flockInfo');
+const elFlockPlacementDate = document.getElementById('flockPlacementDate');
+const elFlockCurrentDay = document.getElementById('flockCurrentDay');
+const elFlockCurrentBirds = document.getElementById('flockCurrentBirds');
+const elFlockBreed = document.getElementById('flockBreed');
 
 function renderTabs() {
   elTabs.innerHTML = '';
@@ -49,16 +57,77 @@ function renderTabs() {
     const b = document.createElement('button');
     b.className = 'tab' + (i === active ? ' active' : '');
     b.textContent = `Птичник ${t.id}`;
-    b.onclick = () => { active = i; fillForm(); renderTabs(); };
+    b.onclick = () => { active = i; fillForm(); renderTabs(); renderHouseTabs(); loadFlockInfo(); };
     elTabs.appendChild(b);
   });
+}
+
+function renderHouseTabs() {
+  if (!elHouseTabs) return;
+  const houseTabsData = [
+    { id: 'calc', label: 'Расчёты' },
+    { id: 'diary', label: 'Дневник' },
+    { id: 'analytics', label: 'Аналитика' }
+  ];
+  elHouseTabs.innerHTML = '';
+  houseTabsData.forEach(ht => {
+    const b = document.createElement('button');
+    b.className = 'tab' + (ht.id === activeHouseTab ? ' active' : '');
+    b.textContent = ht.label;
+    b.onclick = () => { activeHouseTab = ht.id; renderHouseTabs(); showActiveContent(); };
+    elHouseTabs.appendChild(b);
+  });
+  showActiveContent();
+}
+
+function showActiveContent() {
+  // Get content sections
+  const calcContent = document.getElementById('calcContent');
+  const diaryContent = document.getElementById('diaryContent');
+  const analyticsContent = document.getElementById('analyticsContent');
+
+  // Hide all
+  if (calcContent) calcContent.style.display = 'none';
+  if (diaryContent) diaryContent.style.display = 'none';
+  if (analyticsContent) analyticsContent.style.display = 'none';
+
+  // Show active
+  if (activeHouseTab === 'calc' && calcContent) {
+    calcContent.style.display = 'grid';
+  } else if (activeHouseTab === 'diary' && diaryContent) {
+    diaryContent.style.display = 'grid';
+  } else if (activeHouseTab === 'analytics' && analyticsContent) {
+    analyticsContent.style.display = 'grid';
+  }
+}
+
+async function loadFlockInfo() {
+  const t = tabs[active];
+  if (!t || !elFlockInfo) return;
+
+  try {
+    const r = await fetch(`/flock/${t.id}/info`);
+    if (r.ok) {
+      const data = await r.json();
+      elFlockInfo.style.display = 'block';
+      elFlockPlacementDate.textContent = data.placement_date || '—';
+      elFlockCurrentDay.textContent = data.current_day || '—';
+      elFlockCurrentBirds.textContent = data.initial_bird_count || t.birds || '—';
+      elFlockBreed.textContent = data.breed || '—';
+    } else {
+      elFlockInfo.style.display = 'none';
+    }
+  } catch (e) {
+    console.warn('Failed to load flock info:', e);
+    elFlockInfo.style.display = 'none';
+  }
 }
 
 function fillForm() {
   const t = tabs[active];
   elHouse.value = t.id;
   elBirds.value = t.birds;
-  if (elSeasonRes) elSeasonRes.value = t.season || 'summer';
+  if (elOutsideTemp) elOutsideTemp.value = t.outside_t ?? 15;
   elCap.value = t.cap ?? '';
   elHeater.checked = !!t.heater_on;
   (document.querySelector(`input[name="unit"][value="${t.unit || 'per_bird'}"]`)||{}).checked = true;
@@ -69,7 +138,7 @@ function readFormToTab() {
   const idVal = (elHouse.value || '').trim();
   t.id = idVal !== '' ? idVal : t.id;
   t.birds = Number(elBirds.value || t.birds);
-  t.season = elSeasonRes ? elSeasonRes.value : (t.season || 'summer');
+  t.outside_t = elOutsideTemp ? Number(elOutsideTemp.value) : (t.outside_t ?? 15);
   const capVal = elCap.value === '' ? null : Number(elCap.value);
   t.cap = capVal;
   t.heater_on = !!elHeater.checked;
@@ -84,14 +153,14 @@ async function recalc() {
     house: t.id,
     birds: t.birds,
     age_days: t.age_days,
-    mode_id: t.season || 'summer',
+    mode_id: 'summer', // Deprecated, but kept for backward compatibility
     display_unit: t.unit,
-    outside_t: (t.season === 'winter' ? -1 : (t.season === 'spring_autumn' ? 0 : 15)),
+    outside_t: t.outside_t ?? 15,
     heater_on: !!t.heater_on,
   };
   if (t.cap !== null && t.cap !== undefined && t.cap !== '') payload.user_max_m3h = t.cap;
 
-  elCalc.disabled = true; elCalc.textContent = 'Считаем…';
+  elSum.disabled = true; elSum.textContent = 'Считаем…';
   try {
     const r = await fetch('/calc/minmax', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -106,7 +175,7 @@ async function recalc() {
   } catch (e) {
     elResult.innerHTML = `<div class="danger">Ошибка запроса: ${String(e)}</div>`;
   } finally {
-    elCalc.disabled = false; elCalc.textContent = 'Пересчитать';
+    elSum.disabled = false; elSum.textContent = 'Рассчитать профиль';
   }
 }
 
@@ -116,10 +185,11 @@ async function summary7() {
   const payload = {
     house: t.id,
     birds: t.birds,
-    mode_id: (elSeasonRes ? elSeasonRes.value : (t.season || 'summer')),
+    mode_id: 'summer', // Deprecated but required by API
     user_max_m3h: (t.cap === null || t.cap === undefined || t.cap === '') ? null : Number(t.cap),
     heater_on: !!t.heater_on,
     display_unit: t.unit,
+    outside_t: t.outside_t ?? 15,
   };
   elSum.disabled = true; elSum.textContent = 'Считаем…';
   try {
@@ -137,15 +207,16 @@ async function summary7() {
   } catch (e) {
     elSummary.innerHTML = `<div class="danger">Ошибка запроса: ${String(e)}</div>`;
   } finally {
-    elSum.disabled = false; elSum.textContent = 'Сводка 7 точек';
+    elSum.disabled = false; elSum.textContent = 'Рассчитать профиль';
   }
 }
 
 function renderSummary(d) {
-  const head = `<div class="kv"><span>Сезон</span><span>${d.mode_id}</span></div>
+  const t = tabs[active];
+  const outsideT = t.outside_t ?? 15;
+  const head = `<div class="kv"><span>Температура наружного воздуха</span><span>${outsideT} °C</span></div>
                 <div class="kv"><span>Птичник/Птица</span><span>${d.house} / ${d.birds}</span></div>
                 <div class="kv"><span>Макс. производительность</span><span>${d.user_max_m3h ?? '—'} м³/ч</span></div>`;
-  if (elSeasonRes) elSeasonRes.value = d.mode_id;
   const mode = elView ? elView.value : 'total';
   const headerByMode = {
     total: ['Qmin, м³/ч', 'Qmax, м³/ч'],
@@ -266,10 +337,12 @@ const elViewCtl = document.getElementById('viewMode');
 if (elViewCtl) {
   elViewCtl.addEventListener('change', ()=>{ if (lastSummary) renderSummary(lastSummary); });
 }
-const elSeasonCtl = document.getElementById('seasonResult');
-if (elSeasonCtl) {
-  elSeasonCtl.addEventListener('change', ()=>{ summary7(); });
+const elOutsideTempCtl = document.getElementById('outsideTemp');
+if (elOutsideTempCtl) {
+  elOutsideTempCtl.addEventListener('change', ()=>{ summary7(); });
 }
 
 renderTabs();
+renderHouseTabs();
 fillForm();
+loadFlockInfo();

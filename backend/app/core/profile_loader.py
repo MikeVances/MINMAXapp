@@ -5,6 +5,17 @@ import os
 from dataclasses import dataclass
 from typing import Dict, List, Literal, Optional, Tuple
 
+from math import isfinite
+
+def _to_float(v, default: float | None = None) -> float | None:
+    try:
+        if v is None or v == "":
+            return default
+        x = float(v)
+        return x if isfinite(x) else default
+    except Exception:
+        return default
+
 
 Mode = Literal["winter", "summer", "spring_autumn", "tropical"]
 
@@ -21,6 +32,7 @@ class ProfilePoint:
     # уставка минимальной температуры (внутри), целевой уровень RH (%)
     min_temp_c: float | None = None
     rv_percent: float | None = None
+    authoritative_basis: Literal['per_kg','per_bird'] | None = None
 
 
 class VentProfile:
@@ -74,23 +86,70 @@ class VentProfile:
 def load_profile_from_json(path: str) -> VentProfile:
     with open(path, "r", encoding="utf-8") as f:
         raw = json.load(f)
+
     points_by_mode: Dict[Mode, List[ProfilePoint]] = {}
+    valid_modes: Tuple[Mode, ...] = ("winter", "spring_autumn", "summer", "tropical")
+
     for mode_key, rows in raw.items():
+        if mode_key not in valid_modes:
+            # игнорируем незнакомые ключи режимов, чтобы не завалить загрузку
+            continue
         pts: List[ProfilePoint] = []
         for r in rows:
+            day = int(r.get("day"))
+            bw_g = _to_float(r.get("body_weight_g"), 0.0) or 0.0
+            w_kg = max(bw_g / 1000.0, 1e-6)
+
+            # читаем ставки (они могут отсутствовать в seed)
+            min_bird = _to_float(r.get("min_per_bird"))
+            max_bird = _to_float(r.get("max_per_bird"))
+            min_kg   = _to_float(r.get("min_per_kg"))
+            max_kg   = _to_float(r.get("max_per_kg"))
+
+            # восстанавливаем недостающие значения по массе
+            if min_bird is None and min_kg is not None:
+                min_bird = min_kg * w_kg
+            if min_kg is None and min_bird is not None:
+                min_kg = min_bird / w_kg
+
+            if max_bird is None and max_kg is not None:
+                max_bird = max_kg * w_kg
+            if max_kg is None and max_bird is not None:
+                max_kg = max_bird / w_kg
+
+            # справочные поля
+            min_temp_c = _to_float(r.get("min_temp_c"))
+            rv_percent = _to_float(r.get("rv_percent"))
+
+            basis = r.get("authoritative_basis")
+            if basis not in ("per_kg", "per_bird", None):
+                basis = None
+
             pts.append(
                 ProfilePoint(
-                    day=int(r["day"]),
-                    body_weight_g=float(r["body_weight_g"]),
-                    min_per_bird=float(r["min_per_bird"]),
-                    max_per_bird=float(r["max_per_bird"]),
-                    min_per_kg=float(r["min_per_kg"]),
-                    max_per_kg=float(r["max_per_kg"]),
-                    min_temp_c=(float(r["min_temp_c"]) if "min_temp_c" in r and r["min_temp_c"] is not None else None),
-                    rv_percent=(float(r["rv_percent"]) if "rv_percent" in r and r["rv_percent"] is not None else None),
+                    day=day,
+                    body_weight_g=bw_g,
+                    min_per_bird=float(min_bird or 0.0),
+                    max_per_bird=float(max_bird or 0.0),
+                    min_per_kg=float(min_kg or 0.0),
+                    max_per_kg=float(max_kg or 0.0),
+                    min_temp_c=min_temp_c,
+                    rv_percent=rv_percent,
+                    authoritative_basis=basis,
                 )
             )
-        points_by_mode[mode_key] = pts
+        # сортируем по дню
+        points_by_mode[mode_key] = sorted(pts, key=lambda p: p.day)
+
+    # простая валидация присутствия ключевых режимов
+    required = ("winter", "spring_autumn", "summer")
+    if not all(points_by_mode.get(m) for m in required):
+        # дополним демо‑данными, чтобы приложение не упало целиком
+        demo = demo_profile()
+        for m in valid_modes:
+            if not points_by_mode.get(m):
+                points_by_mode[m] = demo.points.get(m, [])
+
     return VentProfile(points_by_mode)
 
 
@@ -112,6 +171,7 @@ def demo_profile() -> VentProfile:
             max_per_bird=round(max_bird, 4),
             min_per_kg=round(min_kg, 4),
             max_per_kg=round(max_kg, 4),
+            authoritative_basis="per_bird",
         )
     base = {d: mk_row(d, 1.0) for d in days}
     colder = {d: mk_row(d, 0.9) for d in days}
@@ -142,6 +202,10 @@ def get_profile(seed_path: Optional[str] = None) -> VentProfile:
         required = ("winter", "spring_autumn", "summer")
         try:
             if all(vp.points.get(m) for m in required):
+                # tropical желателен, но не обязателен; если отсутствует — подставим из демо
+                if not vp.points.get("tropical"):
+                    demo = demo_profile()
+                    vp.points["tropical"] = demo.points.get("tropical", [])
                 return vp
         except Exception:
             pass

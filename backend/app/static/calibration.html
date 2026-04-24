@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Калибровка помещения — Ventilation Min/Max</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main class="container">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
+      <h1 style="margin:0;">🔬 Калибровка помещения</h1>
+      <div style="display:flex; gap:10px;">
+        <a class="btn btn-secondary" href="/">← На главную</a>
+        <a class="btn btn-secondary" href="/settings.html">⚙️ Настройки</a>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px;">
+      <p class="muted">
+        Эта страница позволяет точно рассчитать теплопотери помещения и учесть дополнительный воздухообмен
+        для газовых обогревателей открытого горения. Калибровка выполняется один раз, результаты используются
+        для автоматического расчета минимальной вентиляции с учетом работы обогревателей.
+      </p>
+    </div>
+
+    <!-- Шаг 1: Размеры помещения -->
+    <section>
+      <div class="card">
+        <h2>Шаг 1: Размеры помещения</h2>
+        <p class="muted" style="margin-bottom:12px;">
+          Введите габаритные размеры птичника. Объем будет рассчитан автоматически.
+        </p>
+
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:12px;">
+          <label>
+            Длина, м
+            <input id="length" type="number" step="0.1" min="1" max="500" placeholder="100">
+          </label>
+          <label>
+            Ширина, м
+            <input id="width" type="number" step="0.1" min="1" max="200" placeholder="20">
+          </label>
+          <label>
+            Высота, м
+            <input id="height" type="number" step="0.1" min="1" max="20" placeholder="3">
+          </label>
+        </div>
+
+        <div style="margin-top:12px; padding:12px; background:var(--bg); border-radius:8px;">
+          <div class="kv">
+            <span>Объем помещения</span>
+            <span id="volumeDisplay" style="font-weight:600;">— м³</span>
+          </div>
+          <div class="kv">
+            <span>Площадь пола</span>
+            <span id="areaDisplay" style="font-weight:600;">— м²</span>
+          </div>
+        </div>
+
+        <button id="saveBuildingBtn" class="btn" style="margin-top:12px;">Сохранить размеры</button>
+        <span id="buildingStatus" class="muted" style="margin-left:10px;"></span>
+      </div>
+    </section>
+
+    <!-- Шаг 2: Конфигурация обогревателей -->
+    <section style="margin-top:16px;">
+      <div class="card">
+        <h2>Шаг 2: Обогревательное оборудование</h2>
+        <p class="muted" style="margin-bottom:12px;">
+          Укажите тип и общую мощность обогревателей. Для газовых обогревателей открытого горения
+          система автоматически добавит воздух для горения (≈95 м³/ч на 100 кВт).
+        </p>
+
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap:12px;">
+          <label>
+            Тип обогревателей
+            <select id="heaterType">
+              <option value="gas_open">Газовые открытого горения</option>
+              <option value="electric">Электрические</option>
+            </select>
+          </label>
+          <label>
+            Общая тепловая мощность, кВт
+            <input id="heaterPower" type="number" step="1" min="0" max="10000" placeholder="500">
+          </label>
+        </div>
+
+        <div id="gasInfo" style="margin-top:12px; padding:12px; background:var(--warning-bg,#3a2f1a); border-left:3px solid var(--warning,#f4b942); border-radius:4px;">
+          <strong>ℹ️ Справка по газовым обогревателям:</strong>
+          <ul style="margin:8px 0 0 20px; padding:0;">
+            <li>Расход природного газа: ~10 м³/ч на 100 кВт</li>
+            <li>Необходимый воздух для горения: ~9.5 м³ на 1 м³ газа</li>
+            <li>Итого: ~95 м³/ч воздуха на 100 кВт мощности</li>
+          </ul>
+        </div>
+
+        <button id="saveHeaterBtn" class="btn" style="margin-top:12px;">Сохранить конфигурацию</button>
+        <span id="heaterStatus" class="muted" style="margin-left:10px;"></span>
+      </div>
+    </section>
+
+    <!-- Шаг 3: Тест охлаждения -->
+    <section style="margin-top:16px;">
+      <div class="card">
+        <h2>Шаг 3: Тест охлаждения (калибровка)</h2>
+        <p class="muted" style="margin-bottom:12px;">
+          <strong>Инструкция:</strong><br>
+          1. Нагрейте помещение до желаемой температуры (например, 30°C)<br>
+          2. Выключите обогрев и вентиляцию<br>
+          3. Засеките время и замерьте температуру через 5-10 минут<br>
+          4. Введите данные ниже для расчета коэффициента теплопотерь
+        </p>
+
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:12px;">
+          <label>
+            Начальная температура, °C
+            <input id="tInitial" type="number" step="0.1" min="-20" max="50" placeholder="30.0">
+          </label>
+          <label>
+            Конечная температура, °C
+            <input id="tFinal" type="number" step="0.1" min="-20" max="50" placeholder="28.0">
+          </label>
+          <label>
+            Температура снаружи, °C
+            <input id="tOutside" type="number" step="0.1" min="-40" max="50" placeholder="-5.0">
+          </label>
+          <label>
+            Время теста, минуты
+            <input id="timeMinutes" type="number" step="0.1" min="0.1" max="60" placeholder="5.0">
+          </label>
+        </div>
+
+        <div style="display:flex; gap:10px; margin-top:12px; flex-wrap:wrap;">
+          <button id="calculateBtn" class="btn">📊 Рассчитать UA коэффициент</button>
+          <button id="saveCalibrationBtn" class="btn" disabled>💾 Сохранить калибровку</button>
+        </div>
+
+        <div id="calibrationResult" style="margin-top:12px;"></div>
+      </div>
+    </section>
+
+    <!-- Шаг 4: Анализ работы обогревателей -->
+    <section style="margin-top:16px;">
+      <div class="card">
+        <h2>Шаг 4: Анализ работы обогревателей</h2>
+        <p class="muted" style="margin-bottom:12px;">
+          После калибровки можно рассч��тать, сколько времени будут работать обогреватели и сколько
+          дополнительного воздуха потребуется для горения при разных условиях.
+        </p>
+
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:12px;">
+          <label>
+            Целевая температура внутри, °C
+            <input id="tInsideTarget" type="number" step="0.1" min="-20" max="50" placeholder="33.0" value="33.0">
+          </label>
+          <label>
+            Температура снаружи, °C
+            <input id="tOutsideAnalysis" type="number" step="0.1" min="-40" max="50" placeholder="-5.0" value="-5.0">
+          </label>
+        </div>
+
+        <button id="analyzeBtn" class="btn" style="margin-top:12px;">🔍 Анализировать</button>
+
+        <div id="analysisResult" style="margin-top:12px;"></div>
+      </div>
+    </section>
+
+    <!-- Текущая конфигурация -->
+    <section style="margin-top:16px;">
+      <div class="card">
+        <h2>📋 Текущая конфигурация</h2>
+        <div id="currentConfig" class="muted">Загрузка...</div>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="/calibration.js?v=1"></script>
+</body>
+</html>

@@ -9,15 +9,34 @@
 <body>
   <main class="container">
     <h1>Настройки: профиль 42 дня</h1>
-    <p class="muted">Редактируйте массу одной головы (г), минимальную температуру и RH для каждого дня. Сохраните изменения и вернитесь на главную.</p>
-    <div style="margin:8px 0; display:flex; gap:10px; flex-wrap:wrap;">
+    <p class="muted">Задайте опорные точки профиля. Система автоматически интерполирует значения между точками для создания полного профиля 42 дня.</p>
+
+    <div style="margin:16px 0; display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
       <a class="btn btn-secondary" href="/">← На главную</a>
-      <button id="saveBtn" class="btn">Сохранить</button>
+      <button id="saveBtn" class="btn">Сохранить и интерполировать</button>
       <span id="status" class="muted"></span>
     </div>
+
+    <!-- Anchor points configuration -->
+    <div class="card" style="margin-bottom:16px;">
+      <h2>Опорные точки</h2>
+      <div style="display:flex; gap:16px; align-items:center; flex-wrap:wrap;">
+        <label style="display:flex; align-items:center; gap:8px;">
+          Количество точек:
+          <input id="numPoints" type="number" min="3" max="10" value="7" style="width:80px;" />
+        </label>
+        <button id="updatePointsBtn" class="btn btn-secondary">Применить</button>
+        <span class="muted" style="font-size:12px;">Рекомендуется: 7 точек (недельный профиль)</span>
+      </div>
+    </div>
+
+    <!-- Global config -->
+    <div id="configSection"></div>
+
+    <!-- Anchor points table -->
     <div id="table"></div>
   </main>
-  <script src="/settings.js"></script>
+  <script src="/settings.js?v=5"></script>
 </body>
 </html>
 

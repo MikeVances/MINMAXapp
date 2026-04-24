@@ -8,61 +8,104 @@
 </head>
 <body>
   <main class="container">
-    <h1>Ventilation Min/Max — MVP</h1>
-    <div style="margin:8px 0;">
-      <a class="btn btn-secondary" href="/settings.html">Настройки профиля 42 дня</a>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
+      <h1 style="margin:0;">Ventilation Min/Max — MVP</h1>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <a class="btn btn-secondary" href="/calculators.html">🔧 Калькуляторы</a>
+        <a class="btn btn-secondary" href="/settings.html">⚙️ Настройки хозяйства</a>
+      </div>
     </div>
 
     <section>
       <div id="tabs" class="tabs"></div>
-      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
         <button id="addTab" class="btn btn-secondary">+ Добавить птичник</button>
         <button id="delTab" class="btn btn-secondary">Удалить птичник</button>
       </div>
-    </section>
 
-    <section class="grid">
-      <div class="card">
-        <h2>Ввод</h2>
-        <label>Птичник (ID)
-          <input id="house" type="text" placeholder="например: Дом A-1" />
-        </label>
-        <label>Число птиц
-          <input id="birds" type="number" min="1" max="60000" />
-        </label>
-        <label class="inline"><input id="heater" type="checkbox" /> Обогрев включён</label>
-        <label>Макс. производительность системы (м³/ч)
-          <input id="cap" type="number" min="0" placeholder="не задано" />
-        </label>
-        <button id="sumBtn" class="btn">Рассчитать профиль</button>
-      </div>
-
-      <div class="card">
-        <h2>Результат</h2>
-        <div style="margin-bottom:10px">
-          <label>Сезон
-            <select id="seasonResult">
-              <option value="winter">Зима</option>
-              <option value="spring_autumn">Осень/Весна</option>
-              <option value="summer" selected>Лето</option>
-              <option value="tropical">Тропики</option>
-            </select>
-          </label>
-        </div>
-        <div id="result" class="result muted">Заполните поля слева и нажмите «Сводка 7 точек», чтобы получить таблицу по 1,7,14,21,28,35,42 дням.</div>
-        <div id="summary"></div>
-        <div style="margin-top:10px">
-          <label>Режим отображения
-            <select id="viewMode">
-              <option value="total">м³/ч на стадо</option>
-              <option value="percent">% от стада</option>
-              <option value="per_bird">м³/ч на голову</option>
-              <option value="per_kg">м³/ч на кг ЖМ</option>
-            </select>
-          </label>
+      <!-- Flock info card -->
+      <div id="flockInfo" class="card" style="margin-bottom:12px; display:none;">
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:12px;">
+          <div>
+            <div class="muted" style="font-size:12px;">Дата посадки</div>
+            <div id="flockPlacementDate">—</div>
+          </div>
+          <div>
+            <div class="muted" style="font-size:12px;">Текущий день</div>
+            <div id="flockCurrentDay">—</div>
+          </div>
+          <div>
+            <div class="muted" style="font-size:12px;">Текущее поголовье</div>
+            <div id="flockCurrentBirds">—</div>
+          </div>
+          <div>
+            <div class="muted" style="font-size:12px;">Порода</div>
+            <div id="flockBreed">—</div>
+          </div>
         </div>
       </div>
+
+      <!-- House tabs (Расчёты/Дневник/Аналитика) -->
+      <div id="houseTabs" class="tabs" style="margin-bottom:12px;"></div>
     </section>
+
+    <!-- Content container for tabs -->
+    <div id="contentContainer">
+      <!-- Calc tab content -->
+      <section id="calcContent" class="grid">
+        <div class="card">
+          <h2>Ввод</h2>
+          <label>Птичник (ID)
+            <input id="house" type="text" placeholder="например: Дом A-1" />
+          </label>
+          <label>Число птиц
+            <input id="birds" type="number" min="1" max="60000" />
+          </label>
+          <label class="inline"><input id="heater" type="checkbox" /> Обогрев включён</label>
+          <label>Макс. производительность системы (м³/ч)
+            <input id="cap" type="number" min="0" placeholder="не задано" />
+          </label>
+          <button id="sumBtn" class="btn">Рассчитать профиль</button>
+        </div>
+
+        <div class="card">
+          <h2>Результат</h2>
+          <div style="margin-bottom:10px">
+            <label>Температура наружного воздуха, °C
+              <input id="outsideTemp" type="number" step="1" min="-40" max="50" value="15">
+            </label>
+          </div>
+          <div id="result" class="result muted">Заполните поля слева и нажмите «Рассчитать профиль», чтобы получить таблицу по 1,7,14,21,28,35,42 дням.</div>
+          <div id="summary"></div>
+          <div style="margin-top:10px">
+            <label>Режим отображения
+              <select id="viewMode">
+                <option value="total">м³/ч на стадо</option>
+                <option value="percent">% от стада</option>
+                <option value="per_bird">м³/ч на голову</option>
+                <option value="per_kg">м³/ч на кг ЖМ</option>
+              </select>
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <!-- Diary tab content (placeholder for M4) -->
+      <section id="diaryContent" class="grid" style="display:none;">
+        <div class="card" style="grid-column: 1/-1;">
+          <h2>📔 Дневник стада</h2>
+          <p class="muted">Функция дневника будет реализована в Milestone 4. Здесь будет форма для ежедневного ввода веса и падежа.</p>
+        </div>
+      </section>
+
+      <!-- Analytics tab content (placeholder for M5) -->
+      <section id="analyticsContent" class="grid" style="display:none;">
+        <div class="card" style="grid-column: 1/-1;">
+          <h2>📊 Аналитика Plan vs Fact</h2>
+          <p class="muted">Функция аналитики будет реализована в Milestone 5. Здесь будут графики сравнения плановых и фактических показателей.</p>
+        </div>
+      </section>
+    </div>
 
     <footer>
       <small>API: <code>/calc/minmax</code>. Данные профиля берутся из <code>data/vent_profile_seed.json</code> (если заполнен) или демо‑профиля.</small>

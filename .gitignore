@@ -139,3 +139,22 @@ data/*.csv
 data/*.json
 !data/vent_profile_seed.json
 !data/day_master.json
+
+# Runtime user data (создаётся приложением, не хранится в репо)
+data/flocks/
+backend/data/
+
+# Claude Code локальные настройки
+.claude/
+
+# Локальные тест-скрипты (не часть продакшн-кода)
+test_*.py
+
+# Внутренний бэклог разработки
+BACKLOG.md
+
+# Исходные инженерные справочники (бинарные)
+*.doc
+*.docx
+*.xlsx
+*.xls

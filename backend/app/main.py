@@ -3,8 +3,11 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from .routers import calc
 from .routers import settings as settings_router
+from .routers import flock
+from .routers import thermal
+from .routers import tools
 
-app = FastAPI(title="Ventilation Min/Max API", version="0.1.0")
+app = FastAPI(title="Ventilation Min/Max API", version="0.2.0")
 
 
 @app.get("/healthz")
@@ -14,6 +17,9 @@ def healthz():
 
 app.include_router(calc.router, prefix="/calc", tags=["calc"])
 app.include_router(settings_router.router, prefix="/settings", tags=["settings"])
+app.include_router(flock.router, tags=["flock"])
+app.include_router(thermal.router, prefix="/thermal", tags=["thermal"])
+app.include_router(tools.router, prefix="/calc/tools", tags=["tools"])
 
 # Static UI (no Node/Next.js needed for MVP)
 _static_dir = Path(__file__).parent / "static"

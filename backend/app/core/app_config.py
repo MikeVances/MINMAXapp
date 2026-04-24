@@ -11,7 +11,12 @@ APP_CONFIG_PATH = os.getenv("APP_CONFIG_JSON", "data/app_config.json")
 class AppConfig:
     # Общий падёж за цикл (1..42 дни), в % (по умолчанию ~4%)
     total_mortality_pct: float = 4.0
-    # Нижние пороги минимальной вентиляции (м³/ч на голову)
+
+    # Единица измерения для норм вентиляции: "per_bird" (м³/ч/бр) или "per_kg" (м³/ч/кг ЖМ)
+    ventilation_unit: str = "per_bird"
+
+    # DEPRECATED: старые поля, оставлены для обратной совместимости
+    min_floor_unit: str = "per_bird"
     min_floor_0_7: float = 0.15
     min_floor_7_14: float = 0.25
     # Максимальная вентиляция по сезонам (м³/ч на кг живой массы)
@@ -19,6 +24,14 @@ class AppConfig:
     max_per_kg_spring_autumn: float = 3.0
     max_per_kg_summer: float = 4.0
     max_per_kg_tropical: float = 5.0
+    # Использовать температурное смешивание режимов (по умолчанию True)
+    use_temp_blend: bool = True
+
+    # Температурные точки для смешивания режимов (°C)
+    # Используются в calc_core.py для определения режима по температуре
+    temp_winter_c: float = -5.0      # Температура зимы (≤ этого значения)
+    temp_spring_c: float = 10.0      # Температура весны/осени (середина диапазона)
+    temp_summer_c: float = 25.0      # Температура лета (≥ этого значения)
 
 
 def load_app_config(path: str = APP_CONFIG_PATH) -> AppConfig:

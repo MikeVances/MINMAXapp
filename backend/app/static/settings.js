@@ -7,74 +7,255 @@ async function fetchJSON(url, opts) {
 const elTable = document.getElementById('table');
 const elSave = document.getElementById('saveBtn');
 const elStatus = document.getElementById('status');
+const elNumPoints = document.getElementById('numPoints');
+const elUpdatePoints = document.getElementById('updatePointsBtn');
+const elConfigSection = document.getElementById('configSection');
 
-let rows = [];
+let anchorPoints = []; // Only user-defined anchor points
+let numAnchorPoints = 7; // Default 7 points
 let cfg = { total_mortality_pct: 4.0, min_floor_0_7: 0.15, min_floor_7_14: 0.25 };
 
+// Generate evenly spaced anchor days
+function generateAnchorDays(numPoints) {
+  if (numPoints < 2) return [1, 42];
+  if (numPoints === 2) return [1, 42];
+
+  const days = [1]; // Always start with day 1
+  const step = (42 - 1) / (numPoints - 1);
+
+  for (let i = 1; i < numPoints - 1; i++) {
+    days.push(Math.round(1 + step * i));
+  }
+  days.push(42); // Always end with day 42
+
+  return days;
+}
+
+// Initialize anchor points with default values
+function initializeAnchorPoints(numPoints) {
+  const days = generateAnchorDays(numPoints);
+  const defaultWeights = { 1: 50, 7: 200, 14: 400, 21: 650, 28: 900, 35: 1200, 42: 2400 };
+  const defaultTemps = { 1: 33, 7: 31, 14: 28, 21: 25, 28: 22, 35: 20, 42: 19 };
+  const defaultRH = { 1: 60, 7: 60, 14: 60, 21: 60, 28: 60, 35: 60, 42: 60 };
+  // Типичные нормы воздухообмена по возрасту (м³/ч на голову)
+  const defaultQmin = { 1: 0.15, 7: 0.25, 14: 0.35, 21: 0.50, 28: 0.65, 35: 0.80, 42: 1.00 };
+  const defaultQmax = { 1: 0.45, 7: 1.20, 14: 2.00, 21: 3.20, 28: 4.20, 35: 5.10, 42: 6.00 };
+
+  return days.map(day => ({
+    day,
+    body_weight_g: defaultWeights[day] || Math.round(50 + (2400 - 50) * (day - 1) / 41),
+    min_temp_c: defaultTemps[day] || Math.round(33 - (33 - 19) * (day - 1) / 41),
+    rv_percent: defaultRH[day] || 60,
+    q_min_per_bird: defaultQmin[day] || (0.15 + (1.00 - 0.15) * (day - 1) / 41),
+    q_max_per_bird: defaultQmax[day] || (0.45 + (6.00 - 0.45) * (day - 1) / 41)
+  }));
+}
+
 function tr(d) {
+  // Установить значения по умолчанию если пусто
+  const qmin = d.q_min_per_bird ?? getDefaultQmin(d.day);
+  const qmax = d.q_max_per_bird ?? getDefaultQmax(d.day);
+
   return `<tr>
-      <td>${d.day}</td>
-      <td><input type="number" step="1" value="${d.body_weight_g ?? ''}" data-key="bw" data-day="${d.day}"/></td>
-      <td><input type="number" step="0.1" value="${d.min_temp_c ?? ''}" data-key="t" data-day="${d.day}"/></td>
-      <td><input type="number" step="0.1" value="${d.rv_percent ?? ''}" data-key="rv" data-day="${d.day}"/></td>
+      <td><strong>${d.day}</strong></td>
+      <td><input type="number" step="1" min="0" value="${d.body_weight_g ?? ''}" data-key="bw" data-idx="${anchorPoints.indexOf(d)}"/></td>
+      <td><input type="number" step="0.1" value="${d.min_temp_c ?? ''}" data-key="t" data-idx="${anchorPoints.indexOf(d)}"/></td>
+      <td><input type="number" step="0.1" min="0" max="100" value="${d.rv_percent ?? ''}" data-key="rv" data-idx="${anchorPoints.indexOf(d)}"/></td>
+      <td><input type="number" step="0.01" min="0" value="${qmin}" data-key="qmin" data-idx="${anchorPoints.indexOf(d)}"/></td>
+      <td><input type="number" step="0.01" min="0" value="${qmax}" data-key="qmax" data-idx="${anchorPoints.indexOf(d)}"/></td>
     </tr>`;
 }
 
-function render() {
-  const head = `
-    <div class="kv"><span>Падёж за цикл</span><span><input id="mort_total" type="number" step="0.01" value="${cfg.total_mortality_pct}"> %</span></div>
-    <div class="kv"><span>Порог Qmin 0–7 дн (м³/ч/бр)</span><span><input id="floor_0_7" type="number" step="0.001" value="${cfg.min_floor_0_7}"></span></div>
-    <div class="kv"><span>Порог Qmin 7–14 дн (м³/ч/бр)</span><span><input id="floor_7_14" type="number" step="0.001" value="${cfg.min_floor_7_14}"></span></div>`;
-  const table = `
-    <table>
-      <thead><tr><th>День</th><th>Вес, г</th><th>Min Temp, °C</th><th>RH, %</th></tr></thead>
-      <tbody>
-        ${rows.map(tr).join('')}
-      </tbody>
-    </table>`;
-  elTable.innerHTML = head + table;
+function getDefaultQmin(day) {
+  // Линейная интерполяция между 0.15 (день 1) и 1.00 (день 42)
+  return (0.15 + (1.00 - 0.15) * (day - 1) / 41).toFixed(2);
+}
 
+function getDefaultQmax(day) {
+  // Линейная интерполяция между 0.45 (день 1) и 6.00 (день 42)
+  return (0.45 + (6.00 - 0.45) * (day - 1) / 41).toFixed(2);
+}
+
+function renderConfig() {
+  const unit = cfg.ventilation_unit || 'per_bird';
+
+  elConfigSection.innerHTML = `
+    <div class="card" style="margin-bottom:16px;">
+      <h2>Параметры хозяйства</h2>
+      <div style="display:grid; gap:10px;">
+        <div class="kv"><span>Падёж за цикл</span><span><input id="mort_total" type="number" step="0.01" value="${cfg.total_mortality_pct}"> %</span></div>
+
+        <div class="kv">
+          <span>Единица измерения для Qmin/Qmax</span>
+          <span>
+            <select id="ventilation_unit" style="padding:6px 10px;">
+              <option value="per_bird" ${unit === 'per_bird' ? 'selected' : ''}>м³/ч на бройлера</option>
+              <option value="per_kg" ${unit === 'per_kg' ? 'selected' : ''}>м³/ч на кг живой массы</option>
+            </select>
+          </span>
+        </div>
+      </div>
+      <p class="muted" style="font-size:12px; margin-top:12px;">
+        Нормы вентиляции (Qmin/Qmax) настраиваются для каждого возраста индивидуально в таблице ниже.
+      </p>
+    </div>`;
+
+  const mort = document.getElementById('mort_total');
+  const ventUnit = document.getElementById('ventilation_unit');
+
+  mort.addEventListener('change', ()=>{ cfg.total_mortality_pct = Number(mort.value || 0); });
+  ventUnit.addEventListener('change', ()=>{
+    cfg.ventilation_unit = ventUnit.value;
+    renderTable(); // Обновить заголовки таблицы
+  });
+}
+
+function renderTable() {
+  console.log('Rendering anchor points:', anchorPoints.length);
+
+  const unit = cfg.ventilation_unit || 'per_bird';
+  const unitLabel = unit === 'per_bird' ? 'м³/ч/бр' : 'м³/ч/кг';
+  const unitDescription = unit === 'per_bird'
+    ? 'нормы воздухообмена для данного возраста (м³/ч на голову)'
+    : 'нормы воздухообмена для данного возраста (м³/ч на кг живой массы)';
+
+  const table = `
+    <div class="card">
+      <h2>Профиль по опорным точкам</h2>
+      <p class="muted" style="font-size:12px; margin-bottom:12px;">
+        Введите значения для выбранных дней. Qmin и Qmax - ${unitDescription}. После сохранения система автоматически рассчитает промежуточные значения для всех 42 дней.
+      </p>
+      <table>
+        <thead><tr>
+          <th>День</th>
+          <th>Вес, г</th>
+          <th>Min Temp, °C</th>
+          <th>RH, %</th>
+          <th>Qmin, ${unitLabel}</th>
+          <th>Qmax, ${unitLabel}</th>
+        </tr></thead>
+        <tbody>
+          ${anchorPoints.map(tr).join('')}
+        </tbody>
+      </table>
+    </div>`;
+
+  elTable.innerHTML = table;
+
+  // Add event listeners to inputs
   elTable.querySelectorAll('tbody input').forEach(inp => {
     inp.addEventListener('change', () => {
-      if (inp.id === 'mort') return; // handled separately
-      const d = Number(inp.dataset.day);
+      const idx = Number(inp.dataset.idx);
       const key = inp.dataset.key;
       const val = inp.value === '' ? null : Number(inp.value);
-      const row = rows.find(x => x.day === d);
-      if (row) {
-        if (key === 'bw') row.body_weight_g = val;
-        if (key === 't') row.min_temp_c = val;
-        if (key === 'rv') row.rv_percent = val;
+      const point = anchorPoints[idx];
+      if (point) {
+        if (key === 'bw') point.body_weight_g = val;
+        if (key === 't') point.min_temp_c = val;
+        if (key === 'rv') point.rv_percent = val;
+        if (key === 'qmin') point.q_min_per_bird = val;
+        if (key === 'qmax') point.q_max_per_bird = val;
       }
     });
   });
+}
 
-  const mort = document.getElementById('mort_total');
-  const f1 = document.getElementById('floor_0_7');
-  const f2 = document.getElementById('floor_7_14');
-  mort.addEventListener('change', ()=>{ cfg.total_mortality_pct = Number(mort.value || 0); });
-  f1.addEventListener('change', ()=>{ cfg.min_floor_0_7 = Number(f1.value || 0); });
-  f2.addEventListener('change', ()=>{ cfg.min_floor_7_14 = Number(f2.value || 0); });
+function render() {
+  renderConfig();
+  renderTable();
 }
 
 async function loadAll(){
-  rows = await fetchJSON('/settings/day-master');
-  cfg = await fetchJSON('/settings/app-config');
-  render();
+  try {
+    // ВАЖНО: Загружаем ТОЛЬКО опорные точки, не полный профиль!
+    // Используем mode=anchors чтобы получить только ключевые дни
+    const anchorData = await fetchJSON('/settings/day-master?mode=anchors');
+    console.log('✓ Loaded anchor points:', anchorData.length, 'points');
+
+    if (anchorData && anchorData.length >= 2) {
+      // Используем загруженные опорные точки
+      anchorPoints = anchorData;
+      numAnchorPoints = anchorData.length;
+      elNumPoints.value = anchorData.length;
+      console.log('✓ Using existing anchor points:', anchorPoints.map(p => p.day));
+    } else {
+      // Если нет данных, инициализируем 7 точек по умолчанию
+      anchorPoints = initializeAnchorPoints(7);
+      numAnchorPoints = 7;
+      elNumPoints.value = 7;
+      console.log('✓ Initialized with default 7 anchor points');
+    }
+
+    cfg = await fetchJSON('/settings/app-config');
+    console.log('✓ Loaded app-config:', cfg);
+
+    render();
+  } catch (e) {
+    console.error('✗ Error loading data:', e);
+    elStatus.textContent = 'Ошибка загрузки: ' + String(e);
+  }
 }
 
 async function saveAll(){
   try {
-    elSave.disabled = true; elStatus.textContent = 'Сохранение…';
-    await fetchJSON('/settings/day-master', { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(rows) });
-    await fetchJSON('/settings/app-config', { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(cfg) });
-    elStatus.textContent = 'Сохранено';
+    elSave.disabled = true;
+    elStatus.textContent = 'Сохранение и интерполяция…';
+
+    // Save anchor points with auto-interpolation
+    const url = '/settings/day-master?auto_interpolate=true';
+    await fetchJSON(url, {
+      method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(anchorPoints)
+    });
+
+    await fetchJSON('/settings/app-config', {
+      method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(cfg)
+    });
+
+    elStatus.textContent = '✅ Сохранено и интерполировано до 42 дней';
+    setTimeout(() => { elStatus.textContent = ''; }, 3000);
   } catch(e) {
-    elStatus.textContent = 'Ошибка: ' + String(e);
+    elStatus.textContent = '❌ Ошибка: ' + String(e);
   } finally {
     elSave.disabled = false;
   }
 }
 
+
+function updateNumPoints() {
+  const newNum = Number(elNumPoints.value);
+  if (newNum < 3 || newNum > 10) {
+    alert('Количество точек должно быть от 3 до 10');
+    return;
+  }
+
+  // Preserve existing data where possible
+  const oldDays = anchorPoints.map(p => p.day);
+  const newDays = generateAnchorDays(newNum);
+
+  const newAnchors = newDays.map(day => {
+    const existing = anchorPoints.find(p => p.day === day);
+    if (existing) return existing;
+
+    // Create new point with interpolated values
+    return {
+      day,
+      body_weight_g: Math.round(50 + (2400 - 50) * (day - 1) / 41),
+      min_temp_c: Math.round(33 - (33 - 19) * (day - 1) / 41),
+      rv_percent: 60
+    };
+  });
+
+  anchorPoints = newAnchors;
+  numAnchorPoints = newNum;
+  render();
+  elStatus.textContent = `✅ Обновлено: ${newNum} опорных точек`;
+  setTimeout(() => { elStatus.textContent = ''; }, 2000);
+}
+
 elSave.addEventListener('click', saveAll);
+elUpdatePoints.addEventListener('click', updateNumPoints);
 loadAll();
