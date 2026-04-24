@@ -128,7 +128,17 @@
 
     <footer>
       <small data-i18n="footer_text">API: <code>/calc/minmax</code>. Profile data from <code>data/vent_profile_seed.json</code> or built-in defaults.</small>
+      <small class="muted" style="display:block; margin-top:4px;">
+        build: <code id="buildVersion">…</code>
+      </small>
     </footer>
+
+    <script>
+      // Показываем хэш коммита из Render — моментальная проверка что деплой прошёл
+      fetch('/version').then(r => r.json()).then(d => {
+        document.getElementById('buildVersion').textContent = d.commit;
+      }).catch(() => {});
+    </script>
   </main>
 
   <!-- Confirm delete modal -->

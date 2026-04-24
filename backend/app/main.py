@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
@@ -13,6 +14,13 @@ app = FastAPI(title="Ventilation Min/Max API", version="0.2.0")
 @app.get("/healthz")
 def healthz():
     return {"ok": True}
+
+
+@app.get("/version")
+def version():
+    # RENDER_GIT_COMMIT прокидывается Render автоматически при каждом деплое
+    commit = os.environ.get("RENDER_GIT_COMMIT", "local")[:7]
+    return {"commit": commit}
 
 
 app.include_router(calc.router, prefix="/calc", tags=["calc"])
