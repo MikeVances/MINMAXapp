@@ -20,8 +20,10 @@ input[type="number"], input[type="text"] { width: 100%; padding: 8px 10px; backg
 select { width: 100%; padding: 8px 10px; background: #0e1013; color: var(--text); border: 1px solid var(--border); border-radius: 8px; }
 .btn { background: var(--accent); color: #05122b; border: 0; padding: 10px 14px; border-radius: 10px; cursor: pointer; font-weight: 600; }
 .btn-secondary { background: #2a2c33; color: var(--text); border: 1px solid var(--border); }
+.btn:disabled { opacity: 0.38; cursor: not-allowed; }
+.btn:not(:disabled):hover { filter: brightness(1.12); }
 .tabs { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
-.tab { padding: 6px 10px; border: 1px solid var(--border); border-radius: 999px; cursor: pointer; background: #101217; }
+.tab { padding: 6px 10px; border: 1px solid var(--border); border-radius: 999px; cursor: pointer; background: #101217; color: var(--text); }
 .tab.active { background: #111827; border-color: #2b2e35; color: var(--accent-2); }
 .muted { color: var(--muted); }
 .result { display: grid; gap: 8px; }
@@ -35,6 +37,12 @@ th, td { border-bottom: 1px solid var(--border); padding: 8px 6px; text-align: r
 th:first-child, td:first-child { text-align: left; }
 footer { margin-top: 18px; color: var(--muted); }
 code { background: #0e1013; padding: 2px 6px; border-radius: 6px; border: 1px solid var(--border); }
+
+/* Предотвращаем авто-зум iOS Safari при фокусе на инпуте (триггер < 16px) */
+input[type="number"], input[type="text"], select, textarea { font-size: 16px; }
+
+/* Убираем 300мс задержку двойного тапа на iOS на интерактивных элементах */
+.btn, .tab, button { touch-action: manipulation; }
 
 @media (max-width: 860px) {
   .grid { grid-template-columns: 1fr; }
