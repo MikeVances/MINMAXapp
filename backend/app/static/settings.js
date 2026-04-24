@@ -37,7 +37,7 @@ function initializeAnchorPoints(numPoints) {
   const defaultWeights = { 1: 50, 7: 200, 14: 400, 21: 650, 28: 900, 35: 1200, 42: 2400 };
   const defaultTemps = { 1: 33, 7: 31, 14: 28, 21: 25, 28: 22, 35: 20, 42: 19 };
   const defaultRH = { 1: 60, 7: 60, 14: 60, 21: 60, 28: 60, 35: 60, 42: 60 };
-  // Типичные нормы воздухообмена по возрасту (м³/ч на голову)
+  // Typical ventilation rates by age (m³/h per bird)
   const defaultQmin = { 1: 0.15, 7: 0.25, 14: 0.35, 21: 0.50, 28: 0.65, 35: 0.80, 42: 1.00 };
   const defaultQmax = { 1: 0.45, 7: 1.20, 14: 2.00, 21: 3.20, 28: 4.20, 35: 5.10, 42: 6.00 };
 
@@ -52,7 +52,7 @@ function initializeAnchorPoints(numPoints) {
 }
 
 function tr(d) {
-  // Установить значения по умолчанию если пусто
+  // Use defaults if value is missing
   const qmin = d.q_min_per_bird ?? getDefaultQmin(d.day);
   const qmax = d.q_max_per_bird ?? getDefaultQmax(d.day);
 
@@ -67,12 +67,12 @@ function tr(d) {
 }
 
 function getDefaultQmin(day) {
-  // Линейная интерполяция между 0.15 (день 1) и 1.00 (день 42)
+  // Linear interpolation: 0.15 (day 1) → 1.00 (day 42)
   return (0.15 + (1.00 - 0.15) * (day - 1) / 41).toFixed(2);
 }
 
 function getDefaultQmax(day) {
-  // Линейная интерполяция между 0.45 (день 1) и 6.00 (день 42)
+  // Linear interpolation: 0.45 (day 1) → 6.00 (day 42)
   return (0.45 + (6.00 - 0.45) * (day - 1) / 41).toFixed(2);
 }
 
@@ -81,22 +81,22 @@ function renderConfig() {
 
   elConfigSection.innerHTML = `
     <div class="card" style="margin-bottom:16px;">
-      <h2>Параметры хозяйства</h2>
+      <h2>Farm parameters</h2>
       <div style="display:grid; gap:10px;">
-        <div class="kv"><span>Падёж за цикл</span><span><input id="mort_total" type="number" step="0.01" value="${cfg.total_mortality_pct}"> %</span></div>
+        <div class="kv"><span>Total mortality per cycle</span><span><input id="mort_total" type="number" step="0.01" value="${cfg.total_mortality_pct}"> %</span></div>
 
         <div class="kv">
-          <span>Единица измерения для Qmin/Qmax</span>
+          <span>Qmin/Qmax unit</span>
           <span>
             <select id="ventilation_unit" style="padding:6px 10px;">
-              <option value="per_bird" ${unit === 'per_bird' ? 'selected' : ''}>м³/ч на бройлера</option>
-              <option value="per_kg" ${unit === 'per_kg' ? 'selected' : ''}>м³/ч на кг живой массы</option>
+              <option value="per_bird" ${unit === 'per_bird' ? 'selected' : ''}>m³/h per bird</option>
+              <option value="per_kg" ${unit === 'per_kg' ? 'selected' : ''}>m³/h per kg live weight</option>
             </select>
           </span>
         </div>
       </div>
       <p class="muted" style="font-size:12px; margin-top:12px;">
-        Нормы вентиляции (Qmin/Qmax) настраиваются для каждого возраста индивидуально в таблице ниже.
+        Ventilation rates (Qmin/Qmax) are configured per age in the table below.
       </p>
     </div>`;
 
@@ -106,7 +106,7 @@ function renderConfig() {
   mort.addEventListener('change', ()=>{ cfg.total_mortality_pct = Number(mort.value || 0); });
   ventUnit.addEventListener('change', ()=>{
     cfg.ventilation_unit = ventUnit.value;
-    renderTable(); // Обновить заголовки таблицы
+    renderTable(); // Refresh table headers
   });
 }
 
@@ -114,21 +114,21 @@ function renderTable() {
   console.log('Rendering anchor points:', anchorPoints.length);
 
   const unit = cfg.ventilation_unit || 'per_bird';
-  const unitLabel = unit === 'per_bird' ? 'м³/ч/бр' : 'м³/ч/кг';
+  const unitLabel = unit === 'per_bird' ? 'm³/h/bird' : 'm³/h/kg';
   const unitDescription = unit === 'per_bird'
-    ? 'нормы воздухообмена для данного возраста (м³/ч на голову)'
-    : 'нормы воздухообмена для данного возраста (м³/ч на кг живой массы)';
+    ? 'ventilation rates for this age (m³/h per bird)'
+    : 'ventilation rates for this age (m³/h per kg live weight)';
 
   const table = `
     <div class="card">
-      <h2>Профиль по опорным точкам</h2>
+      <h2>Anchor-point profile</h2>
       <p class="muted" style="font-size:12px; margin-bottom:12px;">
-        Введите значения для выбранных дней. Qmin и Qmax - ${unitDescription}. После сохранения система автоматически рассчитает промежуточные значения для всех 42 дней.
+        Enter values for the selected days. Qmin and Qmax are ${unitDescription}. After saving, the system automatically interpolates all 42 days.
       </p>
       <table>
         <thead><tr>
-          <th>День</th>
-          <th>Вес, г</th>
+          <th>Day</th>
+          <th>Weight, g</th>
           <th>Min Temp, °C</th>
           <th>RH, %</th>
           <th>Qmin, ${unitLabel}</th>
@@ -167,19 +167,18 @@ function render() {
 
 async function loadAll(){
   try {
-    // ВАЖНО: Загружаем ТОЛЬКО опорные точки, не полный профиль!
-    // Используем mode=anchors чтобы получить только ключевые дни
+    // Load ONLY anchor points, not the full interpolated profile
+    // mode=anchors returns only the key days
     const anchorData = await fetchJSON('/settings/day-master?mode=anchors');
     console.log('✓ Loaded anchor points:', anchorData.length, 'points');
 
     if (anchorData && anchorData.length >= 2) {
-      // Используем загруженные опорные точки
       anchorPoints = anchorData;
       numAnchorPoints = anchorData.length;
       elNumPoints.value = anchorData.length;
       console.log('✓ Using existing anchor points:', anchorPoints.map(p => p.day));
     } else {
-      // Если нет данных, инициализируем 7 точек по умолчанию
+      // No data saved yet — initialise with 7 default points
       anchorPoints = initializeAnchorPoints(7);
       numAnchorPoints = 7;
       elNumPoints.value = 7;
@@ -192,14 +191,14 @@ async function loadAll(){
     render();
   } catch (e) {
     console.error('✗ Error loading data:', e);
-    elStatus.textContent = 'Ошибка загрузки: ' + String(e);
+    elStatus.textContent = 'Load error: ' + String(e);
   }
 }
 
 async function saveAll(){
   try {
     elSave.disabled = true;
-    elStatus.textContent = 'Сохранение и интерполяция…';
+    elStatus.textContent = 'Saving and interpolating…';
 
     // Save anchor points with auto-interpolation
     const url = '/settings/day-master?auto_interpolate=true';
@@ -215,10 +214,10 @@ async function saveAll(){
       body: JSON.stringify(cfg)
     });
 
-    elStatus.textContent = '✅ Сохранено и интерполировано до 42 дней';
+    elStatus.textContent = '✅ Saved and interpolated to 42 days';
     setTimeout(() => { elStatus.textContent = ''; }, 3000);
   } catch(e) {
-    elStatus.textContent = '❌ Ошибка: ' + String(e);
+    elStatus.textContent = '❌ Error: ' + String(e);
   } finally {
     elSave.disabled = false;
   }
@@ -228,7 +227,7 @@ async function saveAll(){
 function updateNumPoints() {
   const newNum = Number(elNumPoints.value);
   if (newNum < 3 || newNum > 10) {
-    alert('Количество точек должно быть от 3 до 10');
+    alert('Number of points must be between 3 and 10');
     return;
   }
 
@@ -252,7 +251,7 @@ function updateNumPoints() {
   anchorPoints = newAnchors;
   numAnchorPoints = newNum;
   render();
-  elStatus.textContent = `✅ Обновлено: ${newNum} опорных точек`;
+  elStatus.textContent = `✅ Updated: ${newNum} anchor points`;
   setTimeout(() => { elStatus.textContent = ''; }, 2000);
 }
 

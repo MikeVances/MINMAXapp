@@ -56,7 +56,7 @@ function renderTabs() {
   tabs.forEach((t, i) => {
     const b = document.createElement('button');
     b.className = 'tab' + (i === active ? ' active' : '');
-    b.textContent = `Птичник ${t.id}`;
+    b.textContent = `House ${t.id}`;
     b.onclick = () => { active = i; fillForm(); renderTabs(); renderHouseTabs(); loadFlockInfo(); };
     elTabs.appendChild(b);
   });
@@ -65,9 +65,9 @@ function renderTabs() {
 function renderHouseTabs() {
   if (!elHouseTabs) return;
   const houseTabsData = [
-    { id: 'calc', label: 'Расчёты' },
-    { id: 'diary', label: 'Дневник' },
-    { id: 'analytics', label: 'Аналитика' }
+    { id: 'calc', label: 'Calculations' },
+    { id: 'diary', label: 'Diary' },
+    { id: 'analytics', label: 'Analytics' }
   ];
   elHouseTabs.innerHTML = '';
   houseTabsData.forEach(ht => {
@@ -160,7 +160,7 @@ async function recalc() {
   };
   if (t.cap !== null && t.cap !== undefined && t.cap !== '') payload.user_max_m3h = t.cap;
 
-  elSum.disabled = true; elSum.textContent = 'Считаем…';
+  elSum.disabled = true; elSum.textContent = 'Calculating…';
   try {
     const r = await fetch('/calc/minmax', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -173,9 +173,9 @@ async function recalc() {
     const data = await r.json();
     renderResult(data, t);
   } catch (e) {
-    elResult.innerHTML = `<div class="danger">Ошибка запроса: ${String(e)}</div>`;
+    elResult.innerHTML = `<div class="danger">Request error: ${String(e)}</div>`;
   } finally {
-    elSum.disabled = false; elSum.textContent = 'Рассчитать профиль';
+    elSum.disabled = false; elSum.textContent = 'Calculate profile';
   }
 }
 
@@ -191,7 +191,7 @@ async function summary7() {
     display_unit: t.unit,
     outside_t: t.outside_t ?? 15,
   };
-  elSum.disabled = true; elSum.textContent = 'Считаем…';
+  elSum.disabled = true; elSum.textContent = 'Calculating…';
   try {
     const r = await fetch('/calc/summary7', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -205,24 +205,24 @@ async function summary7() {
     lastSummary = data;
     renderSummary(data);
   } catch (e) {
-    elSummary.innerHTML = `<div class="danger">Ошибка запроса: ${String(e)}</div>`;
+    elSummary.innerHTML = `<div class="danger">Request error: ${String(e)}</div>`;
   } finally {
-    elSum.disabled = false; elSum.textContent = 'Рассчитать профиль';
+    elSum.disabled = false; elSum.textContent = 'Calculate profile';
   }
 }
 
 function renderSummary(d) {
   const t = tabs[active];
   const outsideT = t.outside_t ?? 15;
-  const head = `<div class="kv"><span>Температура наружного воздуха</span><span>${outsideT} °C</span></div>
-                <div class="kv"><span>Птичник/Птица</span><span>${d.house} / ${d.birds}</span></div>
-                <div class="kv"><span>Макс. производительность</span><span>${d.user_max_m3h ?? '—'} м³/ч</span></div>`;
+  const head = `<div class="kv"><span>Outdoor temperature</span><span>${outsideT} °C</span></div>
+                <div class="kv"><span>House / Birds</span><span>${d.house} / ${d.birds}</span></div>
+                <div class="kv"><span>System max capacity</span><span>${d.user_max_m3h ?? '—'} m³/h</span></div>`;
   const mode = elView ? elView.value : 'total';
   const headerByMode = {
-    total: ['Qmin, м³/ч', 'Qmax, м³/ч'],
+    total: ['Qmin, m³/h', 'Qmax, m³/h'],
     percent: ['Qmin, %', 'Qmax, %'],
-    per_bird: ['Qmin, м³/ч/бр', 'Qmax, м³/ч/бр'],
-    per_kg: ['Qmin, м³/ч/кг', 'Qmax, м³/ч/кг']
+    per_bird: ['Qmin, m³/h/bird', 'Qmax, m³/h/bird'],
+    per_kg: ['Qmin, m³/h/kg', 'Qmax, m³/h/kg']
   };
   const headCols = headerByMode[mode] || headerByMode.total;
   const rows = d.rows.map(r => {
@@ -250,7 +250,7 @@ function renderSummary(d) {
   elSummary.innerHTML = `${head}
     <table>
       <thead><tr>
-        <th>День</th><th>Min Temp, °C</th><th>Вес, г</th>
+        <th>Day</th><th>Min Temp, °C</th><th>Weight, g</th>
         <th>${headCols[0]}</th><th>${headCols[1]}</th>
       </tr></thead>
       <tbody>${rows}</tbody>
@@ -261,18 +261,18 @@ function renderResult(d, t) {
   const cap = t.cap ? Number(t.cap) : null;
   const pct = (x) => cap && cap > 0 ? ((x / cap) * 100).toFixed(1) + '%' : '—';
   const weight = (typeof d.weight_used_g === 'number' && isFinite(d.weight_used_g)) ? d.weight_used_g.toFixed(0) : '—';
-  const dayInfo = d.day_setpoints ? `<div class="kv"><span>Уставки дня</span><span>${d.day_setpoints.min_temp_c ?? '—'} °C, RH ${d.day_setpoints.rv_percent ?? '—'}%</span></div>` : '';
+  const dayInfo = d.day_setpoints ? `<div class="kv"><span>Day setpoints</span><span>${d.day_setpoints.min_temp_c ?? '—'} °C, RH ${d.day_setpoints.rv_percent ?? '—'}%</span></div>` : '';
 
   elResult.innerHTML = `
-    <div class="kv"><span>Возраст, день</span><span>${d.profile_day_resolved}</span></div>
-    <div class="kv"><span>Вес, г</span><span>${weight}</span></div>
-    <div class="kv big"><span>Qmin</span><span class="ok">${Math.round(d.q_min_m3h)} м³/ч</span></div>
-    <div class="kv"><span>Qmin от мощности</span><span>${pct(d.q_min_m3h)}</span></div>
-    <div class="kv big"><span>Qmax</span><span class="warn">${Math.round(d.q_max_m3h)} м³/ч</span></div>
-    <div class="kv"><span>Qmax (номинал)</span><span>${Math.round(d.q_max_nominal_m3h)} м³/ч</span></div>
-    <div class="kv"><span>Qmax от мощности</span><span>${pct(d.q_max_m3h)}</span></div>
-    <div class="kv"><span>Ставки (на голову)</span><span>${d.rates.per_bird.min}…${d.rates.per_bird.max} м³/ч/бр</span></div>
-    <div class="kv"><span>Ставки (на кг)</span><span>${d.rates.per_kg.min}…${d.rates.per_kg.max} м³/ч/кг</span></div>
+    <div class="kv"><span>Age, day</span><span>${d.profile_day_resolved}</span></div>
+    <div class="kv"><span>Weight, g</span><span>${weight}</span></div>
+    <div class="kv big"><span>Qmin</span><span class="ok">${Math.round(d.q_min_m3h)} m³/h</span></div>
+    <div class="kv"><span>Qmin % of capacity</span><span>${pct(d.q_min_m3h)}</span></div>
+    <div class="kv big"><span>Qmax</span><span class="warn">${Math.round(d.q_max_m3h)} m³/h</span></div>
+    <div class="kv"><span>Qmax nominal</span><span>${Math.round(d.q_max_nominal_m3h)} m³/h</span></div>
+    <div class="kv"><span>Qmax % of capacity</span><span>${pct(d.q_max_m3h)}</span></div>
+    <div class="kv"><span>Rates per bird</span><span>${d.rates.per_bird.min}…${d.rates.per_bird.max} m³/h/bird</span></div>
+    <div class="kv"><span>Rates per kg LW</span><span>${d.rates.per_kg.min}…${d.rates.per_kg.max} m³/h/kg</span></div>
     ${dayInfo}
   `;
 }
@@ -291,7 +291,7 @@ elDelTab.onclick = () => {
   const name = t?.id ?? (active + 1);
   pendingDeleteIndex = active;
   if (elModal && elModalText) {
-    elModalText.textContent = `Удалить птичник «${name}»? Это действие удалит локально сохранённые данные этой вкладки и не может быть отменено.`;
+    elModalText.textContent = `Remove house "${name}"? This will delete locally saved data for this tab and cannot be undone.`;
     elModal.classList.remove('hidden');
     // inline fallback styles (на случай кеша CSS)
     elModal.style.position = 'fixed';

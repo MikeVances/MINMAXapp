@@ -1,32 +1,32 @@
 <!doctype html>
-<html lang="ru">
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Настройки — Профиль 42 дня</title>
+  <title>Settings — 42-day Profile</title>
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
   <main class="container">
-    <h1>Настройки: профиль 42 дня</h1>
-    <p class="muted">Задайте опорные точки профиля. Система автоматически интерполирует значения между точками для создания полного профиля 42 дня.</p>
+    <h1>Settings: 42-day profile</h1>
+    <p class="muted">Define anchor points for the ventilation profile. Values between points are automatically interpolated to produce a full 42-day profile.</p>
 
     <div style="margin:16px 0; display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
-      <a class="btn btn-secondary" href="/">← На главную</a>
-      <button id="saveBtn" class="btn">Сохранить и интерполировать</button>
+      <a class="btn btn-secondary" href="/">← Home</a>
+      <button id="saveBtn" class="btn">Save &amp; interpolate</button>
       <span id="status" class="muted"></span>
     </div>
 
     <!-- Anchor points configuration -->
     <div class="card" style="margin-bottom:16px;">
-      <h2>Опорные точки</h2>
+      <h2>Anchor points</h2>
       <div style="display:flex; gap:16px; align-items:center; flex-wrap:wrap;">
         <label style="display:flex; align-items:center; gap:8px;">
-          Количество точек:
+          Number of points:
           <input id="numPoints" type="number" min="3" max="10" value="7" style="width:80px;" />
         </label>
-        <button id="updatePointsBtn" class="btn btn-secondary">Применить</button>
-        <span class="muted" style="font-size:12px;">Рекомендуется: 7 точек (недельный профиль)</span>
+        <button id="updatePointsBtn" class="btn btn-secondary">Apply</button>
+        <span class="muted" style="font-size:12px;">Recommended: 7 points (weekly profile)</span>
       </div>
     </div>
 

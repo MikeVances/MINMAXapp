@@ -40,8 +40,8 @@ function updateDimensionsDisplay() {
   if (l > 0 && w > 0 && h > 0) {
     const volume = l * w * h;
     const area = l * w;
-    elVolumeDisplay.textContent = `${volume.toFixed(1)} м³`;
-    elAreaDisplay.textContent = `${area.toFixed(1)} м²`;
+    elVolumeDisplay.textContent = `${volume.toFixed(1)} m³`;
+    elAreaDisplay.textContent = `${area.toFixed(1)} m²`;
   } else {
     elVolumeDisplay.textContent = '— м³';
     elAreaDisplay.textContent = '— м²';
@@ -70,7 +70,7 @@ elSaveBuildingBtn.addEventListener('click', async () => {
   const h = parseFloat(elHeight.value);
 
   if (!l || !w || !h || l <= 0 || w <= 0 || h <= 0) {
-    elBuildingStatus.textContent = '❌ Введите корректные размеры';
+    elBuildingStatus.textContent = '❌ Enter valid dimensions';
     elBuildingStatus.style.color = 'var(--danger, #ff7a7a)';
     return;
   }
@@ -78,6 +78,7 @@ elSaveBuildingBtn.addEventListener('click', async () => {
   try {
     const config = await loadConfig();
     config.building = { length_m: l, width_m: w, height_m: h };
+
 
     const r = await fetch('/thermal/config', {
       method: 'PUT',
@@ -87,7 +88,7 @@ elSaveBuildingBtn.addEventListener('click', async () => {
 
     if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
 
-    elBuildingStatus.textContent = '✅ Сохранено';
+    elBuildingStatus.textContent = '✅ Saved';
     elBuildingStatus.style.color = 'var(--ok, #7bc96f)';
     await loadAndDisplayConfig();
 
@@ -103,7 +104,7 @@ elSaveHeaterBtn.addEventListener('click', async () => {
   const power = parseFloat(elHeaterPower.value);
 
   if (!power || power < 0) {
-    elHeaterStatus.textContent = '❌ Введите корректную мощность';
+    elHeaterStatus.textContent = '❌ Enter valid heating capacity';
     elHeaterStatus.style.color = 'var(--danger, #ff7a7a)';
     return;
   }
@@ -171,14 +172,14 @@ elCalculateBtn.addEventListener('click', async () => {
 
     elCalibrationResult.innerHTML = `
       <div style="padding:12px; background:var(--ok-bg,#1a3a1a); border-left:3px solid var(--ok,#7bc96f); border-radius:4px;">
-        <strong>✅ Калибровка выполнена успешно</strong>
+        <strong>✅ Calibration complete</strong>
         <div style="margin-top:8px; display:grid; gap:6px;">
-          <div class="kv"><span>UA коэффициент</span><span><strong>${calculatedUA.toFixed(1)} Вт/°C</strong></span></div>
-          <div class="kv"><span>Объем помещения</span><span>${data.volume_m3.toFixed(1)} м³</span></div>
-          <div class="kv"><span>Скорость охлаждения</span><span>${coolingRate.toFixed(3)} °C/мин</span></div>
+          <div class="kv"><span>UA coefficient</span><span><strong>${calculatedUA.toFixed(1)} W/°C</strong></span></div>
+          <div class="kv"><span>Building volume</span><span>${data.volume_m3.toFixed(1)} m³</span></div>
+          <div class="kv"><span>Cooling rate</span><span>${coolingRate.toFixed(3)} °C/min</span></div>
         </div>
         <p class="muted" style="margin:8px 0 0 0; font-size:13px;">
-          Теперь нажмите "Сохранить калибровку" чтобы использовать эти данные в расчетах.
+          Click "Save calibration" to use these values in ventilation calculations.
         </p>
       </div>
     `;
@@ -259,27 +260,27 @@ elAnalyzeBtn.addEventListener('click', async () => {
     if (data.air_demand_m3h > 0) {
       airInfo = `
         <div class="kv" style="background:var(--warning-bg,#3a2f1a); padding:8px; border-radius:4px; border-left:3px solid var(--warning,#f4b942);">
-          <span>Дополнительный воздух для горения</span>
-          <span><strong>${airDemand} м³/ч</strong></span>
+          <span>Additional combustion air</span>
+          <span><strong>${airDemand} m³/h</strong></span>
         </div>
       `;
     } else {
-      airInfo = `<p class="muted" style="margin:8px 0;">Электрические обогреватели не требуют дополнительного воздуха для горения.</p>`;
+      airInfo = `<p class="muted" style="margin:8px 0;">Electric heaters do not require additional combustion air.</p>`;
     }
 
     elAnalysisResult.innerHTML = `
       <div style="padding:12px; background:var(--card); border:1px solid var(--border); border-radius:8px; margin-top:12px;">
-        <strong>📊 Результаты анализа:</strong>
+        <strong>📊 Analysis results:</strong>
         <div style="margin-top:8px; display:grid; gap:8px;">
-          <div class="kv"><span>Теплопотери</span><span>${heatLoss} кВт</span></div>
-          <div class="kv"><span>Загрузка обогревателей</span><span>${dutyCyclePercent}%</span></div>
-          <div class="kv"><span>Время работы</span><span>${dutyCyclePercent}% от времени</span></div>
+          <div class="kv"><span>Heat loss</span><span>${heatLoss} kW</span></div>
+          <div class="kv"><span>Heater load</span><span>${dutyCyclePercent}%</span></div>
+          <div class="kv"><span>Run time</span><span>${dutyCyclePercent}% of the time</span></div>
           ${airInfo}
         </div>
         <p class="muted" style="margin:8px 0 0 0; font-size:13px;">
           ${data.air_demand_m3h > 0 ?
-            'Этот воздух будет автоматически добавлен к минимальной вентиляции в расчетах.' :
-            'Расчеты вентиляции не изменятся, так как электрические обогреватели не требуют воздуха.'}
+            'This air will be automatically added to minimum ventilation in calculations.' :
+            'Ventilation calculations will not change — electric heaters do not consume combustion air.'}
         </p>
       </div>
     `;
@@ -314,10 +315,10 @@ async function loadAndDisplayConfig() {
 
     html += `
       <div style="margin-bottom:12px;">
-        <strong>🏢 Размеры помещения:</strong>
-        <div class="kv"><span>Длина × Ширина × Высота</span><span>${b.length_m} × ${b.width_m} × ${b.height_m} м</span></div>
-        <div class="kv"><span>Объем</span><span>${volume} м³</span></div>
-        <div class="kv"><span>Площадь пола</span><span>${area} м²</span></div>
+        <strong>🏢 Building dimensions:</strong>
+        <div class="kv"><span>Length × Width × Height</span><span>${b.length_m} × ${b.width_m} × ${b.height_m} m</span></div>
+        <div class="kv"><span>Volume</span><span>${volume} m³</span></div>
+        <div class="kv"><span>Floor area</span><span>${area} m²</span></div>
       </div>
     `;
 
@@ -327,18 +328,18 @@ async function loadAndDisplayConfig() {
     elHeight.value = b.height_m;
     updateDimensionsDisplay();
   } else {
-    html += '<div class="muted">🏢 Размеры помещения не заданы</div>';
+    html += '<div class="muted">🏢 Building dimensions not set</div>';
   }
 
   if (config.heater) {
     const h = config.heater;
-    const typeLabel = h.heater_type === 'gas_open' ? 'Газовые открытого горения' : 'Электрические';
+    const typeLabel = h.heater_type === 'gas_open' ? 'Open-flame gas brooders' : 'Electric heaters';
 
     html += `
       <div style="margin-bottom:12px;">
-        <strong>🔥 Обогревательное оборудование:</strong>
-        <div class="kv"><span>Тип</span><span>${typeLabel}</span></div>
-        <div class="kv"><span>Мощность</span><span>${h.total_power_kw} кВт</span></div>
+        <strong>🔥 Heating equipment:</strong>
+        <div class="kv"><span>Type</span><span>${typeLabel}</span></div>
+        <div class="kv"><span>Capacity</span><span>${h.total_power_kw} kW</span></div>
       </div>
     `;
 
@@ -347,20 +348,20 @@ async function loadAndDisplayConfig() {
     elHeaterPower.value = h.total_power_kw;
     updateGasInfoVisibility();
   } else {
-    html += '<div class="muted">🔥 Обогреватели не настроены</div>';
+    html += '<div class="muted">🔥 Heaters not configured</div>';
   }
 
   if (config.calibration) {
     const c = config.calibration;
     html += `
       <div>
-        <strong>🔬 Калибровка выполнена:</strong>
-        <div class="kv"><span>UA коэффициент</span><span>${c.ua_coefficient.toFixed(1)} Вт/°C</span></div>
-        <div class="kv"><span>Условия теста</span><span>${c.t_initial_c}°C → ${c.t_final_c}°C за ${c.time_minutes} мин (снаружи ${c.t_outside_c}°C)</span></div>
+        <strong>🔬 Calibration complete:</strong>
+        <div class="kv"><span>UA coefficient</span><span>${c.ua_coefficient.toFixed(1)} W/°C</span></div>
+        <div class="kv"><span>Test conditions</span><span>${c.t_initial_c}°C → ${c.t_final_c}°C in ${c.time_minutes} min (outdoor ${c.t_outside_c}°C)</span></div>
       </div>
     `;
   } else {
-    html += '<div class="muted">🔬 Калибровка не выполнена</div>';
+    html += '<div class="muted">🔬 Calibration not performed</div>';
   }
 
   elCurrentConfig.innerHTML = html;
