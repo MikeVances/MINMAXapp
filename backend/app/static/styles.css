@@ -22,8 +22,12 @@ select { width: 100%; padding: 8px 10px; background: #0e1013; color: var(--text)
 .btn-secondary { background: #2a2c33; color: var(--text); border: 1px solid var(--border); }
 .btn:disabled { opacity: 0.38; cursor: not-allowed; }
 .btn:not(:disabled):hover { filter: brightness(1.12); }
-.tabs { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
-.tab { padding: 6px 10px; border: 1px solid var(--border); border-radius: 999px; cursor: pointer; background: #101217; color: var(--text); }
+/* overflow-x:auto + nowrap — вкладки скроллятся горизонтально, а не переносятся.
+   Без этого при большом числе домов вкладки занимают весь экран. */
+.tabs { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
+/* flex-shrink:0 — таб не сжимается при nowrap, сохраняет читаемость текста */
+.tab { flex-shrink: 0; padding: 6px 10px; border: 1px solid var(--border); border-radius: 999px; cursor: pointer; background: #101217; color: var(--text); }
 .tab.active { background: #111827; border-color: #2b2e35; color: var(--accent-2); }
 .muted { color: var(--muted); }
 .result { display: grid; gap: 8px; }

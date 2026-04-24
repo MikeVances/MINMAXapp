@@ -283,7 +283,14 @@ function renderResult(d, tab) {
   `;
 }
 
+const MAX_HOUSES = 30; // разумный предел для одной фермы
+
 elAddTab.onclick = () => {
+  if (tabs.length >= MAX_HOUSES) {
+    // Не даём накапливать сотни корпусов и ломать вёрстку
+    alert(t('err_max_houses', { max: MAX_HOUSES }));
+    return;
+  }
   const last = tabs[tabs.length - 1]?.id || '0';
   const nextNum = parseInt(last, 10);
   const nextId = isNaN(nextNum) ? `${tabs.length + 1}` : String(nextNum + 1);

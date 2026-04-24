@@ -76,6 +76,7 @@ const LOCALES = {
 
     // ── APP.JS dynamic ─────────────────────────────
     house_tab:          'House {id}',
+    err_max_houses:     'Maximum {max} houses reached. Remove unused houses before adding new ones.',
     btn_calculating:    'Calculating…',
     err_request:        'Request error: {msg}',
     modal_remove_txt:   'Remove house "{name}"? This will delete locally saved data for this tab and cannot be undone.',
@@ -416,6 +417,7 @@ const LOCALES = {
 
     // ── APP.JS динамика ────────────────────────────
     house_tab:          'Птичник {id}',
+    err_max_houses:     'Достигнут лимит {max} корпусов. Удалите неиспользуемые перед добавлением новых.',
     btn_calculating:    'Расчёт…',
     err_request:        'Ошибка запроса: {msg}',
     modal_remove_txt:   'Удалить птичник «{name}»? Локальные данные этой вкладки будут удалены без возможности восстановления.',
