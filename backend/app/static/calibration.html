@@ -94,29 +94,50 @@
     <section style="margin-top:16px;">
       <div class="card">
         <h2 data-i18n="step3_h2">Step 3: Cooling test (calibration)</h2>
-        <p class="muted" style="margin-bottom:12px;" data-i18n-html="step3_proc_html"></p>
 
-        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:12px;">
-          <label data-i18n="label_t_initial">Initial temperature, °C
-            <input id="tInitial" type="number" step="0.1" min="-20" max="50" placeholder="30.0">
-          </label>
-          <label data-i18n="label_t_final">Final temperature, °C
-            <input id="tFinal" type="number" step="0.1" min="-20" max="50" placeholder="28.0">
-          </label>
-          <label data-i18n="label_t_outside">Outdoor temperature, °C
-            <input id="tOutside" type="number" step="0.1" min="-40" max="50" placeholder="-5.0">
-          </label>
-          <label data-i18n="label_time_min">Test duration, minutes
-            <input id="timeMinutes" type="number" step="0.1" min="0.1" max="60" placeholder="5.0">
-          </label>
+        <!-- Пошаговая инструкция -->
+        <div style="margin-bottom:16px;" data-i18n-html="step3_proc_html"></div>
+
+        <!-- Единственный ручной ввод — уличная температура -->
+        <label style="max-width:280px;">
+          <span data-i18n="label_t_outside">Outdoor temperature, °C</span>
+          <input id="tOutside" type="number" step="0.1" min="-40" max="50" placeholder="-5.0">
+        </label>
+
+        <!-- Фиксированные температуры теста -->
+        <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;">
+          <div class="kv" style="flex:1; min-width:130px;">
+            <span data-i18n="lbl_t_start">Start temp</span>
+            <span><strong>30 °C</strong></span>
+          </div>
+          <div class="kv" style="flex:1; min-width:130px;">
+            <span data-i18n="lbl_t_stop">Stop temp</span>
+            <span><strong>25 °C</strong></span>
+          </div>
         </div>
 
-        <div style="display:flex; gap:10px; margin-top:12px; flex-wrap:wrap;">
-          <button id="calculateBtn" class="btn" data-i18n="btn_calc_ua">📊 Calculate UA coefficient</button>
-          <button id="saveCalibrationBtn" class="btn" disabled data-i18n="btn_save_cal">💾 Save calibration</button>
+        <!-- Таймер -->
+        <div style="margin-top:20px; padding:20px 16px; background:var(--bg); border-radius:10px; text-align:center;">
+          <div id="timerDisplay"
+               style="font-size:52px; font-weight:700; font-family:monospace; letter-spacing:6px; color:var(--accent);">
+            00:00
+          </div>
+          <div id="timerStatus" class="muted" style="margin:10px 0 18px; font-size:13px;"
+               data-i18n="timer_ready">Heat building to 30 °C, then press Start.</div>
+          <button id="timerBtn" class="btn" data-i18n="btn_start_test">▶ Start test</button>
         </div>
 
-        <div id="calibrationResult" style="margin-top:12px;"></div>
+        <!-- Скрытые поля — заполняются таймером, читаются логикой расчёта -->
+        <input id="tInitial"    type="hidden" value="30">
+        <input id="tFinal"      type="hidden" value="25">
+        <input id="timeMinutes" type="hidden" value="">
+
+        <!-- Кнопка расчёта скрыта — вызывается программно из таймера -->
+        <button id="calculateBtn" style="display:none;">Calculate</button>
+
+        <div id="calibrationResult" style="margin-top:14px;"></div>
+        <button id="saveCalibrationBtn" class="btn" style="margin-top:10px;" disabled
+                data-i18n="btn_save_cal">💾 Save calibration</button>
       </div>
     </section>
 
@@ -153,6 +174,6 @@
 
   </main>
 
-  <script src="/calibration.js?v=2"></script>
+  <script src="/calibration.js?v=3"></script>
 </body>
 </html>

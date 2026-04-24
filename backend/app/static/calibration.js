@@ -29,6 +29,92 @@ const elAnalysisResult    = document.getElementById('analysisResult');
 
 const elCurrentConfig = document.getElementById('currentConfig');
 
+// ── Таймер теста охлаждения ──────────────────────────────────────────────────
+const elTimerBtn     = document.getElementById('timerBtn');
+const elTimerDisplay = document.getElementById('timerDisplay');
+const elTimerStatus  = document.getElementById('timerStatus');
+
+// Фиксированные температуры — отдельно от DOM, чтобы логика была явной
+const T_TEST_START = 30.0;  // °C — нагреть до этой температуры
+const T_TEST_END   = 25.0;  // °C — остановить таймер при этой температуре
+
+let timerRunning   = false;
+let timerInterval  = null;
+let timerStartTime = null; // timestamp Date.now()
+
+function timerFormat(totalSeconds) {
+  const m = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
+  const s = (totalSeconds % 60).toString().padStart(2, '0');
+  return `${m}:${s}`;
+}
+
+elTimerBtn.addEventListener('click', () => {
+  if (!timerRunning) {
+    // ── СТАРТ ──────────────────────────────────────
+    const tOut = parseFloat(elTOutside.value);
+    if (isNaN(tOut)) {
+      elTimerStatus.textContent = t('err_enter_outside_first');
+      elTimerStatus.style.color = 'var(--danger)';
+      return;
+    }
+    if (tOut >= T_TEST_END) {
+      // Уличная температура выше температуры остановки — тест некорректен
+      elTimerStatus.textContent = t('err_outside_too_warm', { t_end: T_TEST_END });
+      elTimerStatus.style.color = 'var(--danger)';
+      return;
+    }
+
+    timerRunning   = true;
+    timerStartTime = Date.now();
+
+    elTimerDisplay.style.color = 'var(--accent-2)'; // зелёный — идёт тест
+    elTimerStatus.style.color  = '';
+    elTimerStatus.textContent  = t('timer_running', { t_end: T_TEST_END });
+    elTimerBtn.textContent     = t('btn_stop_test', { t_end: T_TEST_END });
+    elTimerBtn.style.background = 'var(--danger, #ff7a7a)';
+    elTimerBtn.style.color      = '#1b0b0b';
+
+    timerInterval = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - timerStartTime) / 1000);
+      elTimerDisplay.textContent = timerFormat(elapsed);
+    }, 500); // 500мс чтобы не было заметного лага при старте
+
+  } else {
+    // ── СТОП ───────────────────────────────────────
+    clearInterval(timerInterval);
+    timerRunning = false;
+
+    const elapsedSeconds = Math.floor((Date.now() - timerStartTime) / 1000);
+    const elapsedMinutes = elapsedSeconds / 60;
+
+    // Сбрасываем стиль кнопки
+    elTimerBtn.textContent      = t('btn_start_test');
+    elTimerBtn.style.background = '';
+    elTimerBtn.style.color      = '';
+    elTimerDisplay.style.color  = 'var(--accent)';
+
+    if (elapsedSeconds < 30) {
+      // Слишком мало времени — результат будет ненадёжным
+      elTimerStatus.textContent = t('err_test_too_short');
+      elTimerStatus.style.color = 'var(--warn, #ffcf6b)';
+      return;
+    }
+
+    // Заполняем скрытые поля — остальная логика расчёта не меняется
+    elTInitial.value    = T_TEST_START;
+    elTFinal.value      = T_TEST_END;
+    elTimeMinutes.value = elapsedMinutes.toFixed(3);
+
+    elTimerStatus.style.color = 'var(--ok)';
+    elTimerStatus.textContent = t('timer_done', { min: (elapsedSeconds / 60).toFixed(1) });
+
+    // Запускаем расчёт автоматически
+    elCalculateBtn.click();
+  }
+});
+
+// ── Конец логики таймера ─────────────────────────────────────────────────────
+
 let calculatedUA = null;
 
 // Update volume and area display
