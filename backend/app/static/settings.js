@@ -81,22 +81,22 @@ function renderConfig() {
 
   elConfigSection.innerHTML = `
     <div class="card" style="margin-bottom:16px;">
-      <h2>Farm parameters</h2>
+      <h2>${t('farm_params_h2')}</h2>
       <div style="display:grid; gap:10px;">
-        <div class="kv"><span>Total mortality per cycle</span><span><input id="mort_total" type="number" step="0.01" value="${cfg.total_mortality_pct}"> %</span></div>
+        <div class="kv"><span>${t('mortality_lbl')}</span><span><input id="mort_total" type="number" step="0.01" value="${cfg.total_mortality_pct}"> %</span></div>
 
         <div class="kv">
-          <span>Qmin/Qmax unit</span>
+          <span>${t('vent_unit_lbl')}</span>
           <span>
             <select id="ventilation_unit" style="padding:6px 10px;">
-              <option value="per_bird" ${unit === 'per_bird' ? 'selected' : ''}>m³/h per bird</option>
-              <option value="per_kg" ${unit === 'per_kg' ? 'selected' : ''}>m³/h per kg live weight</option>
+              <option value="per_bird" ${unit === 'per_bird' ? 'selected' : ''}>${t('opt_per_bird')}</option>
+              <option value="per_kg" ${unit === 'per_kg' ? 'selected' : ''}>${t('opt_per_kg')}</option>
             </select>
           </span>
         </div>
       </div>
       <p class="muted" style="font-size:12px; margin-top:12px;">
-        Ventilation rates (Qmin/Qmax) are configured per age in the table below.
+        ${t('vent_hint')}
       </p>
     </div>`;
 
@@ -114,23 +114,21 @@ function renderTable() {
   console.log('Rendering anchor points:', anchorPoints.length);
 
   const unit = cfg.ventilation_unit || 'per_bird';
-  const unitLabel = unit === 'per_bird' ? 'm³/h/bird' : 'm³/h/kg';
-  const unitDescription = unit === 'per_bird'
-    ? 'ventilation rates for this age (m³/h per bird)'
-    : 'ventilation rates for this age (m³/h per kg live weight)';
+  const unitLabel = unit === 'per_bird' ? t('unit_bird') : t('unit_kg');
+  const profileDesc = unit === 'per_bird' ? t('profile_desc_bird') : t('profile_desc_kg');
 
   const table = `
     <div class="card">
-      <h2>Anchor-point profile</h2>
+      <h2>${t('profile_h2')}</h2>
       <p class="muted" style="font-size:12px; margin-bottom:12px;">
-        Enter values for the selected days. Qmin and Qmax are ${unitDescription}. After saving, the system automatically interpolates all 42 days.
+        ${profileDesc}
       </p>
       <table>
         <thead><tr>
-          <th>Day</th>
-          <th>Weight, g</th>
-          <th>Min Temp, °C</th>
-          <th>RH, %</th>
+          <th>${t('col_day')}</th>
+          <th>${t('col_weight')}</th>
+          <th>${t('col_min_temp')}</th>
+          <th>${t('col_rh')}</th>
           <th>Qmin, ${unitLabel}</th>
           <th>Qmax, ${unitLabel}</th>
         </tr></thead>
@@ -191,14 +189,14 @@ async function loadAll(){
     render();
   } catch (e) {
     console.error('✗ Error loading data:', e);
-    elStatus.textContent = 'Load error: ' + String(e);
+    elStatus.textContent = t('status_load_err') + String(e);
   }
 }
 
 async function saveAll(){
   try {
     elSave.disabled = true;
-    elStatus.textContent = 'Saving and interpolating…';
+    elStatus.textContent = t('status_saving');
 
     // Save anchor points with auto-interpolation
     const url = '/settings/day-master?auto_interpolate=true';
@@ -214,10 +212,10 @@ async function saveAll(){
       body: JSON.stringify(cfg)
     });
 
-    elStatus.textContent = '✅ Saved and interpolated to 42 days';
+    elStatus.textContent = t('status_saved_ok');
     setTimeout(() => { elStatus.textContent = ''; }, 3000);
   } catch(e) {
-    elStatus.textContent = '❌ Error: ' + String(e);
+    elStatus.textContent = t('status_err') + String(e);
   } finally {
     elSave.disabled = false;
   }
@@ -227,7 +225,7 @@ async function saveAll(){
 function updateNumPoints() {
   const newNum = Number(elNumPoints.value);
   if (newNum < 3 || newNum > 10) {
-    alert('Number of points must be between 3 and 10');
+    alert(t('err_points_range'));
     return;
   }
 
@@ -251,7 +249,7 @@ function updateNumPoints() {
   anchorPoints = newAnchors;
   numAnchorPoints = newNum;
   render();
-  elStatus.textContent = `✅ Updated: ${newNum} anchor points`;
+  elStatus.textContent = t('updated_points', { n: newNum });
   setTimeout(() => { elStatus.textContent = ''; }, 2000);
 }
 

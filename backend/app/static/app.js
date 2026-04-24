@@ -10,8 +10,8 @@ function loadTabs() {
   try {
     const raw = localStorage.getItem(storeKey);
     if (!raw) return defaultTabs;
-    const t = JSON.parse(raw);
-    if (Array.isArray(t) && t.length) return t;
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed) && parsed.length) return parsed;
   } catch {}
   return defaultTabs;
 }
@@ -24,39 +24,41 @@ let tabs = loadTabs();
 let active = 0;
 let activeHouseTab = 'calc'; // calc, diary, analytics
 
-const elTabs = document.getElementById('tabs');
-const elAddTab = document.getElementById('addTab');
-const elDelTab = document.getElementById('delTab');
-const elHouse = document.getElementById('house');
-const elBirds = document.getElementById('birds');
+const elTabs       = document.getElementById('tabs');
+const elAddTab     = document.getElementById('addTab');
+const elDelTab     = document.getElementById('delTab');
+const elHouse      = document.getElementById('house');
+const elBirds      = document.getElementById('birds');
 const elOutsideTemp = document.getElementById('outsideTemp');
-const elCap = document.getElementById('cap');
-const elHeater = document.getElementById('heater');
-const elSum = document.getElementById('sumBtn');
-const elResult = document.getElementById('result');
-const elSummary = document.getElementById('summary');
-const elView = document.getElementById('viewMode');
+const elCap        = document.getElementById('cap');
+const elHeater     = document.getElementById('heater');
+const elSum        = document.getElementById('sumBtn');
+const elResult     = document.getElementById('result');
+const elSummary    = document.getElementById('summary');
+const elView       = document.getElementById('viewMode');
 let lastSummary = null;
+
 // modal elements
-const elModal = document.getElementById('modal');
-const elModalText = document.getElementById('modalText');
-const elModalOk = document.getElementById('modalOk');
+const elModal       = document.getElementById('modal');
+const elModalText   = document.getElementById('modalText');
+const elModalOk     = document.getElementById('modalOk');
 const elModalCancel = document.getElementById('modalCancel');
 let pendingDeleteIndex = null;
+
 // house tabs and flock info
-const elHouseTabs = document.getElementById('houseTabs');
-const elFlockInfo = document.getElementById('flockInfo');
+const elHouseTabs        = document.getElementById('houseTabs');
+const elFlockInfo        = document.getElementById('flockInfo');
 const elFlockPlacementDate = document.getElementById('flockPlacementDate');
-const elFlockCurrentDay = document.getElementById('flockCurrentDay');
+const elFlockCurrentDay  = document.getElementById('flockCurrentDay');
 const elFlockCurrentBirds = document.getElementById('flockCurrentBirds');
-const elFlockBreed = document.getElementById('flockBreed');
+const elFlockBreed       = document.getElementById('flockBreed');
 
 function renderTabs() {
   elTabs.innerHTML = '';
-  tabs.forEach((t, i) => {
+  tabs.forEach((tab, i) => {
     const b = document.createElement('button');
     b.className = 'tab' + (i === active ? ' active' : '');
-    b.textContent = `House ${t.id}`;
+    b.textContent = t('house_tab', { id: tab.id });
     b.onclick = () => { active = i; fillForm(); renderTabs(); renderHouseTabs(); loadFlockInfo(); };
     elTabs.appendChild(b);
   });
@@ -65,9 +67,9 @@ function renderTabs() {
 function renderHouseTabs() {
   if (!elHouseTabs) return;
   const houseTabsData = [
-    { id: 'calc', label: 'Calculations' },
-    { id: 'diary', label: 'Diary' },
-    { id: 'analytics', label: 'Analytics' }
+    { id: 'calc',      label: t('tab_calc') },
+    { id: 'diary',     label: t('tab_diary') },
+    { id: 'analytics', label: t('tab_analytics') }
   ];
   elHouseTabs.innerHTML = '';
   houseTabsData.forEach(ht => {
@@ -81,39 +83,32 @@ function renderHouseTabs() {
 }
 
 function showActiveContent() {
-  // Get content sections
-  const calcContent = document.getElementById('calcContent');
-  const diaryContent = document.getElementById('diaryContent');
+  const calcContent     = document.getElementById('calcContent');
+  const diaryContent    = document.getElementById('diaryContent');
   const analyticsContent = document.getElementById('analyticsContent');
 
-  // Hide all
-  if (calcContent) calcContent.style.display = 'none';
-  if (diaryContent) diaryContent.style.display = 'none';
+  if (calcContent)      calcContent.style.display = 'none';
+  if (diaryContent)     diaryContent.style.display = 'none';
   if (analyticsContent) analyticsContent.style.display = 'none';
 
-  // Show active
-  if (activeHouseTab === 'calc' && calcContent) {
-    calcContent.style.display = 'grid';
-  } else if (activeHouseTab === 'diary' && diaryContent) {
-    diaryContent.style.display = 'grid';
-  } else if (activeHouseTab === 'analytics' && analyticsContent) {
-    analyticsContent.style.display = 'grid';
-  }
+  if (activeHouseTab === 'calc' && calcContent)           calcContent.style.display = 'grid';
+  else if (activeHouseTab === 'diary' && diaryContent)    diaryContent.style.display = 'grid';
+  else if (activeHouseTab === 'analytics' && analyticsContent) analyticsContent.style.display = 'grid';
 }
 
 async function loadFlockInfo() {
-  const t = tabs[active];
-  if (!t || !elFlockInfo) return;
+  const tab = tabs[active];
+  if (!tab || !elFlockInfo) return;
 
   try {
-    const r = await fetch(`/flock/${t.id}/info`);
+    const r = await fetch(`/flock/${tab.id}/info`);
     if (r.ok) {
       const data = await r.json();
       elFlockInfo.style.display = 'block';
-      elFlockPlacementDate.textContent = data.placement_date || '—';
-      elFlockCurrentDay.textContent = data.current_day || '—';
-      elFlockCurrentBirds.textContent = data.initial_bird_count || t.birds || '—';
-      elFlockBreed.textContent = data.breed || '—';
+      elFlockPlacementDate.textContent  = data.placement_date || '—';
+      elFlockCurrentDay.textContent     = data.current_day || '—';
+      elFlockCurrentBirds.textContent   = data.initial_bird_count || tab.birds || '—';
+      elFlockBreed.textContent          = data.breed || '—';
     } else {
       elFlockInfo.style.display = 'none';
     }
@@ -124,43 +119,43 @@ async function loadFlockInfo() {
 }
 
 function fillForm() {
-  const t = tabs[active];
-  elHouse.value = t.id;
-  elBirds.value = t.birds;
-  if (elOutsideTemp) elOutsideTemp.value = t.outside_t ?? 15;
-  elCap.value = t.cap ?? '';
-  elHeater.checked = !!t.heater_on;
-  (document.querySelector(`input[name="unit"][value="${t.unit || 'per_bird'}"]`)||{}).checked = true;
+  const tab = tabs[active];
+  elHouse.value = tab.id;
+  elBirds.value = tab.birds;
+  if (elOutsideTemp) elOutsideTemp.value = tab.outside_t ?? 15;
+  elCap.value = tab.cap ?? '';
+  elHeater.checked = !!tab.heater_on;
+  (document.querySelector(`input[name="unit"][value="${tab.unit || 'per_bird'}"]`) || {}).checked = true;
 }
 
 function readFormToTab() {
-  const t = tabs[active];
+  const tab = tabs[active];
   const idVal = (elHouse.value || '').trim();
-  t.id = idVal !== '' ? idVal : t.id;
-  t.birds = Number(elBirds.value || t.birds);
-  t.outside_t = elOutsideTemp ? Number(elOutsideTemp.value) : (t.outside_t ?? 15);
+  tab.id       = idVal !== '' ? idVal : tab.id;
+  tab.birds    = Number(elBirds.value || tab.birds);
+  tab.outside_t = elOutsideTemp ? Number(elOutsideTemp.value) : (tab.outside_t ?? 15);
   const capVal = elCap.value === '' ? null : Number(elCap.value);
-  t.cap = capVal;
-  t.heater_on = !!elHeater.checked;
-  t.unit = 'per_bird';
+  tab.cap      = capVal;
+  tab.heater_on = !!elHeater.checked;
+  tab.unit     = 'per_bird';
   saveTabs(tabs);
 }
 
 async function recalc() {
   readFormToTab();
-  const t = tabs[active];
+  const tab = tabs[active];
   const payload = {
-    house: t.id,
-    birds: t.birds,
-    age_days: t.age_days,
-    mode_id: 'summer', // Deprecated, but kept for backward compatibility
-    display_unit: t.unit,
-    outside_t: t.outside_t ?? 15,
-    heater_on: !!t.heater_on,
+    house:        tab.id,
+    birds:        tab.birds,
+    age_days:     tab.age_days,
+    mode_id:      'summer', // Deprecated, kept for backward compatibility
+    display_unit: tab.unit,
+    outside_t:    tab.outside_t ?? 15,
+    heater_on:    !!tab.heater_on,
   };
-  if (t.cap !== null && t.cap !== undefined && t.cap !== '') payload.user_max_m3h = t.cap;
+  if (tab.cap !== null && tab.cap !== undefined && tab.cap !== '') payload.user_max_m3h = tab.cap;
 
-  elSum.disabled = true; elSum.textContent = 'Calculating…';
+  elSum.disabled = true; elSum.textContent = t('btn_calculating');
   try {
     const r = await fetch('/calc/minmax', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -171,27 +166,27 @@ async function recalc() {
       throw new Error(`${r.status} ${r.statusText}: ${txt}`);
     }
     const data = await r.json();
-    renderResult(data, t);
+    renderResult(data, tab);
   } catch (e) {
-    elResult.innerHTML = `<div class="danger">Request error: ${String(e)}</div>`;
+    elResult.innerHTML = `<div class="danger">${t('err_request', { msg: String(e) })}</div>`;
   } finally {
-    elSum.disabled = false; elSum.textContent = 'Calculate profile';
+    elSum.disabled = false; elSum.textContent = t('btn_calc_profile');
   }
 }
 
 async function summary7() {
   readFormToTab();
-  const t = tabs[active];
+  const tab = tabs[active];
   const payload = {
-    house: t.id,
-    birds: t.birds,
-    mode_id: 'summer', // Deprecated but required by API
-    user_max_m3h: (t.cap === null || t.cap === undefined || t.cap === '') ? null : Number(t.cap),
-    heater_on: !!t.heater_on,
-    display_unit: t.unit,
-    outside_t: t.outside_t ?? 15,
+    house:        tab.id,
+    birds:        tab.birds,
+    mode_id:      'summer', // Deprecated but required by API
+    user_max_m3h: (tab.cap === null || tab.cap === undefined || tab.cap === '') ? null : Number(tab.cap),
+    heater_on:    !!tab.heater_on,
+    display_unit: tab.unit,
+    outside_t:    tab.outside_t ?? 15,
   };
-  elSum.disabled = true; elSum.textContent = 'Calculating…';
+  elSum.disabled = true; elSum.textContent = t('btn_calculating');
   try {
     const r = await fetch('/calc/summary7', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -205,38 +200,45 @@ async function summary7() {
     lastSummary = data;
     renderSummary(data);
   } catch (e) {
-    elSummary.innerHTML = `<div class="danger">Request error: ${String(e)}</div>`;
+    elSummary.innerHTML = `<div class="danger">${t('err_request', { msg: String(e) })}</div>`;
   } finally {
-    elSum.disabled = false; elSum.textContent = 'Calculate profile';
+    elSum.disabled = false; elSum.textContent = t('btn_calc_profile');
   }
 }
 
 function renderSummary(d) {
-  const t = tabs[active];
-  const outsideT = t.outside_t ?? 15;
-  const head = `<div class="kv"><span>Outdoor temperature</span><span>${outsideT} °C</span></div>
-                <div class="kv"><span>House / Birds</span><span>${d.house} / ${d.birds}</span></div>
-                <div class="kv"><span>System max capacity</span><span>${d.user_max_m3h ?? '—'} m³/h</span></div>`;
+  const tab = tabs[active];
+  const outsideT = tab.outside_t ?? 15;
+  const head = `
+    <div class="kv"><span>${t('sum_outdoor')}</span><span>${outsideT} °C</span></div>
+    <div class="kv"><span>${t('sum_house_birds')}</span><span>${d.house} / ${d.birds}</span></div>
+    <div class="kv"><span>${t('sum_sys_max')}</span><span>${d.user_max_m3h ?? '—'} ${t('unit_m3h_plain')}</span></div>`;
+
   const mode = elView ? elView.value : 'total';
   const headerByMode = {
-    total: ['Qmin, m³/h', 'Qmax, m³/h'],
-    percent: ['Qmin, %', 'Qmax, %'],
-    per_bird: ['Qmin, m³/h/bird', 'Qmax, m³/h/bird'],
-    per_kg: ['Qmin, m³/h/kg', 'Qmax, m³/h/kg']
+    total:    [t('hdr_qmin_m3h'), t('hdr_qmax_m3h')],
+    percent:  [t('hdr_qmin_pct'), t('hdr_qmax_pct')],
+    per_bird: [t('hdr_qmin_bird'), t('hdr_qmax_bird')],
+    per_kg:   [t('hdr_qmin_kg'),  t('hdr_qmax_kg')]
   };
   const headCols = headerByMode[mode] || headerByMode.total;
+
   const rows = d.rows.map(r => {
     let c1 = '—', c2 = '—';
     if (mode === 'total') {
       c1 = Math.round(r.q_min_m3h).toString();
       c2 = Math.round(r.q_max_m3h).toString();
     } else if (mode === 'percent') {
-      c1 = (r.q_min_pct != null) ? (r.q_min_pct.toFixed(1) + '%') : '—';
-      c2 = (r.q_max_pct != null) ? (r.q_max_pct.toFixed(1) + '%') : '—';
+      c1 = r.q_min_pct != null ? (r.q_min_pct.toFixed(1) + '%') : '—';
+      c2 = r.q_max_pct != null ? (r.q_max_pct.toFixed(1) + '%') : '—';
     } else if (mode === 'per_bird') {
-      const be = r.birds_eff || d.birds; if (be > 0) { c1 = (r.q_min_m3h / be).toFixed(4); c2 = (r.q_max_m3h / be).toFixed(4); }
+      const be = r.birds_eff || d.birds;
+      if (be > 0) { c1 = (r.q_min_m3h / be).toFixed(4); c2 = (r.q_max_m3h / be).toFixed(4); }
     } else if (mode === 'per_kg') {
-      const be = r.birds_eff || d.birds; const wkg = (r.weight_g || 0)/1000.0; const totalKg = be*wkg; if (totalKg > 0) { c1 = (r.q_min_m3h/totalKg).toFixed(4); c2 = (r.q_max_m3h/totalKg).toFixed(4); }
+      const be = r.birds_eff || d.birds;
+      const wkg = (r.weight_g || 0) / 1000.0;
+      const totalKg = be * wkg;
+      if (totalKg > 0) { c1 = (r.q_min_m3h / totalKg).toFixed(4); c2 = (r.q_max_m3h / totalKg).toFixed(4); }
     }
     return `
       <tr>
@@ -247,32 +249,36 @@ function renderSummary(d) {
         <td>${c2}</td>
       </tr>`;
   }).join('');
+
   elSummary.innerHTML = `${head}
     <table>
       <thead><tr>
-        <th>Day</th><th>Min Temp, °C</th><th>Weight, g</th>
+        <th>${t('col_day')}</th><th>${t('col_min_temp')}</th><th>${t('col_weight')}</th>
         <th>${headCols[0]}</th><th>${headCols[1]}</th>
       </tr></thead>
       <tbody>${rows}</tbody>
     </table>`;
 }
 
-function renderResult(d, t) {
-  const cap = t.cap ? Number(t.cap) : null;
+function renderResult(d, tab) {
+  const cap = tab.cap ? Number(tab.cap) : null;
   const pct = (x) => cap && cap > 0 ? ((x / cap) * 100).toFixed(1) + '%' : '—';
-  const weight = (typeof d.weight_used_g === 'number' && isFinite(d.weight_used_g)) ? d.weight_used_g.toFixed(0) : '—';
-  const dayInfo = d.day_setpoints ? `<div class="kv"><span>Day setpoints</span><span>${d.day_setpoints.min_temp_c ?? '—'} °C, RH ${d.day_setpoints.rv_percent ?? '—'}%</span></div>` : '';
+  const weight = (typeof d.weight_used_g === 'number' && isFinite(d.weight_used_g))
+    ? d.weight_used_g.toFixed(0) : '—';
+  const dayInfo = d.day_setpoints
+    ? `<div class="kv"><span>${t('res_day_setpoints')}</span><span>${d.day_setpoints.min_temp_c ?? '—'} °C, RH ${d.day_setpoints.rv_percent ?? '—'}%</span></div>`
+    : '';
 
   elResult.innerHTML = `
-    <div class="kv"><span>Age, day</span><span>${d.profile_day_resolved}</span></div>
-    <div class="kv"><span>Weight, g</span><span>${weight}</span></div>
-    <div class="kv big"><span>Qmin</span><span class="ok">${Math.round(d.q_min_m3h)} m³/h</span></div>
-    <div class="kv"><span>Qmin % of capacity</span><span>${pct(d.q_min_m3h)}</span></div>
-    <div class="kv big"><span>Qmax</span><span class="warn">${Math.round(d.q_max_m3h)} m³/h</span></div>
-    <div class="kv"><span>Qmax nominal</span><span>${Math.round(d.q_max_nominal_m3h)} m³/h</span></div>
-    <div class="kv"><span>Qmax % of capacity</span><span>${pct(d.q_max_m3h)}</span></div>
-    <div class="kv"><span>Rates per bird</span><span>${d.rates.per_bird.min}…${d.rates.per_bird.max} m³/h/bird</span></div>
-    <div class="kv"><span>Rates per kg LW</span><span>${d.rates.per_kg.min}…${d.rates.per_kg.max} m³/h/kg</span></div>
+    <div class="kv"><span>${t('res_age_day')}</span><span>${d.profile_day_resolved}</span></div>
+    <div class="kv"><span>${t('res_weight_g')}</span><span>${weight}</span></div>
+    <div class="kv big"><span>${t('res_qmin')}</span><span class="ok">${Math.round(d.q_min_m3h)} ${t('unit_m3h_plain')}</span></div>
+    <div class="kv"><span>${t('res_qmin_pct')}</span><span>${pct(d.q_min_m3h)}</span></div>
+    <div class="kv big"><span>${t('res_qmax')}</span><span class="warn">${Math.round(d.q_max_m3h)} ${t('unit_m3h_plain')}</span></div>
+    <div class="kv"><span>${t('res_qmax_nominal')}</span><span>${Math.round(d.q_max_nominal_m3h)} ${t('unit_m3h_plain')}</span></div>
+    <div class="kv"><span>${t('res_qmax_pct')}</span><span>${pct(d.q_max_m3h)}</span></div>
+    <div class="kv"><span>${t('res_rates_bird')}</span><span>${d.rates.per_bird.min}…${d.rates.per_bird.max} ${t('unit_m3h_bird')}</span></div>
+    <div class="kv"><span>${t('res_rates_kg')}</span><span>${d.rates.per_kg.min}…${d.rates.per_kg.max} ${t('unit_m3h_kg')}</span></div>
     ${dayInfo}
   `;
 }
@@ -286,14 +292,15 @@ elAddTab.onclick = () => {
   saveTabs(tabs);
   renderTabs(); fillForm();
 };
+
 elDelTab.onclick = () => {
-  const t = tabs[active];
-  const name = t?.id ?? (active + 1);
+  const tab = tabs[active];
+  const name = tab?.id ?? (active + 1);
   pendingDeleteIndex = active;
   if (elModal && elModalText) {
-    elModalText.textContent = `Remove house "${name}"? This will delete locally saved data for this tab and cannot be undone.`;
+    elModalText.textContent = t('modal_remove_txt', { name });
     elModal.classList.remove('hidden');
-    // inline fallback styles (на случай кеша CSS)
+    // Inline fallback styles (in case CSS cache)
     elModal.style.position = 'fixed';
     elModal.style.top = '0';
     elModal.style.left = '0';
@@ -317,7 +324,7 @@ elDelTab.onclick = () => {
   }
 };
 
-function applyDelete(index){
+function applyDelete(index) {
   if (index == null) return;
   if (tabs.length <= 1) {
     tabs = [{ id: '1', birds: 30000, age_days: 21, outside_t: 10, cap: null, unit: 'per_bird' }];
@@ -330,16 +337,31 @@ function applyDelete(index){
   renderTabs(); fillForm();
 }
 
-if (elModalOk) elModalOk.addEventListener('click', ()=>{ applyDelete(pendingDeleteIndex); pendingDeleteIndex = null; elModal.classList.add('hidden'); elModal.removeAttribute('style'); const c = elModal.querySelector('.modal-card'); if (c){ c.removeAttribute('style'); } });
-if (elModalCancel) elModalCancel.addEventListener('click', ()=>{ pendingDeleteIndex = null; elModal.classList.add('hidden'); elModal.removeAttribute('style'); const c = elModal.querySelector('.modal-card'); if (c){ c.removeAttribute('style'); } });
+if (elModalOk) elModalOk.addEventListener('click', () => {
+  applyDelete(pendingDeleteIndex);
+  pendingDeleteIndex = null;
+  elModal.classList.add('hidden');
+  elModal.removeAttribute('style');
+  const c = elModal.querySelector('.modal-card');
+  if (c) c.removeAttribute('style');
+});
+if (elModalCancel) elModalCancel.addEventListener('click', () => {
+  pendingDeleteIndex = null;
+  elModal.classList.add('hidden');
+  elModal.removeAttribute('style');
+  const c = elModal.querySelector('.modal-card');
+  if (c) c.removeAttribute('style');
+});
+
 elSum.onclick = summary7;
+
 const elViewCtl = document.getElementById('viewMode');
 if (elViewCtl) {
-  elViewCtl.addEventListener('change', ()=>{ if (lastSummary) renderSummary(lastSummary); });
+  elViewCtl.addEventListener('change', () => { if (lastSummary) renderSummary(lastSummary); });
 }
 const elOutsideTempCtl = document.getElementById('outsideTemp');
 if (elOutsideTempCtl) {
-  elOutsideTempCtl.addEventListener('change', ()=>{ summary7(); });
+  elOutsideTempCtl.addEventListener('change', () => { summary7(); });
 }
 
 renderTabs();

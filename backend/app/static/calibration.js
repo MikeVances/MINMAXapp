@@ -1,31 +1,31 @@
 // Calibration page logic
 
-const elLength = document.getElementById('length');
-const elWidth = document.getElementById('width');
-const elHeight = document.getElementById('height');
+const elLength   = document.getElementById('length');
+const elWidth    = document.getElementById('width');
+const elHeight   = document.getElementById('height');
 const elVolumeDisplay = document.getElementById('volumeDisplay');
-const elAreaDisplay = document.getElementById('areaDisplay');
+const elAreaDisplay   = document.getElementById('areaDisplay');
 const elSaveBuildingBtn = document.getElementById('saveBuildingBtn');
-const elBuildingStatus = document.getElementById('buildingStatus');
+const elBuildingStatus  = document.getElementById('buildingStatus');
 
-const elHeaterType = document.getElementById('heaterType');
-const elHeaterPower = document.getElementById('heaterPower');
-const elGasInfo = document.getElementById('gasInfo');
+const elHeaterType    = document.getElementById('heaterType');
+const elHeaterPower   = document.getElementById('heaterPower');
+const elGasInfo       = document.getElementById('gasInfo');
 const elSaveHeaterBtn = document.getElementById('saveHeaterBtn');
-const elHeaterStatus = document.getElementById('heaterStatus');
+const elHeaterStatus  = document.getElementById('heaterStatus');
 
-const elTInitial = document.getElementById('tInitial');
-const elTFinal = document.getElementById('tFinal');
-const elTOutside = document.getElementById('tOutside');
+const elTInitial    = document.getElementById('tInitial');
+const elTFinal      = document.getElementById('tFinal');
+const elTOutside    = document.getElementById('tOutside');
 const elTimeMinutes = document.getElementById('timeMinutes');
-const elCalculateBtn = document.getElementById('calculateBtn');
+const elCalculateBtn      = document.getElementById('calculateBtn');
 const elSaveCalibrationBtn = document.getElementById('saveCalibrationBtn');
-const elCalibrationResult = document.getElementById('calibrationResult');
+const elCalibrationResult  = document.getElementById('calibrationResult');
 
-const elTInsideTarget = document.getElementById('tInsideTarget');
-const elTOutsideAnalysis = document.getElementById('tOutsideAnalysis');
-const elAnalyzeBtn = document.getElementById('analyzeBtn');
-const elAnalysisResult = document.getElementById('analysisResult');
+const elTInsideTarget     = document.getElementById('tInsideTarget');
+const elTOutsideAnalysis  = document.getElementById('tOutsideAnalysis');
+const elAnalyzeBtn        = document.getElementById('analyzeBtn');
+const elAnalysisResult    = document.getElementById('analysisResult');
 
 const elCurrentConfig = document.getElementById('currentConfig');
 
@@ -34,31 +34,27 @@ let calculatedUA = null;
 // Update volume and area display
 function updateDimensionsDisplay() {
   const l = parseFloat(elLength.value) || 0;
-  const w = parseFloat(elWidth.value) || 0;
+  const w = parseFloat(elWidth.value)  || 0;
   const h = parseFloat(elHeight.value) || 0;
 
   if (l > 0 && w > 0 && h > 0) {
     const volume = l * w * h;
-    const area = l * w;
-    elVolumeDisplay.textContent = `${volume.toFixed(1)} m³`;
-    elAreaDisplay.textContent = `${area.toFixed(1)} m²`;
+    const area   = l * w;
+    elVolumeDisplay.textContent = `${volume.toFixed(1)} ${t('unit_m3')}`;
+    elAreaDisplay.textContent   = `${area.toFixed(1)} ${t('unit_m2')}`;
   } else {
-    elVolumeDisplay.textContent = '— м³';
-    elAreaDisplay.textContent = '— м²';
+    elVolumeDisplay.textContent = t('vol_default');
+    elAreaDisplay.textContent   = t('area_default');
   }
 }
 
 elLength.addEventListener('input', updateDimensionsDisplay);
-elWidth.addEventListener('input', updateDimensionsDisplay);
+elWidth.addEventListener('input',  updateDimensionsDisplay);
 elHeight.addEventListener('input', updateDimensionsDisplay);
 
 // Toggle gas info visibility
 function updateGasInfoVisibility() {
-  if (elHeaterType.value === 'gas_open') {
-    elGasInfo.style.display = 'block';
-  } else {
-    elGasInfo.style.display = 'none';
-  }
+  elGasInfo.style.display = elHeaterType.value === 'gas_open' ? 'block' : 'none';
 }
 
 elHeaterType.addEventListener('change', updateGasInfoVisibility);
@@ -70,7 +66,7 @@ elSaveBuildingBtn.addEventListener('click', async () => {
   const h = parseFloat(elHeight.value);
 
   if (!l || !w || !h || l <= 0 || w <= 0 || h <= 0) {
-    elBuildingStatus.textContent = '❌ Enter valid dimensions';
+    elBuildingStatus.textContent = t('err_valid_dims');
     elBuildingStatus.style.color = 'var(--danger, #ff7a7a)';
     return;
   }
@@ -78,7 +74,6 @@ elSaveBuildingBtn.addEventListener('click', async () => {
   try {
     const config = await loadConfig();
     config.building = { length_m: l, width_m: w, height_m: h };
-
 
     const r = await fetch('/thermal/config', {
       method: 'PUT',
@@ -88,12 +83,12 @@ elSaveBuildingBtn.addEventListener('click', async () => {
 
     if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
 
-    elBuildingStatus.textContent = '✅ Saved';
+    elBuildingStatus.textContent = t('status_saved');
     elBuildingStatus.style.color = 'var(--ok, #7bc96f)';
     await loadAndDisplayConfig();
 
   } catch (e) {
-    elBuildingStatus.textContent = `❌ Ошибка: ${e.message}`;
+    elBuildingStatus.textContent = t('err_prefix') + e.message;
     elBuildingStatus.style.color = 'var(--danger, #ff7a7a)';
   }
 });
@@ -104,7 +99,7 @@ elSaveHeaterBtn.addEventListener('click', async () => {
   const power = parseFloat(elHeaterPower.value);
 
   if (!power || power < 0) {
-    elHeaterStatus.textContent = '❌ Enter valid heating capacity';
+    elHeaterStatus.textContent = t('err_valid_heater');
     elHeaterStatus.style.color = 'var(--danger, #ff7a7a)';
     return;
   }
@@ -121,30 +116,30 @@ elSaveHeaterBtn.addEventListener('click', async () => {
 
     if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
 
-    elHeaterStatus.textContent = '✅ Сохранено';
+    elHeaterStatus.textContent = t('status_saved');
     elHeaterStatus.style.color = 'var(--ok, #7bc96f)';
     await loadAndDisplayConfig();
 
   } catch (e) {
-    elHeaterStatus.textContent = `❌ Ошибка: ${e.message}`;
+    elHeaterStatus.textContent = t('err_prefix') + e.message;
     elHeaterStatus.style.color = 'var(--danger, #ff7a7a)';
   }
 });
 
 // Calculate UA coefficient
 elCalculateBtn.addEventListener('click', async () => {
-  const tInitial = parseFloat(elTInitial.value);
-  const tFinal = parseFloat(elTFinal.value);
-  const tOutside = parseFloat(elTOutside.value);
+  const tInitial    = parseFloat(elTInitial.value);
+  const tFinal      = parseFloat(elTFinal.value);
+  const tOutside    = parseFloat(elTOutside.value);
   const timeMinutes = parseFloat(elTimeMinutes.value);
 
   if (isNaN(tInitial) || isNaN(tFinal) || isNaN(tOutside) || isNaN(timeMinutes) || timeMinutes <= 0) {
-    elCalibrationResult.innerHTML = '<div class="danger">❌ Заполните все поля корректно</div>';
+    elCalibrationResult.innerHTML = `<div class="danger">${t('err_fill_fields')}</div>`;
     return;
   }
 
   if (tInitial <= tOutside || tFinal <= tOutside) {
-    elCalibrationResult.innerHTML = '<div class="danger">❌ Начальная и конечная температуры должны быть выше наружной</div>';
+    elCalibrationResult.innerHTML = `<div class="danger">${t('err_temps_outside')}</div>`;
     return;
   }
 
@@ -153,9 +148,9 @@ elCalculateBtn.addEventListener('click', async () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        t_initial_c: tInitial,
-        t_final_c: tFinal,
-        t_outside_c: tOutside,
+        t_initial_c:  tInitial,
+        t_final_c:    tFinal,
+        t_outside_c:  tOutside,
         time_minutes: timeMinutes
       })
     });
@@ -169,17 +164,20 @@ elCalculateBtn.addEventListener('click', async () => {
     calculatedUA = data.ua_coefficient;
 
     const coolingRate = Math.abs(data.cooling_rate_per_minute);
+    const uaUnit      = t('cfg_ua_unit');
+    const volUnit     = t('unit_m3');
+    const rateUnit    = `°C/${t('unit_min')}`;
 
     elCalibrationResult.innerHTML = `
       <div style="padding:12px; background:var(--ok-bg,#1a3a1a); border-left:3px solid var(--ok,#7bc96f); border-radius:4px;">
-        <strong>✅ Calibration complete</strong>
+        <strong>${t('cal_complete')}</strong>
         <div style="margin-top:8px; display:grid; gap:6px;">
-          <div class="kv"><span>UA coefficient</span><span><strong>${calculatedUA.toFixed(1)} W/°C</strong></span></div>
-          <div class="kv"><span>Building volume</span><span>${data.volume_m3.toFixed(1)} m³</span></div>
-          <div class="kv"><span>Cooling rate</span><span>${coolingRate.toFixed(3)} °C/min</span></div>
+          <div class="kv"><span>${t('ua_coeff_lbl')}</span><span><strong>${calculatedUA.toFixed(1)} ${uaUnit}</strong></span></div>
+          <div class="kv"><span>${t('vol_label')}</span><span>${data.volume_m3.toFixed(1)} ${volUnit}</span></div>
+          <div class="kv"><span>${t('cool_rate_lbl')}</span><span>${coolingRate.toFixed(3)} ${rateUnit}</span></div>
         </div>
         <p class="muted" style="margin:8px 0 0 0; font-size:13px;">
-          Click "Save calibration" to use these values in ventilation calculations.
+          ${t('cal_save_hint')}
         </p>
       </div>
     `;
@@ -187,7 +185,7 @@ elCalculateBtn.addEventListener('click', async () => {
     elSaveCalibrationBtn.disabled = false;
 
   } catch (e) {
-    elCalibrationResult.innerHTML = `<div class="danger">❌ Ошибка: ${String(e)}</div>`;
+    elCalibrationResult.innerHTML = `<div class="danger">${t('err_prefix')}${String(e)}</div>`;
     elSaveCalibrationBtn.disabled = true;
   }
 });
@@ -195,21 +193,21 @@ elCalculateBtn.addEventListener('click', async () => {
 // Save calibration
 elSaveCalibrationBtn.addEventListener('click', async () => {
   if (!calculatedUA) {
-    alert('Сначала выполните расчет');
+    alert(t('err_calc_first'));
     return;
   }
 
-  const tInitial = parseFloat(elTInitial.value);
-  const tFinal = parseFloat(elTFinal.value);
-  const tOutside = parseFloat(elTOutside.value);
+  const tInitial    = parseFloat(elTInitial.value);
+  const tFinal      = parseFloat(elTFinal.value);
+  const tOutside    = parseFloat(elTOutside.value);
   const timeMinutes = parseFloat(elTimeMinutes.value);
 
   try {
     const config = await loadConfig();
     config.calibration = {
-      t_initial_c: tInitial,
-      t_final_c: tFinal,
-      t_outside_c: tOutside,
+      t_initial_c:  tInitial,
+      t_final_c:    tFinal,
+      t_outside_c:  tOutside,
       time_minutes: timeMinutes
     };
 
@@ -221,21 +219,21 @@ elSaveCalibrationBtn.addEventListener('click', async () => {
 
     if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
 
-    alert('✅ Калибровка сохранена! Теперь расчеты вентиляции будут автоматически учитывать воздух для обогревателей.');
+    alert(t('cal_saved_alert'));
     await loadAndDisplayConfig();
 
   } catch (e) {
-    alert(`❌ Ошибка сохранения: ${e.message}`);
+    alert(t('err_save_cal') + e.message);
   }
 });
 
 // Analyze heaters
 elAnalyzeBtn.addEventListener('click', async () => {
-  const tInside = parseFloat(elTInsideTarget.value);
+  const tInside  = parseFloat(elTInsideTarget.value);
   const tOutside = parseFloat(elTOutsideAnalysis.value);
 
   if (isNaN(tInside) || isNaN(tOutside)) {
-    elAnalysisResult.innerHTML = '<div class="danger">❌ Введите температуры</div>';
+    elAnalysisResult.innerHTML = `<div class="danger">${t('err_enter_temps')}</div>`;
     return;
   }
 
@@ -252,41 +250,39 @@ elAnalyzeBtn.addEventListener('click', async () => {
 
     const data = await r.json();
 
-    const dutyCyclePercent = (data.duty_cycle_percent).toFixed(1);
-    const heatLoss = data.heat_loss_kw.toFixed(1);
+    const dutyCyclePercent = data.duty_cycle_percent.toFixed(1);
+    const heatLoss  = data.heat_loss_kw.toFixed(1);
     const airDemand = data.air_demand_m3h.toFixed(0);
 
-    let airInfo = '';
+    let airInfo;
     if (data.air_demand_m3h > 0) {
       airInfo = `
         <div class="kv" style="background:var(--warning-bg,#3a2f1a); padding:8px; border-radius:4px; border-left:3px solid var(--warning,#f4b942);">
-          <span>Additional combustion air</span>
-          <span><strong>${airDemand} m³/h</strong></span>
+          <span>${t('combustion_lbl')}</span>
+          <span><strong>${airDemand} ${t('unit_m3h')}</strong></span>
         </div>
       `;
     } else {
-      airInfo = `<p class="muted" style="margin:8px 0;">Electric heaters do not require additional combustion air.</p>`;
+      airInfo = `<p class="muted" style="margin:8px 0;">${t('no_combustion')}</p>`;
     }
 
     elAnalysisResult.innerHTML = `
       <div style="padding:12px; background:var(--card); border:1px solid var(--border); border-radius:8px; margin-top:12px;">
-        <strong>📊 Analysis results:</strong>
+        <strong>${t('analysis_title')}</strong>
         <div style="margin-top:8px; display:grid; gap:8px;">
-          <div class="kv"><span>Heat loss</span><span>${heatLoss} kW</span></div>
-          <div class="kv"><span>Heater load</span><span>${dutyCyclePercent}%</span></div>
-          <div class="kv"><span>Run time</span><span>${dutyCyclePercent}% of the time</span></div>
+          <div class="kv"><span>${t('heat_loss_lbl')}</span><span>${heatLoss} ${t('unit_kw')}</span></div>
+          <div class="kv"><span>${t('heater_load_lbl')}</span><span>${dutyCyclePercent}%</span></div>
+          <div class="kv"><span>${t('run_time_lbl')}</span><span>${t('run_time_val', { pct: dutyCyclePercent })}</span></div>
           ${airInfo}
         </div>
         <p class="muted" style="margin:8px 0 0 0; font-size:13px;">
-          ${data.air_demand_m3h > 0 ?
-            'This air will be automatically added to minimum ventilation in calculations.' :
-            'Ventilation calculations will not change — electric heaters do not consume combustion air.'}
+          ${data.air_demand_m3h > 0 ? t('air_added_hint') : t('no_air_change')}
         </p>
       </div>
     `;
 
   } catch (e) {
-    elAnalysisResult.innerHTML = `<div class="danger">❌ ${String(e)}</div>`;
+    elAnalysisResult.innerHTML = `<div class="danger">${t('err_prefix')}${String(e)}</div>`;
   }
 });
 
@@ -294,9 +290,7 @@ elAnalyzeBtn.addEventListener('click', async () => {
 async function loadConfig() {
   try {
     const r = await fetch('/thermal/config');
-    if (r.ok) {
-      return await r.json();
-    }
+    if (r.ok) return await r.json();
   } catch (e) {
     console.error('Failed to load config:', e);
   }
@@ -305,63 +299,65 @@ async function loadConfig() {
 
 async function loadAndDisplayConfig() {
   const config = await loadConfig();
-
   let html = '';
 
   if (config.building) {
-    const b = config.building;
+    const b      = config.building;
     const volume = (b.length_m * b.width_m * b.height_m).toFixed(1);
-    const area = (b.length_m * b.width_m).toFixed(1);
+    const area   = (b.length_m * b.width_m).toFixed(1);
+    const uM  = t('unit_m');
+    const uM3 = t('unit_m3');
+    const uM2 = t('unit_m2');
 
     html += `
       <div style="margin-bottom:12px;">
-        <strong>🏢 Building dimensions:</strong>
-        <div class="kv"><span>Length × Width × Height</span><span>${b.length_m} × ${b.width_m} × ${b.height_m} m</span></div>
-        <div class="kv"><span>Volume</span><span>${volume} m³</span></div>
-        <div class="kv"><span>Floor area</span><span>${area} m²</span></div>
+        <strong>${t('cfg_bldg_h')}</strong>
+        <div class="kv"><span>${t('cfg_lwh')}</span><span>${b.length_m} × ${b.width_m} × ${b.height_m} ${uM}</span></div>
+        <div class="kv"><span>${t('cfg_volume')}</span><span>${volume} ${uM3}</span></div>
+        <div class="kv"><span>${t('cfg_floor')}</span><span>${area} ${uM2}</span></div>
       </div>
     `;
 
     // Fill form
     elLength.value = b.length_m;
-    elWidth.value = b.width_m;
+    elWidth.value  = b.width_m;
     elHeight.value = b.height_m;
     updateDimensionsDisplay();
   } else {
-    html += '<div class="muted">🏢 Building dimensions not set</div>';
+    html += `<div class="muted">${t('cfg_bldg_none')}</div>`;
   }
 
   if (config.heater) {
-    const h = config.heater;
-    const typeLabel = h.heater_type === 'gas_open' ? 'Open-flame gas brooders' : 'Electric heaters';
+    const h         = config.heater;
+    const typeLabel = h.heater_type === 'gas_open' ? t('cfg_gas_lbl') : t('cfg_elec_lbl');
 
     html += `
       <div style="margin-bottom:12px;">
-        <strong>🔥 Heating equipment:</strong>
-        <div class="kv"><span>Type</span><span>${typeLabel}</span></div>
-        <div class="kv"><span>Capacity</span><span>${h.total_power_kw} kW</span></div>
+        <strong>${t('cfg_heater_h')}</strong>
+        <div class="kv"><span>${t('cfg_heater_type')}</span><span>${typeLabel}</span></div>
+        <div class="kv"><span>${t('cfg_heater_cap')}</span><span>${h.total_power_kw} ${t('cfg_kw_unit')}</span></div>
       </div>
     `;
 
     // Fill form
-    elHeaterType.value = h.heater_type;
+    elHeaterType.value  = h.heater_type;
     elHeaterPower.value = h.total_power_kw;
     updateGasInfoVisibility();
   } else {
-    html += '<div class="muted">🔥 Heaters not configured</div>';
+    html += `<div class="muted">${t('cfg_heater_none')}</div>`;
   }
 
   if (config.calibration) {
     const c = config.calibration;
     html += `
       <div>
-        <strong>🔬 Calibration complete:</strong>
-        <div class="kv"><span>UA coefficient</span><span>${c.ua_coefficient.toFixed(1)} W/°C</span></div>
-        <div class="kv"><span>Test conditions</span><span>${c.t_initial_c}°C → ${c.t_final_c}°C in ${c.time_minutes} min (outdoor ${c.t_outside_c}°C)</span></div>
+        <strong>${t('cfg_cal_h')}</strong>
+        <div class="kv"><span>${t('cfg_ua')}</span><span>${c.ua_coefficient.toFixed(1)} ${t('cfg_ua_unit')}</span></div>
+        <div class="kv"><span>${t('cfg_test_cond')}</span><span>${t('cfg_test_val', { t0: c.t_initial_c, t1: c.t_final_c, time: c.time_minutes, tout: c.t_outside_c })}</span></div>
       </div>
     `;
   } else {
-    html += '<div class="muted">🔬 Calibration not performed</div>';
+    html += `<div class="muted">${t('cfg_cal_none')}</div>`;
   }
 
   elCurrentConfig.innerHTML = html;

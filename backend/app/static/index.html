@@ -5,41 +5,42 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Ventilation Min/Max — Poultry House</title>
   <link rel="stylesheet" href="/styles.css" />
+  <script src="/i18n.js"></script>
 </head>
-<body>
+<body data-page-title="index_title">
   <main class="container">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
-      <h1 style="margin:0;">Ventilation Min/Max</h1>
+      <h1 style="margin:0;" data-i18n="index_h1">Ventilation Min/Max</h1>
       <div style="display:flex; gap:8px; flex-wrap:wrap;">
-        <a class="btn btn-secondary" href="/calculators.html">🔧 Calculators</a>
-        <a class="btn btn-secondary" href="/settings.html">⚙️ Farm Settings</a>
+        <a class="btn btn-secondary" href="/calculators.html" data-i18n="nav_calculators">🔧 Calculators</a>
+        <a class="btn btn-secondary" href="/settings.html" data-i18n="nav_settings">⚙️ Farm Settings</a>
       </div>
     </div>
 
     <section>
       <div id="tabs" class="tabs"></div>
       <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
-        <button id="addTab" class="btn btn-secondary">+ Add house</button>
-        <button id="delTab" class="btn btn-secondary">Remove house</button>
+        <button id="addTab" class="btn btn-secondary">+ <span data-i18n="label_house_id">House ID</span></button>
+        <button id="delTab" class="btn btn-secondary" data-i18n="btn_remove">Remove house</button>
       </div>
 
       <!-- Flock info card -->
       <div id="flockInfo" class="card" style="margin-bottom:12px; display:none;">
         <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:12px;">
           <div>
-            <div class="muted" style="font-size:12px;">Placement date</div>
+            <div class="muted" style="font-size:12px;" data-i18n="flock_placement">Placement date</div>
             <div id="flockPlacementDate">—</div>
           </div>
           <div>
-            <div class="muted" style="font-size:12px;">Current day</div>
+            <div class="muted" style="font-size:12px;" data-i18n="flock_cur_day">Current day</div>
             <div id="flockCurrentDay">—</div>
           </div>
           <div>
-            <div class="muted" style="font-size:12px;">Current flock</div>
+            <div class="muted" style="font-size:12px;" data-i18n="flock_cur_birds">Current flock</div>
             <div id="flockCurrentBirds">—</div>
           </div>
           <div>
-            <div class="muted" style="font-size:12px;">Breed</div>
+            <div class="muted" style="font-size:12px;" data-i18n="flock_breed">Breed</div>
             <div id="flockBreed">—</div>
           </div>
         </div>
@@ -54,11 +55,13 @@
       <!-- Calc tab -->
       <section id="calcContent" class="grid">
         <div class="card">
-          <h2>Input</h2>
-          <label>House ID
+          <h2 data-i18n="input_h2">Input</h2>
+          <label>
+            <span data-i18n="label_house_id">House ID</span>
             <input id="house" type="text" placeholder="e.g. House A-1" />
           </label>
-          <label>Bird count
+          <label>
+            <span data-i18n="label_bird_count">Bird count</span>
             <input id="birds" type="number" min="1" max="60000" />
           </label>
 
@@ -66,38 +69,39 @@
           <label class="inline" style="align-items:flex-start; gap:8px;">
             <input id="heater" type="checkbox" style="margin-top:3px; flex-shrink:0;" />
             <span>
-              Gas heaters active
-              <span class="muted" style="font-size:11px; display:block; margin-top:3px; line-height:1.5;">
-                ✓ Open-flame gas brooders burning <em>inside</em> the house<br>
-                ✗ Electric, hot-water, or sealed-combustion boilers — leave unchecked<br>
-                <span style="opacity:.7;">Only open-flame burners exhaust flue gases inside — they consume air from the building. Sealed systems vent outside and do not affect ventilation.</span><br>
-                <span style="opacity:.7;">Adds combustion-air correction to Q<sub>min</sub></span>
-              </span>
+              <span data-i18n="heater_label">Gas heaters active</span>
+              <span class="muted" style="font-size:11px; display:block; margin-top:3px; line-height:1.5;"
+                    data-i18n-html="heater_desc_html"></span>
             </span>
           </label>
 
-          <label>System max capacity (m³/h)
-            <input id="cap" type="number" min="0" placeholder="leave blank if unknown" />
+          <label>
+            <span data-i18n="label_sys_max">System max capacity (m³/h)</span>
+            <input id="cap" type="number" min="0"
+                   data-i18n-placeholder="placeholder_cap"
+                   placeholder="leave blank if unknown" />
           </label>
-          <button id="sumBtn" class="btn">Calculate profile</button>
+          <button id="sumBtn" class="btn" data-i18n="btn_calc_profile">Calculate profile</button>
         </div>
 
         <div class="card">
-          <h2>Results</h2>
+          <h2 data-i18n="results_h2">Results</h2>
           <div style="margin-bottom:10px">
-            <label>Outdoor temperature, °C
+            <label>
+              <span data-i18n="label_outdoor_t">Outdoor temperature, °C</span>
               <input id="outsideTemp" type="number" step="1" min="-40" max="50" value="15">
             </label>
           </div>
-          <div id="result" class="result muted">Fill in the fields on the left and click "Calculate profile" to get ventilation rates for days 1, 7, 14, 21, 28, 35, 42.</div>
+          <div id="result" class="result muted" data-i18n="result_placeholder">Fill in the fields on the left and click "Calculate profile" to get ventilation rates for days 1, 7, 14, 21, 28, 35, 42.</div>
           <div id="summary"></div>
           <div style="margin-top:10px">
-            <label>Display mode
+            <label>
+              <span data-i18n="label_disp_mode">Display mode</span>
               <select id="viewMode">
-                <option value="total">m³/h total flock</option>
-                <option value="percent">% of capacity</option>
-                <option value="per_bird">m³/h per bird</option>
-                <option value="per_kg">m³/h per kg LW</option>
+                <option value="total"    data-i18n="mode_total">m³/h total flock</option>
+                <option value="percent"  data-i18n="mode_pct">% of capacity</option>
+                <option value="per_bird" data-i18n="mode_per_bird">m³/h per bird</option>
+                <option value="per_kg"   data-i18n="mode_per_kg">m³/h per kg LW</option>
               </select>
             </label>
           </div>
@@ -107,33 +111,33 @@
       <!-- Diary tab -->
       <section id="diaryContent" class="grid" style="display:none;">
         <div class="card" style="grid-column: 1/-1;">
-          <h2>📔 Flock Diary</h2>
-          <p class="muted">Flock diary will be available in a future update. Daily weight and mortality entry form coming soon.</p>
+          <h2 data-i18n="diary_h2">📔 Flock Diary</h2>
+          <p class="muted" data-i18n="diary_text">Flock diary will be available in a future update. Daily weight and mortality entry form coming soon.</p>
         </div>
       </section>
 
       <!-- Analytics tab -->
       <section id="analyticsContent" class="grid" style="display:none;">
         <div class="card" style="grid-column: 1/-1;">
-          <h2>📊 Plan vs Actual Analytics</h2>
-          <p class="muted">Analytics charts comparing planned and actual performance coming in a future update.</p>
+          <h2 data-i18n="analytics_h2">📊 Plan vs Actual Analytics</h2>
+          <p class="muted" data-i18n="analytics_text">Analytics charts comparing planned and actual performance coming in a future update.</p>
         </div>
       </section>
     </div>
 
     <footer>
-      <small>API: <code>/calc/minmax</code>. Profile data from <code>data/vent_profile_seed.json</code> or built-in defaults.</small>
+      <small data-i18n="footer_text">API: <code>/calc/minmax</code>. Profile data from <code>data/vent_profile_seed.json</code> or built-in defaults.</small>
     </footer>
   </main>
 
   <!-- Confirm delete modal -->
   <div id="modal" class="modal hidden">
     <div class="modal-card">
-      <h3 style="margin:0 0 8px;">Remove house?</h3>
-      <p class="muted" id="modalText">Are you sure you want to remove this house?</p>
+      <h3 style="margin:0 0 8px;" data-i18n="modal_title">Remove house?</h3>
+      <p class="muted" id="modalText" data-i18n="modal_default_txt">Are you sure you want to remove this house?</p>
       <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:12px;">
-        <button id="modalCancel" class="btn btn-secondary">Cancel</button>
-        <button id="modalOk" class="btn" style="background:#ff7a7a; color:#1b0b0b;">Remove</button>
+        <button id="modalCancel" class="btn btn-secondary" data-i18n="modal_cancel">Cancel</button>
+        <button id="modalOk" class="btn" style="background:#ff7a7a; color:#1b0b0b;" data-i18n="modal_remove">Remove</button>
       </div>
     </div>
   </div>

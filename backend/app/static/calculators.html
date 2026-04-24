@@ -1,10 +1,11 @@
 <!doctype html>
-<html lang="ru">
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Инструменты — MINMAXapp</title>
+  <title>Engineering Tools — MINMAXapp</title>
   <link rel="stylesheet" href="/styles.css" />
+  <script src="/i18n.js"></script>
   <style>
     .tool-tabs   { display:flex; gap:8px; margin-bottom:20px; flex-wrap:wrap; }
     .tool-tab    { padding:8px 16px; border:1px solid var(--border); border-radius:999px;
@@ -40,114 +41,110 @@
     .pct-bar      { height:10px; border-radius:6px; transition:width .4s; }
   </style>
 </head>
-<body>
+<body data-page-title="calc_title">
 <main class="container">
 
   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
-    <h1 style="margin:0;">🔧 Инженерные инструменты</h1>
+    <h1 style="margin:0;" data-i18n="calc_h1">🔧 Engineering tools</h1>
     <div style="display:flex; gap:8px;">
-      <a class="btn btn-secondary" href="/">← Главная</a>
-      <a class="btn btn-secondary" href="/settings.html">⚙️ Настройки</a>
+      <a class="btn btn-secondary" href="/" data-i18n="nav_home">← Home</a>
+      <a class="btn btn-secondary" href="/settings.html" data-i18n="nav_settings">⚙️ Farm Settings</a>
     </div>
   </div>
 
-  <p class="muted" style="margin-bottom:20px; font-size:13px;">
-    Расчётные инструменты на основе методик UGA (University of Georgia, Michael Czarick).
-    Все единицы — метрические.
+  <p class="muted" style="margin-bottom:20px; font-size:13px;" data-i18n="calc_intro">
+    Calculation tools based on UGA (University of Georgia, Michael Czarick) methodology. All units are metric.
   </p>
 
-  <!-- Вкладки инструментов -->
+  <!-- Tool tabs -->
   <div class="tool-tabs">
-    <button class="tool-tab active" data-tool="leakage">🏠 Герметичность птичника</button>
-    <button class="tool-tab" data-tool="evap">💧 Испарительное охлаждение</button>
-    <button class="tool-tab" data-tool="tunnel">🌬️ Скорость воздуха в туннеле</button>
+    <button class="tool-tab active" data-tool="leakage" data-i18n="tab_leakage">🏠 House tightness</button>
+    <button class="tool-tab" data-tool="evap"    data-i18n="tab_evap">💧 Evaporative cooling</button>
+    <button class="tool-tab" data-tool="tunnel"  data-i18n="tab_tunnel">🌬️ Tunnel air speed</button>
   </div>
 
   <!-- ═══════════════════════════════════════════════════
-       ИНСТРУМЕНТ: ГЕРМЕТИЧНОСТЬ (ELA)
+       TOOL: HOUSE TIGHTNESS (ELA)
   ═══════════════════════════════════════════════════ -->
   <div class="tool-panel active" id="panel-leakage">
 
-    <div class="info-block" style="margin-bottom:20px;">
-      <strong>Методика теста:</strong><br>
-      1. Закрыть все ворота, люки, шторки, приточные клапаны.<br>
-      2. Запустить один туннельный вентилятор, зафиксировать статическое давление.<br>
-      3. Ввести параметры ниже — получить ELA и класс герметичности.<br>
-      <strong>Рекомендуемое давление теста:</strong> 25–65 Па (≈ 0.10–0.25 дюйма вод. ст.)
-    </div>
+    <div class="info-block" style="margin-bottom:20px;" data-i18n-html="leakage_method_html"></div>
 
     <div class="grid" style="align-items:start; gap:16px;">
 
-      <!-- Форма ввода -->
+      <!-- Input form -->
       <div class="card">
-        <h2>Параметры теста</h2>
+        <h2 data-i18n="leakage_h2">Test parameters</h2>
 
-        <p class="muted" style="font-size:12px; margin:0 0 14px;">Размеры птичника</p>
+        <p class="muted" style="font-size:12px; margin:0 0 14px;" data-i18n="leakage_dims_grp">House dimensions</p>
         <div class="field-row">
-          <label>Длина, м
+          <label data-i18n="label_l_length">Length, m
             <input id="l-length" type="number" step="0.5" min="10" value="96" />
           </label>
-          <label>Ширина, м
+          <label data-i18n="label_l_width">Width, m
             <input id="l-width" type="number" step="0.5" min="5" value="18" />
           </label>
         </div>
 
         <hr class="section-divider" />
-        <p class="muted" style="font-size:12px; margin:0 0 14px;">Тест герметичности</p>
-        <label>Производительность тестового вентилятора при 25 Па, м³/ч
+        <p class="muted" style="font-size:12px; margin:0 0 14px;" data-i18n="leakage_test_grp">Tightness test</p>
+        <label>
+          <span data-i18n="label_fan_cap_25pa">Test fan capacity at 25 Pa, m³/h</span>
           <input id="l-fan-cap" type="number" step="500" min="500" value="34000" />
-          <span class="muted" style="font-size:11px;">≈ 20 000 CFM × 1.7</span>
+          <span class="muted" style="font-size:11px;" data-i18n="hint_fan_20000">≈ 20 000 CFM × 1.7</span>
         </label>
-        <label>Статическое давление при тесте, Па
+        <label>
+          <span data-i18n="label_test_pa">Static pressure at test, Pa</span>
           <input id="l-pressure" type="number" step="1" min="5" max="250" value="25" />
-          <span class="muted" style="font-size:11px;">25 Па ≈ 0.10", 63 Па ≈ 0.25"</span>
+          <span class="muted" style="font-size:11px;" data-i18n="hint_pa_val">25 Pa ≈ 0.10″, 63 Pa ≈ 0.25″</span>
         </label>
 
         <hr class="section-divider" />
-        <p class="muted" style="font-size:12px; margin:0 0 14px;">Минимальная вентиляция</p>
-        <label>Суммарный расход вентиляторов минвентиляции, м³/ч
+        <p class="muted" style="font-size:12px; margin:0 0 14px;" data-i18n="leakage_minvent_grp">Minimum ventilation</p>
+        <label>
+          <span data-i18n="label_min_vent_m3h">Total min-vent fan flow, m³/h</span>
           <input id="l-min-fan" type="number" step="500" min="500" value="34000" />
         </label>
         <div class="field-row">
-          <label>Количество клапанов, шт
+          <label data-i18n="label_num_inlets">Number of inlets
             <input id="l-inlets" type="number" step="1" min="1" value="40" />
           </label>
-          <label>Высота открытия, см
+          <label data-i18n="label_inlet_h_cm">Opening height, cm
             <input id="l-inlet-h" type="number" step="0.5" min="1" value="15" />
           </label>
         </div>
-        <label>Длина одного клапана, см
+        <label data-i18n="label_inlet_len_cm">Inlet length, cm
           <input id="l-inlet-len" type="number" step="1" min="10" value="107" />
         </label>
 
-        <button class="btn" id="l-calc-btn" style="margin-top:16px; width:100%;">
-          Рассчитать герметичность
+        <button class="btn" id="l-calc-btn" style="margin-top:16px; width:100%;" data-i18n="btn_calc_leakage">
+          Calculate tightness
         </button>
       </div>
 
-      <!-- Результаты -->
+      <!-- Results -->
       <div id="l-results" style="display:none;">
 
-        <!-- Класс герметичности -->
+        <!-- Tightness class -->
         <div class="card" style="margin-bottom:12px;">
-          <h2>Результат теста</h2>
+          <h2 data-i18n="leakage_result_h2">Test result</h2>
           <div id="l-badge" class="result-badge"></div>
 
           <div class="result" style="margin-top:8px;">
             <div class="kv">
-              <span>Площадь утечек (ELA)</span>
+              <span data-i18n="lbl_ela">Leakage area (ELA)</span>
               <span id="l-ela" class="big"></span>
             </div>
             <div class="kv">
-              <span>Относительная утечка</span>
+              <span data-i18n="lbl_rel_leak">Relative leakage</span>
               <span id="l-rel" class="big"></span>
             </div>
             <div class="kv">
-              <span>Площадь пола птичника</span>
+              <span data-i18n="lbl_house_area">House floor area</span>
               <span id="l-area"></span>
             </div>
             <div class="kv">
-              <span>Расход вентилятора при тестовом давлении</span>
+              <span data-i18n="lbl_fan_corr">Fan flow at test pressure</span>
               <span id="l-fan-corr"></span>
             </div>
           </div>
@@ -155,40 +152,40 @@
           <div class="info-block" id="l-class-tip" style="margin-top:12px;"></div>
         </div>
 
-        <!-- Анализ впускной системы -->
+        <!-- Inlet system analysis -->
         <div class="card">
-          <h2>Впускная система при минвентиляции</h2>
+          <h2 data-i18n="leakage_inlet_h2">Inlet system at min ventilation</h2>
           <div class="result">
             <div class="kv">
-              <span>Требуемая суммарная площадь впуска</span>
+              <span data-i18n="lbl_req_total">Required total inlet area</span>
               <span id="l-req-total"></span>
             </div>
             <div class="kv">
-              <span>Площадь щелей (ELA)</span>
+              <span data-i18n="lbl_ela2">Gap area (ELA)</span>
               <span id="l-ela2"></span>
             </div>
             <div class="kv">
-              <span>Чистая требуемая площадь клапанов</span>
+              <span data-i18n="lbl_net_inlet">Net required inlet area</span>
               <span id="l-net"></span>
             </div>
           </div>
 
           <div style="margin-top:14px;">
             <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
-              <span>Воздух через клапаны</span>
+              <span data-i18n="lbl_via_inlets">Air via inlets</span>
               <span id="l-pct-text" class="big"></span>
             </div>
             <div class="pct-bar-wrap">
               <div id="l-pct-bar" class="pct-bar"></div>
             </div>
             <div style="display:flex; justify-content:space-between; font-size:11px; margin-top:4px;" class="muted">
-              <span>↑ через щели</span>
-              <span>через клапаны ↑</span>
+              <span data-i18n="lbl_via_gaps">↑ via gaps</span>
+              <span data-i18n="lbl_via_valves">via inlets ↑</span>
             </div>
           </div>
 
           <div class="kv" style="margin-top:12px;">
-            <span>Требуемая высота открытия клапана</span>
+            <span data-i18n="lbl_req_opening">Required inlet opening</span>
             <span id="l-opening" class="big"></span>
           </div>
 
@@ -201,118 +198,113 @@
   </div><!-- /panel-leakage -->
 
   <!-- ═══════════════════════════════════════════════════
-       ИНСТРУМЕНТ: ИСПАРИТЕЛЬНОЕ ОХЛАЖДЕНИЕ (PAD & FAN)
+       TOOL: EVAPORATIVE COOLING (PAD & FAN)
   ═══════════════════════════════════════════════════ -->
   <div class="tool-panel" id="panel-evap">
 
-    <div class="info-block" style="margin-bottom:20px;">
-      <strong>Испарительное охлаждение (Pad &amp; Fan)</strong><br>
-      Воздух охлаждается, испаряя воду в целлюлозном пэде. Предел охлаждения — температура мокрого термометра (T<sub>wb</sub>).
-      КПД пэда при паспортной скорости (UGA): <strong>100 мм ≈ 73%</strong> (225 FPM), <strong>150 мм ≈ 75%</strong> (350 FPM).
-      Рекомендуемая скорость через пэд: <strong>1.0–1.8 м/с</strong> в зависимости от толщины.
-    </div>
+    <div class="info-block" style="margin-bottom:20px;" data-i18n-html="evap_info_html"></div>
 
     <div class="grid" style="align-items:start; gap:16px;">
 
-      <!-- Форма -->
+      <!-- Form -->
       <div class="card">
-        <h2>Параметры системы</h2>
+        <h2 data-i18n="evap_h2">System parameters</h2>
         <form id="evap-form">
 
-          <h3 style="font-size:13px; color:var(--muted); margin:12px 0 6px;">Размеры птичника</h3>
+          <h3 style="font-size:13px; color:var(--muted); margin:12px 0 6px;" data-i18n="evap_dims_grp">House dimensions</h3>
           <div class="field-row">
-            <label>Длина, м
+            <label data-i18n="label_l_length">Length, m
               <input id="ev-length" type="number" step="0.1" min="10" max="300" placeholder="120" required />
             </label>
-            <label>Ширина, м
+            <label data-i18n="label_l_width">Width, m
               <input id="ev-width" type="number" step="0.1" min="5" max="30" placeholder="12" required />
             </label>
           </div>
 
           <hr class="section-divider" />
-          <h3 style="font-size:13px; color:var(--muted); margin:0 0 6px;">Климат снаружи</h3>
+          <h3 style="font-size:13px; color:var(--muted); margin:0 0 6px;" data-i18n="evap_climate_grp">Outdoor climate</h3>
           <div class="field-row">
-            <label>Температура (сухой термометр), °C
+            <label data-i18n="label_tdb">Dry-bulb temperature, °C
               <input id="ev-tdb" type="number" step="0.5" min="-10" max="55" placeholder="32" required />
             </label>
-            <label>Относительная влажность, %
+            <label data-i18n="label_rh">Relative humidity, %
               <input id="ev-rh" type="number" step="1" min="5" max="100" placeholder="45" required />
             </label>
           </div>
 
           <hr class="section-divider" />
-          <h3 style="font-size:13px; color:var(--muted); margin:0 0 6px;">Вентиляция</h3>
-          <label>Суммарная производительность вентиляторов, м³/ч
+          <h3 style="font-size:13px; color:var(--muted); margin:0 0 6px;" data-i18n="evap_fans_grp">Ventilation</h3>
+          <label data-i18n="label_total_fans">Total fan capacity, m³/h
             <input id="ev-fans" type="number" step="100" min="1000" placeholder="180000" required />
           </label>
 
           <hr class="section-divider" />
-          <h3 style="font-size:13px; color:var(--muted); margin:0 0 6px;">Пэд (испарительный мат)</h3>
+          <h3 style="font-size:13px; color:var(--muted); margin:0 0 6px;" data-i18n="evap_pad_grp">Pad (evaporative media)</h3>
           <div class="field-row">
-            <label>Толщина пэда
+            <label data-i18n="label_pad_thick">Pad thickness
               <select id="ev-thickness">
-                <option value="100">100 мм (КПД ≈ 73%, v_рек 1.14 м/с)</option>
-                <option value="150">150 мм (КПД ≈ 75%, v_рек 1.78 м/с)</option>
+                <option value="100" data-i18n="opt_pad_100">100 mm (η ≈ 73%, v_rec 1.14 m/s)</option>
+                <option value="150" data-i18n="opt_pad_150">150 mm (η ≈ 75%, v_rec 1.78 m/s)</option>
               </select>
             </label>
-            <label>Высота пэдов (торцевая стена), м
+            <label data-i18n="label_pad_height">Pad height (gable wall), m
               <input id="ev-padh" type="number" step="0.1" min="1" max="5" placeholder="2.4" required />
             </label>
           </div>
-          <label>Покрытие торцевой стены пэдами, %
+          <label data-i18n="label_pad_cov">Pad coverage of gable wall, %
             <input id="ev-coverage" type="number" step="1" min="10" max="100" value="80" required />
           </label>
 
           <hr class="section-divider" />
-          <h3 style="font-size:13px; color:var(--muted); margin:0 0 6px;">Цель</h3>
-          <label>Целевая температура внутри, °C
+          <h3 style="font-size:13px; color:var(--muted); margin:0 0 6px;" data-i18n="evap_target_grp">Target</h3>
+          <label data-i18n="label_target_t">Target indoor temperature, °C
             <input id="ev-target" type="number" step="0.5" min="15" max="40" value="28" required />
           </label>
 
-          <button type="submit" id="evap-btn" class="btn" style="margin-top:16px;">Рассчитать</button>
+          <button type="submit" id="evap-btn" class="btn" style="margin-top:16px;" data-i18n="btn_calc_evap">Calculate</button>
         </form>
       </div>
 
-      <!-- Результаты -->
+      <!-- Results -->
       <div id="ev-results" style="display:none;">
 
         <div class="card" style="margin-bottom:12px;">
           <span id="ev-status" class="result-badge">—</span>
 
-          <h3 style="font-size:13px; color:var(--muted); margin:16px 0 8px;">Температуры</h3>
+          <h3 style="font-size:13px; color:var(--muted); margin:16px 0 8px;" data-i18n="evap_temps_h3">Temperatures</h3>
           <table style="width:100%; font-size:14px; border-collapse:collapse;">
-            <tr><td class="muted" style="padding:4px 0;">Т мокрого термометра (T<sub>wb</sub>)</td>
+            <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_twb">Wet-bulb temperature (T_wb)</td>
                 <td style="text-align:right;" id="ev-r-twb">—</td></tr>
-            <tr><td class="muted" style="padding:4px 0;">Т воздуха после пэда</td>
+            <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_tpad">Air temperature after pad</td>
                 <td style="text-align:right; font-size:18px; font-weight:700;" id="ev-r-tpad">—</td></tr>
-            <tr><td class="muted" style="padding:4px 0;">Охлаждение достигнуто</td>
+            <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_cooling">Cooling achieved</td>
                 <td style="text-align:right;" id="ev-r-cool">—</td></tr>
-            <tr><td class="muted" style="padding:4px 0;">КПД пэда</td>
+            <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_eta">Pad efficiency</td>
                 <td style="text-align:right;" id="ev-r-eta">—</td></tr>
-            <tr><td class="muted" style="padding:4px 0;">Запас до целевой Т</td>
+            <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_margin">Margin to target temp</td>
                 <td style="text-align:right;" id="ev-r-margin">—</td></tr>
           </table>
         </div>
 
         <div class="card" style="margin-bottom:12px;">
-          <h3 style="font-size:13px; color:var(--muted); margin:0 0 8px;">Пэд и скорость воздуха</h3>
+          <h3 style="font-size:13px; color:var(--muted); margin:0 0 8px;" data-i18n="evap_pad_h3">Pad and air speed</h3>
           <table style="width:100%; font-size:14px; border-collapse:collapse;">
-            <tr><td class="muted" style="padding:4px 0;">Площадь пэдов (факт)</td>
+            <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_pad_area">Actual pad area</td>
                 <td style="text-align:right;" id="ev-r-area">—</td></tr>
-            <tr><td class="muted" style="padding:4px 0;">Скорость воздуха</td>
+            <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_air_vel">Air velocity</td>
                 <td style="text-align:right;" id="ev-r-vel">—</td></tr>
             <tr><td class="muted" style="padding:4px 0;" colspan="2" id="ev-r-velstatus" style="font-size:12px;"></td></tr>
-            <tr><td class="muted" style="padding:4px 0;">Рекомендуемая площадь</td>
+            <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_rec_area">Recommended pad area</td>
                 <td style="text-align:right;" id="ev-r-rec-area">—</td></tr>
           </table>
         </div>
 
         <div class="card">
-          <h3 style="font-size:13px; color:var(--muted); margin:0 0 8px;">Водопотребление</h3>
+          <h3 style="font-size:13px; color:var(--muted); margin:0 0 8px;" data-i18n="evap_water_h3">Water consumption</h3>
           <table style="width:100%; font-size:14px; border-collapse:collapse;">
-            <tr><td class="muted" style="padding:4px 0;">Расход воды</td>
+            <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_water_lpm">Water flow</td>
                 <td style="text-align:right;" id="ev-r-water-lpm">—</td></tr>
-            <tr><td class="muted" style="padding:4px 0;">За час</td>
+            <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_water_h">Per hour</td>
                 <td style="text-align:right;" id="ev-r-water-h">—</td></tr>
           </table>
         </div>
@@ -323,130 +315,126 @@
   </div><!-- /panel-evap -->
 
   <!-- ═══════════════════════════════════════════════════
-       ИНСТРУМЕНТ: ТУННЕЛЬНАЯ СКОРОСТЬ И ВЕТРОВОЕ ОХЛАЖДЕНИЕ
+       TOOL: TUNNEL SPEED & WIND COOLING
   ═══════════════════════════════════════════════════ -->
   <div class="tool-panel" id="panel-tunnel">
 
-    <div class="info-block" style="margin-bottom:20px;">
-      <strong>Туннельная вентиляция — ветровое охлаждение</strong><br>
-      Воздух, движущийся вдоль птичника, усиливает конвективный и испарительный теплоотвод.
-      Ощущаемая температура рассчитывается по <strong>российской нормативной таблице</strong> (трилинейная интерполяция T × RH × V),
-      которая учитывает испарение со слизистых — эффект значительно сильнее линейного UGA-приближения.
-      Практический предел — <strong>3–3.5 м/с</strong>. Выше — птица испытывает стресс от воздушного потока.
-    </div>
+    <div class="info-block" style="margin-bottom:20px;" data-i18n-html="tunnel_info_html"></div>
 
     <div class="grid" style="align-items:start; gap:16px;">
 
-      <!-- Форма -->
+      <!-- Form -->
       <div class="card">
-        <h2>Параметры туннеля</h2>
+        <h2 data-i18n="tunnel_h2">Tunnel parameters</h2>
         <form id="tunnel-form">
 
-          <h3 style="font-size:13px; color:var(--muted); margin:12px 0 6px;">Сечение туннеля</h3>
+          <h3 style="font-size:13px; color:var(--muted); margin:12px 0 6px;" data-i18n="tunnel_sect_grp">Tunnel cross-section</h3>
           <div class="field-row">
-            <label>Ширина птичника, м
+            <label data-i18n="label_tn_width">House width, m
               <input id="tn-width" type="number" step="0.1" min="5" max="30" placeholder="12" required />
             </label>
-            <label>Высота свободного сечения, м
+            <label>
+              <span data-i18n="label_tn_height">Free cross-section height, m</span>
               <input id="tn-height" type="number" step="0.1" min="1" max="5" placeholder="2.0"
-                     title="≈70–85% полной высоты стены: оборудование занимает остаток" required />
+                     data-i18n-title="hint_tn_height" required />
             </label>
           </div>
 
           <hr class="section-divider" />
-          <h3 style="font-size:13px; color:var(--muted); margin:0 0 6px;">Вентиляторы</h3>
+          <h3 style="font-size:13px; color:var(--muted); margin:0 0 6px;" data-i18n="tunnel_fans_grp">Fans</h3>
           <div class="field-row">
-            <label>Количество вентиляторов, шт
+            <label data-i18n="label_tn_fans">Number of fans
               <input id="tn-fans" type="number" step="1" min="1" max="30" placeholder="8" required />
             </label>
-            <label>Производительность одного, м³/ч
+            <label>
+              <span data-i18n="label_tn_fan_cap">Capacity per fan, m³/h</span>
               <input id="tn-fan-cap" type="number" step="100" min="1000" placeholder="25000"
-                     title="При 0 Па статического давления" required />
+                     data-i18n-title="hint_tn_fan_cap" required />
             </label>
           </div>
 
           <hr class="section-divider" />
-          <h3 style="font-size:13px; color:var(--muted); margin:0 0 6px;">Климат и птица</h3>
+          <h3 style="font-size:13px; color:var(--muted); margin:0 0 6px;" data-i18n="tunnel_climate_grp">Climate and birds</h3>
           <div class="field-row">
-            <label>Температура снаружи, °C
+            <label data-i18n="label_tn_tdb">Outdoor temperature, °C
               <input id="tn-tdb" type="number" step="0.5" min="0" max="55" placeholder="33" required />
             </label>
-            <label>Относительная влажность, %
+            <label data-i18n="label_tn_rh">Relative humidity, %
               <input id="tn-rh" type="number" step="1" min="5" max="100" placeholder="50" required />
             </label>
           </div>
-          <label>Возраст птицы, дней
+          <label data-i18n="label_tn_age">Bird age, days
             <input id="tn-age" type="number" step="1" min="1" max="60" placeholder="35" required />
           </label>
 
           <hr class="section-divider" />
-          <h3 style="font-size:13px; color:var(--muted); margin:0 0 6px;">Сопротивление входа</h3>
-          <label>Давление на входе (шторы / пэды), Па
+          <h3 style="font-size:13px; color:var(--muted); margin:0 0 6px;" data-i18n="tunnel_inlet_grp">Inlet resistance</h3>
+          <label>
+            <span data-i18n="label_tn_inlet_pa">Inlet pressure (curtains / pads), Pa</span>
             <input id="tn-inlet-pa" type="number" step="1" min="0" max="50" value="10"
-                   title="Открытый торец без пэдов ≈ 2–5 Па; с испарительными пэдами ≈ 10–20 Па" />
+                   data-i18n-title="hint_tn_inlet_pa" />
           </label>
 
-          <button type="submit" id="tunnel-btn" class="btn" style="margin-top:16px;">Рассчитать</button>
+          <button type="submit" id="tunnel-btn" class="btn" style="margin-top:16px;" data-i18n="btn_calc_tunnel">Calculate</button>
         </form>
       </div>
 
-      <!-- Результаты -->
+      <!-- Results -->
       <div id="tn-results" style="display:none;">
 
-        <!-- Главный бейдж -->
         <div class="card" style="margin-bottom:12px;">
           <span id="tn-status" class="result-badge">—</span>
 
-          <h3 style="font-size:13px; color:var(--muted); margin:16px 0 8px;">Воздушный поток</h3>
+          <h3 style="font-size:13px; color:var(--muted); margin:16px 0 8px;" data-i18n="tunnel_flow_h3">Air flow</h3>
           <table style="width:100%; font-size:14px; border-collapse:collapse;">
-            <tr><td class="muted" style="padding:4px 0;">Сечение туннеля</td>
+            <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_cross_sect">Tunnel cross-section</td>
                 <td style="text-align:right;" id="tn-r-section">—</td></tr>
-            <tr><td class="muted" style="padding:4px 0;">Суммарный расход</td>
+            <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_total_flow">Total flow</td>
                 <td style="text-align:right;" id="tn-r-total">—</td></tr>
-            <tr><td class="muted" style="padding:4px 0;">Скорость воздуха</td>
+            <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_air_speed">Air speed</td>
                 <td style="text-align:right; font-size:20px; font-weight:700;" id="tn-r-vel">—</td></tr>
-            <tr><td class="muted" style="padding:4px 0 2px;">Скорость, FPM</td>
+            <tr><td class="muted" style="padding:4px 0 2px;" data-i18n="lbl_fpm">Speed, FPM</td>
                 <td style="text-align:right; font-size:11px; color:var(--muted);" id="tn-r-fpm">—</td></tr>
           </table>
           <div class="info-block" style="margin-top:8px; font-size:12px;" id="tn-r-vel-status"></div>
         </div>
 
-        <!-- Ветровое охлаждение -->
+        <!-- Wind cooling -->
         <div class="card" style="margin-bottom:12px;">
-          <h3 style="font-size:13px; color:var(--muted); margin:0 0 8px;">Ветровое охлаждение</h3>
+          <h3 style="font-size:13px; color:var(--muted); margin:0 0 8px;" data-i18n="tunnel_chill_h3">Wind cooling</h3>
           <table style="width:100%; font-size:14px; border-collapse:collapse;">
-            <tr><td class="muted" style="padding:4px 0;">Реальная температура</td>
+            <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_treal">Actual temperature</td>
                 <td style="text-align:right;" id="tn-r-treal">—</td></tr>
-            <tr><td class="muted" style="padding:4px 0;">Охлаждение ветром</td>
+            <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_wind_chill">Wind cooling</td>
                 <td style="text-align:right; color:#4ade80;" id="tn-r-windchill">—</td></tr>
-            <tr><td class="muted" style="padding:4px 0;">Эффективная температура</td>
+            <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_eff_temp">Effective temperature</td>
                 <td style="text-align:right; font-size:18px; font-weight:700;" id="tn-r-efftemp">—</td></tr>
           </table>
         </div>
 
         <!-- THI -->
         <div class="card" style="margin-bottom:12px;">
-          <h3 style="font-size:13px; color:var(--muted); margin:0 0 8px;">Индекс теплового стресса (THI)</h3>
+          <h3 style="font-size:13px; color:var(--muted); margin:0 0 8px;" data-i18n="tunnel_thi_h3">Heat stress index (THI)</h3>
           <div style="display:flex; align-items:baseline; gap:12px;">
             <span style="font-size:32px; font-weight:700;" id="tn-r-thi">—</span>
             <span id="tn-r-thi-status" style="font-size:14px;">—</span>
           </div>
-          <div class="info-block" style="margin-top:8px; font-size:12px;">
-            &lt;74 Комфорт · 74–78 Тревога · 79–83 Опасность · &gt;83 Критично
+          <div class="info-block" style="margin-top:8px; font-size:12px;" data-i18n="thi_scale">
+            &lt;74 Comfortable · 74–78 Alert · 79–83 Danger · &gt;83 Critical
           </div>
         </div>
 
-        <!-- Давление и рекомендации -->
+        <!-- Pressure & recommendations -->
         <div class="card">
-          <h3 style="font-size:13px; color:var(--muted); margin:0 0 8px;">Давление и рекомендации</h3>
+          <h3 style="font-size:13px; color:var(--muted); margin:0 0 8px;" data-i18n="tunnel_press_h3">Pressure and recommendations</h3>
           <table style="width:100%; font-size:14px; border-collapse:collapse;">
-            <tr><td class="muted" style="padding:4px 0;">Динамическое давление</td>
+            <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_dyn_pa">Dynamic pressure</td>
                 <td style="text-align:right;" id="tn-r-dyn-pa">—</td></tr>
-            <tr><td class="muted" style="padding:4px 0;">Расчётное давление на вент.</td>
+            <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_tot_pa">Estimated fan pressure</td>
                 <td style="text-align:right;" id="tn-r-tot-pa">—</td></tr>
-            <tr><td class="muted" style="padding:4px 0;">Цель по скорости (возраст)</td>
+            <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_speed_target">Speed target (age)</td>
                 <td style="text-align:right;" id="tn-r-target">—</td></tr>
-            <tr><td class="muted" style="padding:4px 0;">Вент. для нижней границы</td>
+            <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_fans_needed">Fans for lower bound</td>
                 <td style="text-align:right; font-weight:700;" id="tn-r-fans-need">—</td></tr>
           </table>
         </div>
@@ -459,10 +447,10 @@
 </main>
 
 <script>
-// ─────── Переключение вкладок ───────
+// ─────── Tab switching ───────
 document.querySelectorAll('.tool-tab:not([disabled])').forEach(btn => {
   btn.addEventListener('click', () => {
-    document.querySelectorAll('.tool-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tool-tab').forEach(tb => tb.classList.remove('active'));
     document.querySelectorAll('.tool-panel').forEach(p => p.classList.remove('active'));
     btn.classList.add('active');
     const panel = document.getElementById('panel-' + btn.dataset.tool);
@@ -470,12 +458,12 @@ document.querySelectorAll('.tool-tab:not([disabled])').forEach(btn => {
   });
 });
 
-// ─────── Класс герметичности ───────
+// ─────── Tightness class config (tips via i18n) ───────
 const TIGHTNESS = {
-  tight:      { css:'badge-tight',      tip:'Отлично! Птичник герметичный. Потери тепла через щели минимальны. При минимальной вентиляции большая часть воздуха будет поступать через клапаны — контроль микроклимата оптимален.' },
-  moderate:   { css:'badge-moderate',   tip:'Умеренная герметичность. Рекомендуется уплотнить шторы туннельных вентиляторов, ворота и стыки. Это снизит расход топлива и улучшит равномерность поступления свежего воздуха.' },
-  leaky:      { css:'badge-leaky',      tip:'Значительные утечки. Часть воздуха минвентиляции будет поступать через щели у торцевых стен и вентиляторов, что ведёт к холодным зонам, влажной подстилке и росту аммиака.' },
-  very_leaky: { css:'badge-very_leaky', tip:'Критическая проблема! Большой объём холодного воздуха проникает неконтролируемо. Необходим срочный осмотр и устранение щелей — иначе нормальная работа минвентиляции невозможна.' },
+  tight:      { css: 'badge-tight',      tipKey: 'tip_tight' },
+  moderate:   { css: 'badge-moderate',   tipKey: 'tip_moderate' },
+  leaky:      { css: 'badge-leaky',      tipKey: 'tip_leaky' },
+  very_leaky: { css: 'badge-very_leaky', tipKey: 'tip_very_leaky' },
 };
 
 function pctColor(pct) {
@@ -484,7 +472,7 @@ function pctColor(pct) {
   return '#f87171';
 }
 
-// ─────── Расчёт герметичности ───────
+// ─────── Leakage calculation ───────
 document.getElementById('l-calc-btn').addEventListener('click', async () => {
   const body = {
     house_length_m:       +document.getElementById('l-length').value,
@@ -497,14 +485,13 @@ document.getElementById('l-calc-btn').addEventListener('click', async () => {
     inlet_length_cm:      +document.getElementById('l-inlet-len').value,
   };
 
-  // Базовая проверка
   if (Object.values(body).some(v => !v || v <= 0)) {
-    alert('Заполните все поля корректными значениями.');
+    alert(t('err_fill_valid'));
     return;
   }
 
   const btn = document.getElementById('l-calc-btn');
-  btn.textContent = 'Считаю…'; btn.disabled = true;
+  btn.textContent = t('btn_leakage_busy'); btn.disabled = true;
 
   try {
     const resp = await fetch('/calc/tools/leakage', {
@@ -515,46 +502,46 @@ document.getElementById('l-calc-btn').addEventListener('click', async () => {
 
     if (!resp.ok) {
       const err = await resp.json();
-      alert('Ошибка API: ' + JSON.stringify(err.detail));
+      alert(t('err_api') + JSON.stringify(err.detail));
       return;
     }
 
-    const d = await resp.json();
-    renderLeakage(d);
+    renderLeakage(await resp.json());
 
   } catch(e) {
-    alert('Ошибка соединения: ' + e.message);
+    alert(t('err_conn') + e.message);
   } finally {
-    btn.textContent = 'Рассчитать герметичность'; btn.disabled = false;
+    btn.textContent = t('btn_leakage_active'); btn.disabled = false;
   }
 });
 
 function renderLeakage(d) {
-  const tc = TIGHTNESS[d.tightness_class] || TIGHTNESS.very_leaky;
+  const tc  = TIGHTNESS[d.tightness_class] || TIGHTNESS.very_leaky;
   const pct = d.pct_air_via_inlets;
   const relClass = d.relative_leakage < 0.25 ? 'ok'
                  : d.relative_leakage < 0.50 ? 'warn' : 'danger';
+  const u = t('unit_m2');
 
-  // Бейдж
+  // Badge — use i18n key mapped from tightness_class
   const badge = document.getElementById('l-badge');
-  badge.textContent = d.tightness_label_ru;
+  badge.textContent = t('tightness_' + d.tightness_class);
   badge.className   = 'result-badge ' + tc.css;
 
-  // KV-значения теста
+  // Test result KVs
   document.getElementById('l-ela').innerHTML =
-    `<span class="${relClass}">${d.ela_m2.toFixed(3)} м²</span>`;
+    `<span class="${relClass}">${d.ela_m2.toFixed(3)} ${u}</span>`;
   document.getElementById('l-rel').innerHTML =
-    `<span class="${relClass}">${d.relative_leakage.toFixed(3)} м²/1000м²</span>`;
-  document.getElementById('l-area').textContent   = `${d.house_area_m2.toFixed(0)} м²`;
-  document.getElementById('l-fan-corr').textContent = `${d.fan_corrected_m3h.toFixed(0)} м³/ч`;
-  document.getElementById('l-class-tip').textContent = tc.tip;
+    `<span class="${relClass}">${d.relative_leakage.toFixed(3)} ${u}/1000${u}</span>`;
+  document.getElementById('l-area').textContent    = `${d.house_area_m2.toFixed(0)} ${u}`;
+  document.getElementById('l-fan-corr').textContent = `${d.fan_corrected_m3h.toFixed(0)} ${t('unit_m3h')}`;
+  document.getElementById('l-class-tip').textContent = t(tc.tipKey);
 
-  // Впускная система
-  document.getElementById('l-ela2').textContent      = `${d.ela_m2.toFixed(3)} м²`;
-  document.getElementById('l-req-total').textContent = `${d.required_total_area_m2.toFixed(3)} м²`;
-  document.getElementById('l-net').textContent       = `${d.net_inlet_area_m2.toFixed(3)} м²`;
+  // Inlet system
+  document.getElementById('l-ela2').textContent      = `${d.ela_m2.toFixed(3)} ${u}`;
+  document.getElementById('l-req-total').textContent = `${d.required_total_area_m2.toFixed(3)} ${u}`;
+  document.getElementById('l-net').textContent       = `${d.net_inlet_area_m2.toFixed(3)} ${u}`;
 
-  // Процентная полоска
+  // Percentage bar
   const pctText = document.getElementById('l-pct-text');
   const pctPct  = Math.round(pct * 100);
   pctText.textContent = pctPct + '%';
@@ -562,22 +549,22 @@ function renderLeakage(d) {
   document.getElementById('l-pct-bar').style.cssText =
     `width:${pctPct}%; background:${pctColor(pct)};`;
 
-  // Открытие клапана
+  // Required opening
   const opEl = document.getElementById('l-opening');
-  opEl.textContent = `${d.required_opening_cm.toFixed(1)} см`;
+  opEl.textContent = `${d.required_opening_cm.toFixed(1)} ${t('unit_cm')}`;
   opEl.className   = 'big ' + (d.required_opening_cm > 0 ? 'ok' : 'muted');
 
-  // Подсказка по впуску
-  let inletTip = '';
+  // Inlet tip
+  let inletTip;
   if (pct >= 0.85) {
-    inletTip = `✅ Хорошо: ${pctPct}% воздуха идёт через клапаны. Контроль воздухораспределения высокий.`;
+    inletTip = t('inlet_tip_good', { pct: pctPct });
   } else if (pct >= 0.65) {
-    inletTip = `⚠️ ${pctPct}% через клапаны. Значительная часть воздуха входит через щели у торцов — возможны холодные зоны и влажная подстилка. Рекомендуется уплотнение.`;
+    inletTip = t('inlet_tip_moderate', { pct: pctPct });
   } else {
-    inletTip = `🔴 Только ${pctPct}% через клапаны! Большинство воздуха проникает через щели неконтролируемо. Птичник требует срочного уплотнения перед зимовкой.`;
+    inletTip = t('inlet_tip_poor', { pct: pctPct });
   }
   if (d.required_opening_cm === 0) {
-    inletTip += ' Щелей достаточно чтобы покрыть всю потребность в воздухе — клапаны практически не нужны при данной минвентиляции.';
+    inletTip += t('inlet_tip_no_valves');
   }
   document.getElementById('l-inlet-tip').textContent = inletTip;
 
@@ -585,13 +572,13 @@ function renderLeakage(d) {
 }
 
 // ═══════════════════════════════════════════════════
-// ТУННЕЛЬНАЯ СКОРОСТЬ
+// TUNNEL SPEED
 // ═══════════════════════════════════════════════════
 
 document.getElementById('tunnel-form').addEventListener('submit', async e => {
   e.preventDefault();
   const btn = document.getElementById('tunnel-btn');
-  btn.disabled = true; btn.textContent = 'Расчёт...';
+  btn.disabled = true; btn.textContent = t('btn_tunnel_busy');
 
   try {
     const payload = {
@@ -613,36 +600,42 @@ document.getElementById('tunnel-form').addEventListener('submit', async e => {
 
     if (!resp.ok) {
       const err = await resp.json().catch(() => ({ detail: resp.statusText }));
-      alert('Ошибка: ' + JSON.stringify(err.detail || err));
+      alert(t('err_prefix') + JSON.stringify(err.detail || err));
       return;
     }
 
     renderTunnel(await resp.json(), payload.t_outdoor_db_c);
   } finally {
-    btn.disabled = false; btn.textContent = 'Рассчитать';
+    btn.disabled = false; btn.textContent = t('btn_tunnel_active');
   }
 });
 
 function renderTunnel(d, t_real) {
-  // Бейдж статуса
+  const uMs = t('unit_ms');
+  const uM2 = t('unit_m2');
+  const uM3h = t('unit_m3h');
+  const uPa  = t('unit_pa');
+
+  // Status badge (returned by API as label)
   const statusEl = document.getElementById('tn-status');
   statusEl.textContent = d.status_label;
   if (d.status_label.includes('✅')) statusEl.className = 'result-badge badge-tight';
   else if (d.status_label.includes('🟡')) statusEl.className = 'result-badge badge-moderate';
   else statusEl.className = 'result-badge badge-very_leaky';
 
-  // Поток
-  document.getElementById('tn-r-section').textContent = d.cross_section_m2.toFixed(2) + ' м²';
-  document.getElementById('tn-r-total').textContent   = d.total_airflow_m3h.toLocaleString('ru') + ' м³/ч';
+  // Air flow
+  document.getElementById('tn-r-section').textContent = d.cross_section_m2.toFixed(2) + ' ' + uM2;
+  document.getElementById('tn-r-total').textContent   =
+    d.total_airflow_m3h.toLocaleString(I18N.lang) + ' ' + uM3h;
 
-  const vOk = d.air_velocity_ms >= d.target_v_min_ms && d.air_velocity_ms <= d.target_v_max_ms;
+  const vOk   = d.air_velocity_ms >= d.target_v_min_ms && d.air_velocity_ms <= d.target_v_max_ms;
   const vHigh = d.air_velocity_ms > d.target_v_max_ms;
   document.getElementById('tn-r-vel').innerHTML =
-    `<span class="${vOk ? 'ok' : vHigh ? 'warn' : 'danger'}">${d.air_velocity_ms.toFixed(2)} м/с</span>`;
-  document.getElementById('tn-r-fpm').textContent  = d.air_velocity_fpm.toFixed(0) + ' FPM';
+    `<span class="${vOk ? 'ok' : vHigh ? 'warn' : 'danger'}">${d.air_velocity_ms.toFixed(2)} ${uMs}</span>`;
+  document.getElementById('tn-r-fpm').textContent    = d.air_velocity_fpm.toFixed(0) + ' FPM';
   document.getElementById('tn-r-vel-status').textContent = d.velocity_status;
 
-  // Охлаждение
+  // Wind cooling
   document.getElementById('tn-r-treal').textContent     = t_real.toFixed(1) + ' °C';
   document.getElementById('tn-r-windchill').textContent = '−' + d.wind_chill_c.toFixed(1) + ' °C';
   document.getElementById('tn-r-efftemp').textContent   = d.effective_temp_c.toFixed(1) + ' °C';
@@ -656,25 +649,25 @@ function renderTunnel(d, t_real) {
                     : '#f87171';
   document.getElementById('tn-r-thi-status').textContent = d.thi_status;
 
-  // Давление и рекомендации
-  document.getElementById('tn-r-dyn-pa').textContent  = d.dynamic_pressure_pa.toFixed(1) + ' Па';
-  document.getElementById('tn-r-tot-pa').textContent  = d.total_pressure_pa.toFixed(1) + ' Па';
+  // Pressure & recommendations
+  document.getElementById('tn-r-dyn-pa').textContent  = d.dynamic_pressure_pa.toFixed(1) + ' ' + uPa;
+  document.getElementById('tn-r-tot-pa').textContent  = d.total_pressure_pa.toFixed(1)   + ' ' + uPa;
   document.getElementById('tn-r-target').textContent  =
-    `${d.target_v_min_ms}–${d.target_v_max_ms} м/с`;
+    `${d.target_v_min_ms}–${d.target_v_max_ms} ${uMs}`;
   document.getElementById('tn-r-fans-need').textContent =
-    d.fans_needed_for_target + ' шт (для ≥' + d.target_v_min_ms + ' м/с)';
+    t('fans_needed_fmt', { n: d.fans_needed_for_target, v_min: d.target_v_min_ms });
 
   document.getElementById('tn-results').style.display = 'block';
 }
 
 // ═══════════════════════════════════════════════════
-// ИСПАРИТЕЛЬНОЕ ОХЛАЖДЕНИЕ
+// EVAPORATIVE COOLING
 // ═══════════════════════════════════════════════════
 
 document.getElementById('evap-form').addEventListener('submit', async e => {
   e.preventDefault();
   const btn = document.getElementById('evap-btn');
-  btn.disabled = true; btn.textContent = 'Расчёт...';
+  btn.disabled = true; btn.textContent = t('btn_evap_busy');
 
   try {
     const payload = {
@@ -697,21 +690,25 @@ document.getElementById('evap-form').addEventListener('submit', async e => {
 
     if (!resp.ok) {
       const err = await resp.json().catch(() => ({ detail: resp.statusText }));
-      alert('Ошибка: ' + JSON.stringify(err.detail || err));
+      alert(t('err_prefix') + JSON.stringify(err.detail || err));
       return;
     }
 
     renderEvap(await resp.json());
   } finally {
-    btn.disabled = false; btn.textContent = 'Рассчитать';
+    btn.disabled = false; btn.textContent = t('btn_evap_active');
   }
 });
 
 function renderEvap(d) {
-  // Статус
+  const uM2   = t('unit_m2');
+  const uMs   = t('unit_ms');
+  const uLpm  = t('unit_lpm');
+  const uLh   = t('unit_lh');
+
+  // Status badge
   const statusEl = document.getElementById('ev-status');
   statusEl.textContent = d.status_label;
-  // Цвет бейджа по статусу
   if (d.status_label.includes('✅')) {
     statusEl.className = 'result-badge badge-tight';
   } else if (d.status_label.includes('🟡')) {
@@ -720,7 +717,7 @@ function renderEvap(d) {
     statusEl.className = 'result-badge badge-very_leaky';
   }
 
-  // Психрометрика
+  // Psychrometrics
   document.getElementById('ev-r-twb').textContent     = d.t_wb_c.toFixed(1) + ' °C';
   document.getElementById('ev-r-tpad').textContent    = d.t_pad_out_c.toFixed(1) + ' °C';
   document.getElementById('ev-r-cool').textContent    = d.cooling_achieved_c.toFixed(1) + ' °C';
@@ -730,20 +727,19 @@ function renderEvap(d) {
     return `<span class="${cls}">${d.temp_margin_c.toFixed(1)} °C</span>`;
   })();
 
-  // Геометрия пэда
-  document.getElementById('ev-r-area').textContent    = d.pad_area_m2.toFixed(2) + ' м²';
+  // Pad geometry
+  document.getElementById('ev-r-area').textContent    = d.pad_area_m2.toFixed(2) + ' ' + uM2;
   document.getElementById('ev-r-vel').innerHTML       = (() => {
     const cls = d.velocity_ok ? 'ok' : 'danger';
-    return `<span class="${cls}">${d.air_velocity_ms.toFixed(2)} м/с</span>`;
+    return `<span class="${cls}">${d.air_velocity_ms.toFixed(2)} ${uMs}</span>`;
   })();
   document.getElementById('ev-r-velstatus').textContent = d.velocity_status;
-  document.getElementById('ev-r-rec-area').textContent  = d.recommended_pad_area_m2.toFixed(2) + ' м²';
+  document.getElementById('ev-r-rec-area').textContent  = d.recommended_pad_area_m2.toFixed(2) + ' ' + uM2;
 
-  // Вода
-  document.getElementById('ev-r-water-lpm').textContent = d.water_flow_lpm.toFixed(1) + ' л/мин';
-  document.getElementById('ev-r-water-h').textContent   = d.water_per_hour_l.toFixed(0) + ' л/ч';
+  // Water
+  document.getElementById('ev-r-water-lpm').textContent = d.water_flow_lpm.toFixed(1) + ' ' + uLpm;
+  document.getElementById('ev-r-water-h').textContent   = d.water_per_hour_l.toFixed(0) + ' ' + uLh;
 
-  // Показываем результаты
   document.getElementById('ev-results').style.display = 'block';
 }
 </script>
