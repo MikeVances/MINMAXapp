@@ -62,6 +62,7 @@
     <button class="tool-tab active" data-tool="leakage" data-i18n="tab_leakage">🏠 House tightness</button>
     <button class="tool-tab" data-tool="evap"    data-i18n="tab_evap">💧 Evaporative cooling</button>
     <button class="tool-tab" data-tool="tunnel"  data-i18n="tab_tunnel">🌬️ Tunnel air speed</button>
+    <button class="tool-tab" data-tool="calibration" data-i18n="tab_calibration">🔬 Calibration</button>
   </div>
 
   <!-- ═══════════════════════════════════════════════════
@@ -744,5 +745,97 @@ function renderEvap(d) {
   document.getElementById('ev-results').style.display = 'block';
 }
 </script>
+
+<!-- ═══════════════════════════════════════════════════
+     TOOL: BUILDING CALIBRATION
+═══════════════════════════════════════════════════ -->
+<div class="tool-panel" id="panel-calibration">
+
+  <div class="card" style="margin-bottom:16px;">
+    <p class="muted" data-i18n="cal_intro"></p>
+  </div>
+
+  <!-- Step 1 -->
+  <div class="card" style="margin-bottom:16px;">
+    <h2 data-i18n="step1_h2">Step 1: Building dimensions</h2>
+    <p class="muted" style="margin-bottom:12px;" data-i18n="step1_desc"></p>
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:12px;">
+      <label data-i18n="label_length_m">Length, m<input id="length" type="number" step="0.1" min="1" max="500" placeholder="100"></label>
+      <label data-i18n="label_width_m">Width, m<input id="width" type="number" step="0.1" min="1" max="200" placeholder="20"></label>
+      <label data-i18n="label_height_m">Height, m<input id="height" type="number" step="0.1" min="1" max="20" placeholder="3"></label>
+    </div>
+    <div style="margin-top:12px; padding:12px; background:var(--bg); border-radius:8px;">
+      <div class="kv"><span data-i18n="bldg_volume_lbl">Volume</span><span id="volumeDisplay" style="font-weight:600;" data-i18n="vol_default">— m³</span></div>
+      <div class="kv"><span data-i18n="bldg_area_lbl">Floor area</span><span id="areaDisplay" style="font-weight:600;" data-i18n="area_default">— m²</span></div>
+    </div>
+    <button id="saveBuildingBtn" class="btn" style="margin-top:12px;" data-i18n="btn_save_dims">Save dimensions</button>
+    <span id="buildingStatus" class="muted" style="margin-left:10px;"></span>
+  </div>
+
+  <!-- Step 2 -->
+  <div class="card" style="margin-bottom:16px;">
+    <h2 data-i18n="step2_h2">Step 2: Heating equipment</h2>
+    <p class="muted" style="margin-bottom:12px;" data-i18n="step2_desc"></p>
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap:12px;">
+      <label>
+        <span data-i18n="heater_type_lbl">Heater type</span>
+        <select id="heaterType">
+          <option value="gas_open" data-i18n="opt_gas_open">Open-flame gas brooders</option>
+          <option value="electric" data-i18n="opt_electric">Electric heaters</option>
+        </select>
+      </label>
+      <label data-i18n="heating_cap_lbl">Total capacity, kW<input id="heaterPower" type="number" step="1" min="0" max="10000" placeholder="500"></label>
+    </div>
+    <div id="gasInfo" style="margin-top:12px; padding:12px; background:var(--warning-bg,#3a2f1a); border-left:3px solid var(--warning,#f4b942); border-radius:4px;" data-i18n-html="gas_info_html"></div>
+    <button id="saveHeaterBtn" class="btn" style="margin-top:12px;" data-i18n="btn_save_heater">Save configuration</button>
+    <span id="heaterStatus" class="muted" style="margin-left:10px;"></span>
+  </div>
+
+  <!-- Step 3: Timer -->
+  <div class="card" style="margin-bottom:16px;">
+    <h2 data-i18n="step3_h2">Step 3: Cooling test</h2>
+    <div style="margin-bottom:16px;" data-i18n-html="step3_proc_html"></div>
+    <label style="max-width:280px;">
+      <span data-i18n="label_t_outside">Outdoor temperature, °C</span>
+      <input id="tOutside" type="number" step="0.1" min="-40" max="50" placeholder="-5.0">
+    </label>
+    <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;">
+      <div class="kv" style="flex:1; min-width:130px;"><span data-i18n="lbl_t_start">Start</span><span><strong>30 °C</strong></span></div>
+      <div class="kv" style="flex:1; min-width:130px;"><span data-i18n="lbl_t_stop">Stop</span><span><strong>25 °C</strong></span></div>
+    </div>
+    <div style="margin-top:20px; padding:20px 16px; background:var(--bg); border-radius:10px; text-align:center;">
+      <div id="timerDisplay" style="font-size:52px; font-weight:700; font-family:monospace; letter-spacing:6px; color:var(--accent);">00:00</div>
+      <div id="timerStatus" class="muted" style="margin:10px 0 18px; font-size:13px;" data-i18n="timer_ready"></div>
+      <button id="timerBtn" class="btn" data-i18n="btn_start_test">▶ Start test</button>
+    </div>
+    <input id="tInitial"    type="hidden" value="30">
+    <input id="tFinal"      type="hidden" value="25">
+    <input id="timeMinutes" type="hidden" value="">
+    <button id="calculateBtn" style="display:none;">Calculate</button>
+    <div id="calibrationResult" style="margin-top:14px;"></div>
+    <button id="saveCalibrationBtn" class="btn" style="margin-top:10px;" disabled data-i18n="btn_save_cal">💾 Save calibration</button>
+  </div>
+
+  <!-- Step 4 -->
+  <div class="card" style="margin-bottom:16px;">
+    <h2 data-i18n="step4_h2">Step 4: Heater analysis</h2>
+    <p class="muted" style="margin-bottom:12px;" data-i18n="step4_desc"></p>
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:12px;">
+      <label data-i18n="label_t_inside">Target indoor temp, °C<input id="tInsideTarget" type="number" step="0.1" min="-20" max="50" placeholder="33.0" value="33.0"></label>
+      <label data-i18n="label_t_outside2">Outdoor temp, °C<input id="tOutsideAnalysis" type="number" step="0.1" min="-40" max="50" placeholder="-5.0" value="-5.0"></label>
+    </div>
+    <button id="analyzeBtn" class="btn" style="margin-top:12px;" data-i18n="btn_analyse">🔍 Analyse</button>
+    <div id="analysisResult" style="margin-top:12px;"></div>
+  </div>
+
+  <!-- Current config -->
+  <div class="card">
+    <h2 data-i18n="cur_cfg_h2">📋 Current configuration</h2>
+    <div id="currentConfig" class="muted" data-i18n="text_loading">Loading…</div>
+  </div>
+
+</div><!-- /panel-calibration -->
+
+<script src="/calibration.js?v=3"></script>
 </body>
 </html>

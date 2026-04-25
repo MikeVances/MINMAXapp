@@ -231,6 +231,7 @@ const LOCALES = {
     tab_leakage:       '🏠 House tightness',
     tab_evap:          '💧 Evaporative cooling',
     tab_tunnel:        '🌬️ Tunnel air speed',
+    tab_calibration:   '🌡️ Heat loss',
 
     // Leakage tool
     leakage_method_html:  '<strong>Test procedure:</strong><br>1. Close all doors, hatches, curtains, and inlet dampers.<br>2. Start one tunnel fan; record the static pressure reading.<br>3. Enter the parameters below to get ELA and tightness class.<br><strong>Recommended test pressure:</strong> 25–65 Pa (≈ 0.10–0.25 in. w.c.)',
@@ -579,6 +580,7 @@ const LOCALES = {
     tab_leakage:       '🏠 Герметичность птичника',
     tab_evap:          '💧 Испарительное охлаждение',
     tab_tunnel:        '🌬️ Скорость воздуха в туннеле',
+    tab_calibration:   '🌡️ Теплопотери',
 
     // Инструмент герметичности
     leakage_method_html:  '<strong>Методика теста:</strong><br>1. Закрыть все ворота, люки, шторки, приточные клапаны.<br>2. Запустить один туннельный вентилятор, зафиксировать статическое давление.<br>3. Ввести параметры ниже — получить ELA и класс герметичности.<br><strong>Рекомендуемое давление теста:</strong> 25–65 Па (≈ 0.10–0.25 дюйма вод. ст.)',
