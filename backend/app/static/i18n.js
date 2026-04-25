@@ -10,7 +10,7 @@ const LOCALES = {
     // ── Navigation ─────────────────────────────────
     nav_home:            '← Home',
     nav_settings:        '⚙️ Farm Settings',
-    nav_calculators:     '🔧 Calculators',
+    nav_calculators:     '🔍 Farm Audit',
     nav_calibration:     '🔬 Calibration',
 
     // ── Common UI ──────────────────────────────────
@@ -225,9 +225,9 @@ const LOCALES = {
     cfg_kw_unit:       'kW',
 
     // ── CALCULATORS PAGE ──────────────────────────
-    calc_title:        'Engineering Tools — MINMAXapp',
-    calc_h1:           '🔧 Engineering tools',
-    calc_intro:        'Calculation tools based on UGA (University of Georgia, Michael Czarick) methodology. All units are metric.',
+    calc_title:        'Farm Audit — MINMAXapp',
+    calc_h1:           '🔍 Farm Audit',
+    calc_intro:        'Self-audit tools for poultry house systems, based on UGA (University of Georgia, Michael Czarick) methodology. All units are metric.',
     tab_leakage:       '🏠 House tightness',
     tab_evap:          '💧 Evaporative cooling',
     tab_tunnel:        '🌬️ Tunnel air speed',
@@ -358,7 +358,7 @@ const LOCALES = {
     // ── Навигация ──────────────────────────────────
     nav_home:            '← Главная',
     nav_settings:        '⚙️ Настройки хозяйства',
-    nav_calculators:     '🔧 Калькуляторы',
+    nav_calculators:     '🔍 Аудит птичника',
     nav_calibration:     '🔬 Калибровка',
 
     // ── Общий UI ──────────────────────────────────
@@ -573,9 +573,9 @@ const LOCALES = {
     cfg_kw_unit:       'кВт',
 
     // ── ИНСТРУМЕНТЫ ───────────────────────────────
-    calc_title:        'Инженерные инструменты — MINMAXapp',
-    calc_h1:           '🔧 Инженерные инструменты',
-    calc_intro:        'Расчётные инструменты на основе методик UGA (Университет Джорджии, Michael Czarick). Все единицы — метрические.',
+    calc_title:        'Аудит птичника — MINMAXapp',
+    calc_h1:           '🔍 Аудит птичника',
+    calc_intro:        'Инструменты самоаудита системы птичника на основе методик UGA (Университет Джорджии, Michael Czarick). Все единицы — метрические.',
     tab_leakage:       '🏠 Герметичность птичника',
     tab_evap:          '💧 Испарительное охлаждение',
     tab_tunnel:        '🌬️ Скорость воздуха в туннеле',
