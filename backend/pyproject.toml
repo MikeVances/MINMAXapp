@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Ventilation Min/Max API (MVP)"
 requires-python = ">=3.10"
 dependencies = [
-    "fastapi",
+    "fastapi>=0.115.0",
     "uvicorn[standard]",
     "pydantic>=2",
 ]

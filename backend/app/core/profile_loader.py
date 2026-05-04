@@ -194,15 +194,62 @@ def _write_tmp(data) -> str:
     return p
 
 
+def get_profile_from_day_master(dm_path: str = "data/day_master.json") -> VentProfile | None:
+    """Строит VentProfile из day_master.json — единственный источник правды.
+
+    day_master хранит mode-независимый профиль; сезонная поправка (k_temp)
+    применяется в calc_core в рантайме, поэтому все режимы получают одинаковые
+    точки.
+    """
+    if not os.path.exists(dm_path):
+        return None
+    try:
+        with open(dm_path, encoding="utf-8") as f:
+            rows = json.load(f)
+        if not isinstance(rows, list) or not rows:
+            return None
+        pts: List[ProfilePoint] = []
+        for r in rows:
+            bw_g  = _to_float(r.get("body_weight_g"))
+            qminB = _to_float(r.get("q_min_per_bird"))
+            qmaxB = _to_float(r.get("q_max_per_bird"))
+            # Пропускаем дни без данных о весе или нормах вентиляции
+            if bw_g is None or qminB is None or qmaxB is None:
+                continue
+            w_kg = max(bw_g / 1000.0, 1e-6)
+            pts.append(ProfilePoint(
+                day           = int(r["day"]),
+                body_weight_g = bw_g,
+                min_per_bird  = qminB,
+                max_per_bird  = qmaxB,
+                min_per_kg    = qminB / w_kg,
+                max_per_kg    = qmaxB / w_kg,
+                min_temp_c    = _to_float(r.get("min_temp_c")),
+                rv_percent    = _to_float(r.get("rv_percent")),
+            ))
+        if len(pts) < 2:
+            return None
+        pts.sort(key=lambda p: p.day)
+        # Один набор точек для всех режимов — k_temp в calc_core делает поправку
+        modes: Dict[str, List[ProfilePoint]] = {
+            m: list(pts) for m in ("winter", "spring_autumn", "summer", "tropical")
+        }
+        return VentProfile(modes)
+    except Exception:
+        return None
+
+
 def get_profile(seed_path: Optional[str] = None) -> VentProfile:
+    # Приоритет: day_master.json → seed → demo
+    dm = get_profile_from_day_master()
+    if dm is not None:
+        return dm
     path = seed_path or os.getenv("VENT_PROFILE_JSON")
     if path and os.path.exists(path):
         vp = load_profile_from_json(path)
-        # Если seed существует, но пустой/неполный — используем демо-профиль
         required = ("winter", "spring_autumn", "summer")
         try:
             if all(vp.points.get(m) for m in required):
-                # tropical желателен, но не обязателен; если отсутствует — подставим из демо
                 if not vp.points.get("tropical"):
                     demo = demo_profile()
                     vp.points["tropical"] = demo.points.get("tropical", [])

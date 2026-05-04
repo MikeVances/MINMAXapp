@@ -47,29 +47,15 @@ class LeakageInput:
     fan_capacity_m3h: float        # Производительность тестового вентилятора при 25 Па (≈0.10"), м³/ч
     measured_pressure_pa: float    # Статическое давление при тесте, Па (рекомендация: 25-65 Па)
 
-    # Параметры минимальной вентиляции (для расчёта доли инфильтрации)
-    min_vent_fan_m3h: float        # Производительность вентилятора минвентиляции, м³/ч
-    num_inlets: int                # Количество боковых приточных клапанов
-    inlet_height_cm: float         # Максимальная высота открытия клапана, см
-    inlet_length_cm: float         # Длина клапана, см
-
 
 @dataclass
 class LeakageResult:
-    # --- Результаты теста герметичности ---
     fan_corrected_m3h: float       # Скорректированный расход вентилятора при тестовом давлении, м³/ч
     ela_m2: float                  # Суммарная площадь щелей/утечек (ELA), м²
     house_area_m2: float           # Площадь пола птичника, м²
     relative_leakage: float        # Относительная утечка, м² на 1000 м² пола (безразмерна)
     tightness_class: TightnessClass  # Класс герметичности
     tightness_label_ru: str        # Метка на русском
-
-    # --- Анализ впускной системы при минвентиляции ---
-    inlet_area_m2: float           # Суммарная площадь боковых клапанов при макс. открытии, м²
-    required_total_area_m2: float  # Требуемая суммарная площадь впуска при 25 Па (правило UGA), м²
-    net_inlet_area_m2: float       # Чистая требуемая площадь впуска (за вычетом щелей), м²
-    pct_air_via_inlets: float      # Доля воздуха через клапаны (0–1)
-    required_opening_cm: float     # Требуемая высота открытия клапана, см
     static_pressure_pa: float      # Введённое давление (для справки)
 
 
@@ -123,42 +109,12 @@ def calculate_leakage(inp: LeakageInput) -> LeakageResult:
     # Класс герметичности
     t_class, t_label = _classify(relative_leakage)
 
-    # --- Анализ впускной системы ---
-    # Суммарная площадь клапанов при максимальном открытии
-    inlet_h_m  = inp.inlet_height_cm / 100.0
-    inlet_l_m  = inp.inlet_length_cm / 100.0
-    inlet_area_m2 = inlet_h_m * inlet_l_m * inp.num_inlets
-
-    # Требуемая площадь для обеспечения вентиляции при 25 Па (правило 750 CFM/ft²)
-    required_total_area_m2 = inp.min_vent_fan_m3h / INLET_SPECIFIC_M3H_M2
-
-    # Чистая площадь впуска (всё что не покрывается щелями нужно обеспечить клапанами)
-    net_inlet_area_m2 = max(0.0, required_total_area_m2 - ela_m2)
-
-    # Доля воздуха через клапаны
-    if required_total_area_m2 > 0:
-        pct_air_via_inlets = min(1.0, net_inlet_area_m2 / required_total_area_m2)
-    else:
-        pct_air_via_inlets = 0.0
-
-    # Требуемая высота открытия каждого клапана
-    if inp.num_inlets > 0 and inlet_l_m > 0:
-        required_opening_m = net_inlet_area_m2 / (inp.num_inlets * inlet_l_m)
-    else:
-        required_opening_m = 0.0
-    required_opening_cm = required_opening_m * 100.0
-
     return LeakageResult(
-        fan_corrected_m3h       = round(q_corrected_m3h, 0),
-        ela_m2                  = round(ela_m2, 4),
-        house_area_m2           = round(house_area_m2, 1),
-        relative_leakage        = round(relative_leakage, 4),
-        tightness_class         = t_class,
-        tightness_label_ru      = t_label,
-        inlet_area_m2           = round(inlet_area_m2, 4),
-        required_total_area_m2  = round(required_total_area_m2, 4),
-        net_inlet_area_m2       = round(net_inlet_area_m2, 4),
-        pct_air_via_inlets      = round(pct_air_via_inlets, 4),
-        required_opening_cm     = round(required_opening_cm, 1),
-        static_pressure_pa      = inp.measured_pressure_pa,
+        fan_corrected_m3h  = round(q_corrected_m3h, 0),
+        ela_m2             = round(ela_m2, 4),
+        house_area_m2      = round(house_area_m2, 1),
+        relative_leakage   = round(relative_leakage, 4),
+        tightness_class    = t_class,
+        tightness_label_ru = t_label,
+        static_pressure_pa = inp.measured_pressure_pa,
     )

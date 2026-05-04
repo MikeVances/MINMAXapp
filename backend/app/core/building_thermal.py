@@ -75,6 +75,7 @@ class CalibrationTest:
 @dataclass
 class ThermalConfig:
     """Полная конфигурация теплотехнических параметров"""
+    house_id: Optional[str] = None           # ID корпуса из main-page tabs (e.g. "1", "A-2")
     building: Optional[BuildingDimensions] = None
     heater: Optional[HeaterConfig] = None
     calibration: Optional[CalibrationTest] = None
@@ -168,34 +169,46 @@ def calculate_heater_duty_cycle(
 
 def heater_air_demand(heater_power_kw: float, duty_cycle: float, heater_type: str) -> float:
     """
-    Рассчитывает дополнительный воздухообмен для газовых обогревателей.
+    Стехиометрический воздух на горение (для справки/отображения).
 
-    Стехиометрия сгорания природного газа (метан CH₄):
     CH₄ + 2O₂ → CO₂ + 2H₂O
+    1 м³ газа требует 9.5 м³ воздуха (2 м³ O₂ при 21% объёмных).
 
-    1 м³ газа + 9.5 м³ воздуха (для обеспечения 2 м³ O₂ при 21% в воздухе)
-
-    Args:
-        heater_power_kw: Тепловая мощность обогревателей, кВт
-        duty_cycle: Коэффициент загрузки (0..1), доля времени работы
-        heater_type: Тип обогревателей ("gas_open" или "electric")
-
-    Returns:
-        Дополнительный воздухообмен для горения, м³/ч
+    Для расчёта Qmin используй heater_co2_dilution_m3h() — CO₂ dilution является
+    определяющим ограничением и превышает combustion air в ~40 раз.
     """
     if heater_type != "gas_open":
-        # Электрические обогреватели не требуют воздуха для горения
         return 0.0
 
-    # Расход природного газа
-    gas_per_100kw = 10.0  # м³/ч природного газа на 100 кВт тепловой мощности
-    air_per_m3_gas = 9.5  # м³ воздуха на 1 м³ газа для полного сгорания
+    gas_flow = (heater_power_kw / 100.0) * 10.0 * duty_cycle  # м³/ч газа (LHV ≈ 10 кВт/м³)
+    return gas_flow * 9.5
 
-    # С учетом коэффициента загрузки
-    gas_flow = (heater_power_kw / 100.0) * gas_per_100kw * duty_cycle  # м³/ч
-    air_needed = gas_flow * air_per_m3_gas  # м³/ч
 
-    return air_needed
+def heater_co2_dilution_m3h(
+    heater_power_kw: float,
+    duty_cycle: float,
+    heater_type: str,
+    safety_factor: float = 1.5,
+) -> float:
+    """
+    Дополнительный Qmin для поддержания CO₂ < 3000 ppm при работе горелок открытого горения.
+
+    При открытом горении продукты сгорания (CO₂, H₂O) выходят в воздух птичника:
+      CH₄ + 2O₂ → CO₂ + 2H₂O
+      1 м³ природного газа (LHV ≈ 10 кВт/м³) → 1000 л CO₂
+
+    Разбавление: ΔQmin = V_CO₂ [л/ч] / ΔCO₂ [л/м³] × safety
+    ΔCO₂ = 2600 ppm = 2.6 л/м³  (лимит 3000 − фон 400 ppm)
+
+    Это определяющий вентиляционный constraint, в ~40 раз превышающий combustion air.
+    """
+    if heater_type != "gas_open":
+        return 0.0
+
+    gas_flow_m3h = (heater_power_kw / 100.0) * 10.0 * duty_cycle  # м³ газа/ч
+    co2_lh = gas_flow_m3h * 1000.0                                  # л CO₂/ч
+
+    return (co2_lh / 2.6) * safety_factor
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -348,7 +361,12 @@ def load_thermal_config(path: str = THERMAL_CONFIG_PATH) -> ThermalConfig:
         if "calibration" in data and data["calibration"]:
             calibration = CalibrationTest(**data["calibration"])
 
-        return ThermalConfig(building=building, heater=heater, calibration=calibration)
+        return ThermalConfig(
+            house_id=data.get("house_id"),
+            building=building,
+            heater=heater,
+            calibration=calibration,
+        )
 
     except Exception:
         return ThermalConfig()
@@ -359,6 +377,8 @@ def save_thermal_config(config: ThermalConfig, path: str = THERMAL_CONFIG_PATH) 
     os.makedirs(os.path.dirname(path), exist_ok=True)
 
     data = {}
+    if config.house_id is not None:
+        data["house_id"] = config.house_id
     if config.building:
         data["building"] = asdict(config.building)
     if config.heater:

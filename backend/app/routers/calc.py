@@ -13,10 +13,11 @@ router = APIRouter()
 class CalcIn(BaseModel):
     house: str = Field(..., min_length=1, max_length=64)
     birds: int = Field(..., ge=1, le=60000)
-    age_days: int = Field(..., ge=1, le=42)
+    age_days: int = Field(..., ge=1, le=63)
     mode_id: str = Field(..., pattern=r"^(winter|summer|spring_autumn|tropical)$")
     display_unit: str = Field("per_bird", pattern=r"^(per_bird|per_kg)$")
     outside_t: float = Field(..., ge=-40, le=50, description="Outside air temperature, °C")
+    outside_rh: float = Field(60.0, ge=0, le=100, description="Outside relative humidity, %")
     heater_on: bool = Field(False, description="Heater correction enabled")
     user_max_m3h: float | None = Field(None, ge=0, description="System maximum capacity (m3/hour). Optional")
 
@@ -32,16 +33,14 @@ class CalcOut(BaseModel):
     day_setpoints: dict | None = None  # {min_temp_c, rv_percent}
     heater_air_m3h: float | None = None  # Additional air for gas heaters
     heater_duty_cycle: float | None = None  # Heater duty cycle (0..1)
+    tunnel_active: bool = False  # Tunnel mode active under current conditions
+    qmin_basis: str = "co2"  # "co2" | "moisture"
     ref_version: str = "seed-demo-1.0"
 
 
 @router.post("/minmax", response_model=CalcOut)
 def minmax(payload: CalcIn):
-    try:
-        profile = get_profile(seed_path="data/vent_profile_seed.json")
-    except Exception:
-        # Фоллбэк на демо-профиль, если seed не найден
-        profile = get_profile(seed_path=None)
+    profile = get_profile()
 
     ci = CalcInput(
         birds=payload.birds,
@@ -49,6 +48,7 @@ def minmax(payload: CalcIn):
         mode=payload.mode_id,  # type: ignore
         display_unit=payload.display_unit,  # type: ignore
         outside_t=payload.outside_t,
+        outside_rh=payload.outside_rh,
         heater_on=payload.heater_on,
     )
 
@@ -93,6 +93,8 @@ def minmax(payload: CalcIn):
         ),
         heater_air_m3h=cr.heater_air_m3h,
         heater_duty_cycle=cr.heater_duty_cycle,
+        tunnel_active=cr.tunnel_active,
+        qmin_basis=cr.qmin_basis,
     )
 
 
@@ -102,6 +104,7 @@ class SummaryIn(BaseModel):
     birds: int = Field(..., ge=1, le=60000)
     mode_id: str = Field("summer", pattern=r"^(winter|summer|spring_autumn|tropical)$")  # Deprecated, kept for compatibility
     outside_t: float = Field(15.0, ge=-40, le=50, description="Outside air temperature, °C")
+    outside_rh: float = Field(60.0, ge=0, le=100, description="Outside relative humidity, %")
     user_max_m3h: float | None = Field(None, ge=0)
     heater_on: bool = Field(False)
     display_unit: str = Field("per_bird", pattern=r"^(per_bird|per_kg)$")
@@ -132,25 +135,25 @@ class SummaryOut(BaseModel):
 
 @router.post("/summary7", response_model=SummaryOut)
 def summary7(payload: SummaryIn):
-    try:
-        profile = get_profile(seed_path="data/vent_profile_seed.json")
-    except Exception:
-        profile = get_profile(seed_path=None)
+    profile = get_profile()
 
     # Use outside_t from payload (new way), fallback to mode_id mapping (old way)
     outside_t = payload.outside_t
-    days = [1, 7, 14, 21, 28, 35, 42]
     # рассчитываем эффективное количество птиц с учётом смертности и берём пороги min
     try:
         from ..core.app_config import load_app_config
         cfg = load_app_config()
         total_m = max(cfg.total_mortality_pct, 0.0) / 100.0
-        daily_m = 1.0 - (1.0 - total_m) ** (1.0 / max(41, 1))
+        cycle = max(cfg.cycle_days, 7)
+        daily_m = 1.0 - (1.0 - total_m) ** (1.0 / max(cycle - 1, 1))
         min0_7 = cfg.min_floor_0_7
         min7_14 = cfg.min_floor_7_14
+        # Еженедельные контрольные точки + последний день цикла
+        days = sorted(set([1] + list(range(7, cycle, 7)) + [cycle]))
     except Exception:
         daily_m = 0.0
         min0_7, min7_14 = 0.15, 0.25
+        days = [1, 7, 14, 21, 28, 35, 42]
     rows: list[SummaryRow] = []
 
     for d in days:
@@ -160,6 +163,7 @@ def summary7(payload: SummaryIn):
             mode=payload.mode_id,  # type: ignore
             display_unit=payload.display_unit,  # type: ignore
             outside_t=outside_t,
+            outside_rh=payload.outside_rh,
             heater_on=payload.heater_on,
         )
         cr = compute(profile, ci)

@@ -65,11 +65,12 @@ _V_KEYS  = [0.0, 0.5, 1.0, 1.5, 2.0, 2.5]
 # Плотность воздуха при +25°C, кг/м³
 RHO_AIR_KG_M3 = 1.184
 
-# THI-пороги для бройлеров
+# THI-пороги для бройлеров (Buffington 1981)
+# Правило: < threshold → эта категория. Границы: <74, 74-78, 79-83, ≥84
 _THI_THRESHOLDS = [
     (74.0, "Комфорт ✅"),
-    (78.0, "Тревога 🟡"),
-    (83.0, "Опасность ⚠️"),
+    (79.0, "Тревога 🟡"),
+    (84.0, "Опасность ⚠️"),
     (999,  "Критично 🔴"),
 ]
 
@@ -81,10 +82,27 @@ _SPEED_TARGETS = [
     (999, 2.5, 3.5),
 ]
 
+# Верхний предел комфортной температуры для бройлеров по возрасту, °C
+# Источник: Aviagen Broiler Management Guide 2019
+_COMFORT_TARGETS = [
+    (7,   32.0),
+    (14,  29.0),
+    (21,  27.0),
+    (28,  26.0),
+    (35,  25.0),
+    (999, 24.0),
+]
+
+# Практический максимум T_outdoor для птицеводства в таблице — если лимит выше, считаем "без ограничений"
+_T_LIMIT_CAP = 42.0
+
 
 # ─────────────────────────────────────────────────
 # Dataclasses
 # ─────────────────────────────────────────────────
+
+CD_INLET      = 0.62  # Коэффициент расхода для шторных/сетчатых клапанов
+CD_INLET_OPEN = 0.90  # Открытый торец (лёгкое сжатие струи + сетка)
 
 @dataclass
 class TunnelSpeedInput:
@@ -95,7 +113,10 @@ class TunnelSpeedInput:
     t_outdoor_db_c:   float     # Температура сухого термометра, °C
     rh_outdoor_pct:   float     # Относительная влажность, %
     bird_age_days:    int       # Возраст птицы, дней
-    inlet_pressure_pa: float = 10.0  # Статическое давление на входе (пэды/шторы), Па
+    # Геометрия впускной системы (заменяет inlet_pressure_pa)
+    num_inlets:    int   = 1    # Количество приточных секций/проёмов, шт
+    inlet_width_m:  float = 0.0 # Ширина одного проёма, м (0 = авто: ширина птичника)
+    inlet_height_m: float = 0.0 # Высота одного проёма, м (0 = авто: высота туннеля)
 
 
 @dataclass
@@ -109,12 +130,21 @@ class TunnelSpeedResult:
     thi_value:              float
     thi_status:             str
     dynamic_pressure_pa:    float
-    total_pressure_pa:      float
+    inlet_area_m2:          float   # Суммарная площадь впускных проёмов
+    inlet_velocity_ms:      float   # Скорость воздуха через впуск
+    inlet_sp_pa:            float   # Статическое давление на впуске (из геометрии)
+    inlet_status:           str     # Оценка впускной системы
+    total_pressure_pa:      float   # Суммарное давление = дин. + впуск
     target_v_min_ms:        float
     target_v_max_ms:        float
     velocity_status:        str
     fans_needed_for_target: int
     status_label:           str
+    # Тепловой вердикт: туннель vs испарительное охлаждение
+    bird_comfort_target_c:    float  # Целевая T комфорта по возрасту птицы
+    tunnel_sufficient:        bool   # Туннель справляется при текущих условиях
+    t_outdoor_tunnel_limit_c: float  # Макс. T_нар при которой туннель достаточен
+    temp_margin_c:            float  # Запас: T_цель − T_ощущ (>0 = запас есть)
 
 
 # ─────────────────────────────────────────────────
@@ -142,34 +172,48 @@ def _interp_v(speed_dict: dict[float, float], v: float) -> float:
 def _effective_temperature(t_db: float, rh: float, v_ms: float) -> float:
     """
     Трилинейная интерполяция по таблице ощущаемой температуры.
+    За пределами диапазона T (21.1–35.0°C) — линейная экстраполяция
+    по крайнему сегменту таблицы. RH по-прежнему зажимается в [50, 70].
 
     Порядок:
-    1. Находим два соседних T-уровня и интерполируем по T
-    2. Повторяем для двух соседних RH-уровней
-    3. Интерполируем по RH между результатами шага 1 и 2
+    1. Для каждого крайнего RH-уровня: интерполируем (или экстраполируем) по T
+    2. Интерполируем по RH между двумя результатами шага 1
     """
-    # Зажать T в диапазон таблицы
-    t_c = max(_T_KEYS[0], min(t_db, _T_KEYS[-1]))
     rh_c = max(_RH_KEYS[0], min(rh, _RH_KEYS[-1]))
 
-    # --- Шаг 1: интерполяция по T (при двух крайних RH) ---
     def interp_at_rh(rh_level: float) -> float:
-        """Интерполяция по T для конкретного rh_level."""
+        # Экстраполяция выше верхнего предела (T > 35.0°C)
+        if t_db > _T_KEYS[-1]:
+            t0, t1 = _T_KEYS[-2], _T_KEYS[-1]
+            val0 = _interp_v(_EFF_TEMP_TABLE[(t0, rh_level)], v_ms)
+            val1 = _interp_v(_EFF_TEMP_TABLE[(t1, rh_level)], v_ms)
+            slope = (val1 - val0) / (t1 - t0)
+            return val1 + slope * (t_db - t1)
+        # Экстраполяция ниже нижнего предела (T < 21.1°C)
+        if t_db < _T_KEYS[0]:
+            t0, t1 = _T_KEYS[0], _T_KEYS[1]
+            val0 = _interp_v(_EFF_TEMP_TABLE[(t0, rh_level)], v_ms)
+            val1 = _interp_v(_EFF_TEMP_TABLE[(t1, rh_level)], v_ms)
+            slope = (val1 - val0) / (t1 - t0)
+            return val0 + slope * (t_db - t0)
+        # Нормальная интерполяция внутри диапазона
         for i in range(len(_T_KEYS) - 1):
             t0, t1 = _T_KEYS[i], _T_KEYS[i + 1]
-            if t_c <= t1:
-                tt = (t_c - t0) / (t1 - t0)
+            if t_db <= t1:
+                tt = (t_db - t0) / (t1 - t0)
                 val0 = _interp_v(_EFF_TEMP_TABLE[(t0, rh_level)], v_ms)
                 val1 = _interp_v(_EFF_TEMP_TABLE[(t1, rh_level)], v_ms)
                 return _lerp(val0, val1, tt)
         return _interp_v(_EFF_TEMP_TABLE[(_T_KEYS[-1], rh_level)], v_ms)
 
-    # --- Шаг 2: интерполяция по RH ---
     rh0, rh1 = _RH_KEYS[0], _RH_KEYS[-1]   # 50, 70
     val_rh0 = interp_at_rh(rh0)
     val_rh1 = interp_at_rh(rh1)
     rh_t = (rh_c - rh0) / (rh1 - rh0)
-    return _lerp(val_rh0, val_rh1, rh_t)
+    t_eff = _lerp(val_rh0, val_rh1, rh_t)
+    # Физическое ограничение: ветер может только охлаждать, но не нагревать
+    # T_eff не может быть выше фактической температуры воздуха
+    return min(t_eff, t_db)
 
 
 def _calc_thi(t_db: float, rh: float) -> tuple[float, str]:
@@ -186,6 +230,43 @@ def _target_speed(age_days: int) -> tuple[float, float]:
         if age_days <= max_age:
             return v_min, v_max
     return 2.5, 3.5
+
+
+def _bird_comfort_target(age_days: int) -> float:
+    """Верхний предел комфортной температуры для бройлера данного возраста, °C."""
+    for max_age, target in _COMFORT_TARGETS:
+        if age_days <= max_age:
+            return target
+    return 24.0
+
+
+def _find_tunnel_temp_limit(rh_pct: float, v_ms: float, t_target_c: float) -> float:
+    """
+    Максимальная наружная температура, при которой туннельная вентиляция
+    обеспечивает ощущаемую температуру ≤ t_target_c.
+
+    Сканирует T_outdoor от 15 до 45°C с шагом 0.5°C.
+    effective_temp монотонно растёт с T_outdoor → находим точку пересечения
+    через линейную интерполяцию между двумя соседними шагами.
+    """
+    T_STEP = 0.5
+    t_prev = 15.0
+    eff_prev = _effective_temperature(t_prev, rh_pct, v_ms)
+
+    t = t_prev + T_STEP
+    while t <= 45.0:
+        eff = _effective_temperature(t, rh_pct, v_ms)
+        if eff >= t_target_c:
+            # Линейная интерполяция для точности ±0.1°C
+            if eff > eff_prev:
+                frac = (t_target_c - eff_prev) / (eff - eff_prev)
+                return round(t_prev + frac * T_STEP, 1)
+            return round(t_prev, 1)
+        t_prev = t
+        eff_prev = eff
+        t = round(t + T_STEP, 1)
+
+    return _T_LIMIT_CAP  # Лимит выше практического диапазона
 
 
 # ─────────────────────────────────────────────────
@@ -206,12 +287,40 @@ def calculate_tunnel_speed(inp: TunnelSpeedInput) -> TunnelSpeedResult:
     t_eff = _effective_temperature(inp.t_outdoor_db_c, inp.rh_outdoor_pct, v_ms)
     wind_chill = inp.t_outdoor_db_c - t_eff   # положительное = охлаждение
 
-    # THI
-    thi_val, thi_status = _calc_thi(inp.t_outdoor_db_c, inp.rh_outdoor_pct)
+    # THI считаем по ощущаемой температуре: птица в туннеле воспринимает T_eff,
+    # а не T_outdoor. При V=0 t_eff=t_outdoor и THI совпадает с классическим.
+    thi_val, thi_status = _calc_thi(t_eff, inp.rh_outdoor_pct)
 
-    # Давление
+    # Динамическое давление в туннеле
     p_dynamic = 0.5 * RHO_AIR_KG_M3 * v_ms ** 2
-    p_total = p_dynamic + inp.inlet_pressure_pa
+
+    # Геометрия впускных проёмов
+    # 0 → авто: открытый торец = ширина птичника × высота сечения туннеля
+    is_open_end  = (inp.inlet_width_m <= 0 and inp.inlet_height_m <= 0)
+    eff_inlet_w  = inp.inlet_width_m  if inp.inlet_width_m  > 0 else inp.house_width_m
+    eff_inlet_h  = inp.inlet_height_m if inp.inlet_height_m > 0 else inp.tunnel_height_m
+    inlet_area   = inp.num_inlets * eff_inlet_w * eff_inlet_h
+    if inlet_area <= 0:
+        inlet_area = cross_section
+
+    # Открытый торец: Cd≈0.90 (лёгкое сжатие + сетка)
+    # Шторные/панельные клапаны: Cd=0.62
+    cd = CD_INLET_OPEN if is_open_end else CD_INLET
+
+    inlet_v    = total_m3s / inlet_area
+    inlet_sp   = RHO_AIR_KG_M3 * (inlet_v / cd) ** 2 / 2
+
+    # Пороги UGA: 400/600/800 FPM → 2.0/3.0/4.0 м/с
+    if inlet_v < 2.0:
+        inlet_status = f"Хорошо ({inlet_v:.2f} м/с) — минимальное сопротивление ✅"
+    elif inlet_v < 3.0:
+        inlet_status = f"Норма ({inlet_v:.2f} м/с) — умеренное сопротивление 🟡"
+    elif inlet_v < 4.0:
+        inlet_status = f"Высокая ({inlet_v:.2f} м/с) — вентиляторы теряют производительность ⚠️"
+    else:
+        inlet_status = f"Критично ({inlet_v:.2f} м/с) — впуск слишком мал, увеличьте проём 🔴"
+
+    p_total = p_dynamic + inlet_sp
 
     # Рекомендации по скорости
     v_min_t, v_max_t = _target_speed(inp.bird_age_days)
@@ -231,13 +340,25 @@ def calculate_tunnel_speed(inp: TunnelSpeedInput) -> TunnelSpeedResult:
     q_per_fan = inp.fan_capacity_m3h / 3600.0 if inp.fan_capacity_m3h > 0 else 1
     fans_needed = math.ceil(q_need_m3s / q_per_fan)
 
-    # Общая оценка
+    # Тепловой вердикт (нужен до формирования status_label)
+    comfort_target = _bird_comfort_target(inp.bird_age_days)
+    temp_margin    = comfort_target - t_eff
+    # Туннель достаточен только если ОБА условия выполнены:
+    # 1. Скорость воздуха >= минимальной проектной (обеспечивает ветровое охлаждение)
+    # 2. Ощущаемая T <= целевой комфортной T для данного возраста
+    tunnel_ok      = (v_ms >= v_min_t) and (t_eff <= comfort_target)
+    t_limit        = _find_tunnel_temp_limit(inp.rh_outdoor_pct, v_ms, comfort_target)
+
+    # Общая оценка — согласована с tunnel_ok, чтобы бейдж не противоречил карточке
     in_range = v_min_t <= v_ms <= v_max_t
     if in_range:
-        if thi_val < 74:
+        if not tunnel_ok:
+            # Скорость в норме, но ощущаемая T превышает целевую — нужно охлаждение
+            status_label = "Скорость в норме, ощущаемая T выше цели — рассмотрите испарительное охлаждение ⚠️"
+        elif thi_val < 74:
             status_label = "Система в норме, тепловой стресс минимален ✅"
-        elif thi_val < 78:
-            status_label = "Скорость хорошая, но THI повышен — следите за птицей 🟡"
+        elif thi_val < 79:
+            status_label = "Скорость в норме, THI немного повышен — следите за птицей 🟡"
         else:
             status_label = "Скорость ОК, но высокий THI — рассмотрите испарительное охлаждение ⚠️"
     elif v_ms < v_min_t:
@@ -248,19 +369,27 @@ def calculate_tunnel_speed(inp: TunnelSpeedInput) -> TunnelSpeedResult:
         status_label = "Скорость выше нормы для данного возраста — возможен стресс 🟡"
 
     return TunnelSpeedResult(
-        cross_section_m2       = round(cross_section, 2),
-        total_airflow_m3h      = round(total_m3h, 0),
-        air_velocity_ms        = round(v_ms, 2),
-        air_velocity_fpm       = round(v_fpm, 0),
-        wind_chill_c           = round(wind_chill, 1),
-        effective_temp_c       = round(t_eff, 1),
-        thi_value              = thi_val,
-        thi_status             = thi_status,
-        dynamic_pressure_pa    = round(p_dynamic, 1),
-        total_pressure_pa      = round(p_total, 1),
-        target_v_min_ms        = v_min_t,
-        target_v_max_ms        = v_max_t,
-        velocity_status        = velocity_status,
-        fans_needed_for_target = fans_needed,
-        status_label           = status_label,
+        cross_section_m2          = round(cross_section, 2),
+        total_airflow_m3h         = round(total_m3h, 0),
+        air_velocity_ms           = round(v_ms, 2),
+        air_velocity_fpm          = round(v_fpm, 0),
+        wind_chill_c              = round(wind_chill, 1),
+        effective_temp_c          = round(t_eff, 1),
+        thi_value                 = thi_val,
+        thi_status                = thi_status,
+        dynamic_pressure_pa       = round(p_dynamic, 1),
+        inlet_area_m2             = round(inlet_area, 2),
+        inlet_velocity_ms         = round(inlet_v, 2),
+        inlet_sp_pa               = round(inlet_sp, 1),
+        inlet_status              = inlet_status,
+        total_pressure_pa         = round(p_total, 1),
+        target_v_min_ms           = v_min_t,
+        target_v_max_ms           = v_max_t,
+        velocity_status           = velocity_status,
+        fans_needed_for_target    = fans_needed,
+        status_label              = status_label,
+        bird_comfort_target_c     = comfort_target,
+        tunnel_sufficient         = tunnel_ok,
+        t_outdoor_tunnel_limit_c  = t_limit,
+        temp_margin_c             = round(temp_margin, 1),
     )

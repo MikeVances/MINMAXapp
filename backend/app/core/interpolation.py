@@ -120,34 +120,28 @@ def interpolate_to_42_days(anchor_points: Dict[int, DayInfo]) -> Dict[int, DayIn
     """
     if len(anchor_points) < 2:
         raise ValueError("At least 2 anchor points required for interpolation")
-
-    # Проверить, что есть день 1 и день 42 (критически важно)
     if 1 not in anchor_points:
         raise ValueError("Day 1 must be present in anchor points")
-    if 42 not in anchor_points:
-        raise ValueError("Day 42 must be present in anchor points")
+    # Убрана жёсткая проверка на день 42: функция работает с любым cycle_days
 
     anchor_days = sorted(anchor_points.keys())
+    last_day = anchor_days[-1]  # последний день цикла из данных (36, 42, 56...)
 
-    # Подготовить словари значений для интерполяции
     weights = {day: info.body_weight_g for day, info in anchor_points.items()}
-    temps = {day: info.min_temp_c for day, info in anchor_points.items()}
-    rvs = {day: info.rv_percent for day, info in anchor_points.items()}
+    temps   = {day: info.min_temp_c    for day, info in anchor_points.items()}
+    rvs     = {day: info.rv_percent    for day, info in anchor_points.items()}
+    qmins   = {day: info.q_min_per_bird for day, info in anchor_points.items()}
+    qmaxs   = {day: info.q_max_per_bird for day, info in anchor_points.items()}
 
-    # Результирующий словарь
     result: Dict[int, DayInfo] = {}
-
-    # Интерполировать для всех дней 1-42
-    for day in range(1, 43):
-        interpolated_weight = _interpolate_field(weights, day, anchor_days)
-        interpolated_temp = _interpolate_field(temps, day, anchor_days)
-        interpolated_rv = _interpolate_field(rvs, day, anchor_days)
-
+    for day in range(1, last_day + 1):
         result[day] = DayInfo(
             day=day,
-            body_weight_g=interpolated_weight,
-            min_temp_c=interpolated_temp,
-            rv_percent=interpolated_rv
+            body_weight_g=_interpolate_field(weights, day, anchor_days),
+            min_temp_c=_interpolate_field(temps,   day, anchor_days),
+            rv_percent=_interpolate_field(rvs,     day, anchor_days),
+            q_min_per_bird=_interpolate_field(qmins, day, anchor_days),
+            q_max_per_bird=_interpolate_field(qmaxs, day, anchor_days),
         )
 
     return result

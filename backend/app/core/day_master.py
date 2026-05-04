@@ -97,10 +97,11 @@ def _parse_dict(raw_dict: dict) -> Dict[int, DayInfo]:
     return by_day
 
 
-def _interpolate_missing(by_day: Dict[int, DayInfo]) -> Dict[int, DayInfo]:
-    # If not all days 1..42 present, fill gaps: weight, min_temp, q_min, q_max linear; RH kept as-is.
-    all_days = list(range(1, 43))
-    if len(by_day) == 42 and all(d in by_day for d in all_days):
+def _interpolate_missing(by_day: Dict[int, DayInfo], cycle_days: int = 42) -> Dict[int, DayInfo]:
+    # Fill gaps for all days 1..max_day; max_day is the larger of cycle_days and actual data range
+    max_day = max(max(by_day.keys(), default=cycle_days), cycle_days)
+    all_days = list(range(1, max_day + 1))
+    if len(by_day) >= len(all_days) and all(d in by_day for d in all_days):
         return by_day
 
     w_points = {d: (by_day[d].body_weight_g if d in by_day else None) for d in all_days}
@@ -127,7 +128,7 @@ def _interpolate_missing(by_day: Dict[int, DayInfo]) -> Dict[int, DayInfo]:
     return out
 
 
-def load_day_master(path: str = DAY_MASTER_PATH) -> Dict[int, DayInfo]:
+def load_day_master(path: str = DAY_MASTER_PATH, cycle_days: int = 42) -> Dict[int, DayInfo]:
     if not os.path.exists(path):
         return {}
     try:
@@ -143,7 +144,7 @@ def load_day_master(path: str = DAY_MASTER_PATH) -> Dict[int, DayInfo]:
     else:
         by_day = {}
 
-    return _interpolate_missing(by_day)
+    return _interpolate_missing(by_day, cycle_days)
 
 
 def save_day_master(items: Dict[int, DayInfo], path: str = DAY_MASTER_PATH) -> None:
@@ -154,6 +155,8 @@ def save_day_master(items: Dict[int, DayInfo], path: str = DAY_MASTER_PATH) -> N
             "body_weight_g": v.body_weight_g,
             "min_temp_c": v.min_temp_c,
             "rv_percent": v.rv_percent,
+            "q_min_per_bird": v.q_min_per_bird,
+            "q_max_per_bird": v.q_max_per_bird,
         }
         for d, v in sorted(items.items())
     ]

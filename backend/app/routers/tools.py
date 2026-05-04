@@ -7,7 +7,7 @@
 
 from fastapi import APIRouter
 from pydantic import BaseModel, Field
-from typing import Literal
+from typing import Literal, Optional
 
 from ..core.leakage_calc import LeakageInput, LeakageResult, calculate_leakage
 from ..core.evap_cooling_calc import (
@@ -40,14 +40,11 @@ class LeakageRequest(BaseModel):
         description="Статическое давление при тесте, Па (рекомендуемый диапазон 25–65 Па)"
     )
 
-    # Минимальная вентиляция
-    min_vent_fan_m3h: float = Field(
-        ..., gt=0,
-        description="Суммарный расход вентиляторов минимальной вентиляции, м³/ч"
-    )
-    num_inlets: int = Field(..., gt=0, description="Количество боковых приточных клапанов, шт")
-    inlet_height_cm: float = Field(..., gt=0, description="Максимальная высота открытия клапана, см")
-    inlet_length_cm: float = Field(..., gt=0, description="Длина одного клапана, см")
+    # Анализ впускной системы (опционально — не используется в тесте герметичности)
+    min_vent_fan_m3h: Optional[float] = Field(None, gt=0, description="Суммарный расход вентиляторов минвентиляции, м³/ч")
+    num_inlets: Optional[int] = Field(None, gt=0, description="Количество боковых приточных клапанов, шт")
+    inlet_height_cm: Optional[float] = Field(None, gt=0, description="Максимальная высота открытия клапана, см")
+    inlet_length_cm: Optional[float] = Field(None, gt=0, description="Длина одного клапана, см")
 
 
 class LeakageResponse(BaseModel):
@@ -59,12 +56,6 @@ class LeakageResponse(BaseModel):
     tightness_class:        str
     tightness_label_ru:     str
 
-    # Впускная система
-    inlet_area_m2:          float
-    required_total_area_m2: float
-    net_inlet_area_m2:      float
-    pct_air_via_inlets:     float
-    required_opening_cm:    float
     static_pressure_pa:     float
 
 
@@ -74,9 +65,8 @@ class LeakageResponse(BaseModel):
 # ─────────────────────────────────────────────
 
 class EvapCoolingRequest(BaseModel):
-    # Птичник
+    # Птичник (для контекста/аудита)
     house_length_m: float = Field(..., gt=0, description="Длина птичника, м")
-    house_width_m:  float = Field(..., gt=0, description="Ширина птичника, м")
 
     # Климат
     t_outdoor_db_c: float = Field(
@@ -94,23 +84,35 @@ class EvapCoolingRequest(BaseModel):
         description="Суммарная производительность туннельных вентиляторов, м³/ч"
     )
 
-    # Пэд
-    pad_thickness_mm: Literal[100, 150] = Field(
-        100, description="Толщина целлюлозного пэда: 100 мм (КПД≈73%, v_рек 1.14 м/с) или 150 мм (КПД≈75%, v_рек 1.78 м/с)"
+    # Пэд — тип и размеры установленных панелей
+    pad_type: str = Field(
+        "7090",
+        pattern="^(7090|7060|5090)$",
+        description="Тип пэда SANHE: 7090 (макс. η), 7060 (стандарт, низкое ΔP), 5090 (компакт)"
+    )
+    pad_thickness_mm: int = Field(
+        100, ge=50, le=300,
+        description="Толщина пэда, мм. Доступные значения: 7090/7060: 75,100,150,200,300; 5090: 50,75,100,150"
+    )
+    pad_length_m: float = Field(
+        ..., gt=0,
+        description="Суммарная длина установленных панелей охлаждения, м"
     )
     pad_height_m: float = Field(
         ..., gt=0,
-        description="Высота пэдов (высота торцевой стены), м"
-    )
-    pad_coverage_pct: float = Field(
-        80.0, gt=0, le=100,
-        description="Процент охвата торцевой стены пэдами (обычно 70–90%)"
+        description="Высота панелей охлаждения, м"
     )
 
     # Цель
     t_inside_target_c: float = Field(
         28.0,
         description="Целевая температура внутри птичника, °C"
+    )
+
+    # Опционально: температура воды подачи
+    water_supply_t_c: Optional[float] = Field(
+        None, ge=1, le=40,
+        description="Температура воды подачи на пэд, °C (скважина ≈ 8–12, бак летом до 35)"
     )
 
 
@@ -126,6 +128,7 @@ class EvapCoolingResponse(BaseModel):
     air_velocity_ms:         float
     velocity_ok:             bool
     velocity_status:         str
+    pad_pressure_drop_pa:    float
 
     # Вода
     water_flow_lpm:     float
@@ -136,6 +139,12 @@ class EvapCoolingResponse(BaseModel):
     temp_margin_c:           float
     recommended_pad_area_m2: float
     status_label:            str
+
+    # Психрометрика — точка росы (всегда)
+    t_dew_c:             float
+    # Режим подачи воды (None если не задана)
+    water_supply_t_c:    Optional[float]
+    water_regime:        Optional[str]   # 'safe' | 'condensation_risk'
 
 
 @router.post(
@@ -152,9 +161,10 @@ def calc_evap_cooling(req: EvapCoolingRequest) -> EvapCoolingResponse:
     Предел охлаждения — температура мокрого термометра (T_wb).
     Фактическая температура после пэда: T_pad = T_db − η × (T_db − T_wb).
 
-    **КПД пэда (η), сверено с UGA Excel:**
-    - 100 мм: ≈73% при паспортной 225 FPM (1.14 м/с), диапазон 0.60–1.75 м/с
-    - 150 мм: ≈75% при паспортной 350 FPM (1.78 м/с), диапазон 0.80–2.00 м/с
+    **Эффективность насыщения η (saturation efficiency):**
+    η = (T_db_in − T_db_out) / (T_db_in − T_wb_in) — степень приближения к T_wb.
+    Интерполируется из таблиц SANHE по фактической скорости воздуха через пэд.
+    Типы: 7090 (макс. η, выше ΔP), 7060 (стандарт), 5090 (компакт).
 
     **Водопотребление:** психрометрический массовый баланс ΔW = η × (W_sat(T_wb) − W_outside), точность ±2% vs UGA Excel.
 
@@ -162,14 +172,15 @@ def calc_evap_cooling(req: EvapCoolingRequest) -> EvapCoolingResponse:
     """
     inp = EvapCoolingInput(
         house_length_m    = req.house_length_m,
-        house_width_m     = req.house_width_m,
         t_outdoor_db_c    = req.t_outdoor_db_c,
         rh_outdoor_pct    = req.rh_outdoor_pct,
         total_fan_m3h     = req.total_fan_m3h,
+        pad_type          = req.pad_type,
         pad_thickness_mm  = req.pad_thickness_mm,
+        pad_length_m      = req.pad_length_m,
         pad_height_m      = req.pad_height_m,
-        pad_coverage_pct  = req.pad_coverage_pct,
         t_inside_target_c = req.t_inside_target_c,
+        water_supply_t_c  = req.water_supply_t_c,
     )
     r: EvapCoolingResult = calculate_evap_cooling(inp)
     return EvapCoolingResponse(
@@ -181,12 +192,16 @@ def calc_evap_cooling(req: EvapCoolingRequest) -> EvapCoolingResponse:
         air_velocity_ms         = r.air_velocity_ms,
         velocity_ok             = r.velocity_ok,
         velocity_status         = r.velocity_status,
+        pad_pressure_drop_pa    = r.pad_pressure_drop_pa,
         water_flow_lpm          = r.water_flow_lpm,
         water_per_hour_l        = r.water_per_hour_l,
         cooling_sufficient      = r.cooling_sufficient,
         temp_margin_c           = r.temp_margin_c,
         recommended_pad_area_m2 = r.recommended_pad_area_m2,
         status_label            = r.status_label,
+        t_dew_c                 = r.t_dew_c,
+        water_supply_t_c        = r.water_supply_t_c,
+        water_regime            = r.water_regime,
     )
 
 
@@ -218,10 +233,9 @@ class TunnelSpeedRequest(BaseModel):
         ..., ge=1, le=60,
         description="Возраст птицы, дней (влияет на рекомендуемую скорость)"
     )
-    inlet_pressure_pa: float = Field(
-        10.0, ge=0, le=50,
-        description="Статическое давление на входе (шторы/пэды), Па. Открытый торец ≈2–5, с пэдами ≈10–20"
-    )
+    num_inlets:    int   = Field(1,   ge=1, le=500, description="Количество приточных секций/проёмов, шт")
+    inlet_width_m:  float = Field(0.0, ge=0, le=50,  description="Ширина одного проёма, м (0 = авто: ширина птичника)")
+    inlet_height_m: float = Field(0.0, ge=0, le=10,  description="Высота одного проёма, м (0 = авто: высота туннеля)")
 
 
 class TunnelSpeedResponse(BaseModel):
@@ -234,12 +248,20 @@ class TunnelSpeedResponse(BaseModel):
     thi_value:              float
     thi_status:             str
     dynamic_pressure_pa:    float
+    inlet_area_m2:          float
+    inlet_velocity_ms:      float
+    inlet_sp_pa:            float
+    inlet_status:           str
     total_pressure_pa:      float
     target_v_min_ms:        float
     target_v_max_ms:        float
     velocity_status:        str
     fans_needed_for_target: int
     status_label:           str
+    bird_comfort_target_c:    float
+    tunnel_sufficient:        bool
+    t_outdoor_tunnel_limit_c: float
+    temp_margin_c:            float
 
 
 @router.post(
@@ -268,32 +290,42 @@ def calc_tunnel_speed(req: TunnelSpeedRequest) -> TunnelSpeedResponse:
     - 36–42 дня: 2.5–3.0 м/с
     """
     inp = TunnelSpeedInput(
-        house_width_m     = req.house_width_m,
-        tunnel_height_m   = req.tunnel_height_m,
-        num_fans          = req.num_fans,
-        fan_capacity_m3h  = req.fan_capacity_m3h,
-        t_outdoor_db_c    = req.t_outdoor_db_c,
-        rh_outdoor_pct    = req.rh_outdoor_pct,
-        bird_age_days     = req.bird_age_days,
-        inlet_pressure_pa = req.inlet_pressure_pa,
+        house_width_m    = req.house_width_m,
+        tunnel_height_m  = req.tunnel_height_m,
+        num_fans         = req.num_fans,
+        fan_capacity_m3h = req.fan_capacity_m3h,
+        t_outdoor_db_c   = req.t_outdoor_db_c,
+        rh_outdoor_pct   = req.rh_outdoor_pct,
+        bird_age_days    = req.bird_age_days,
+        num_inlets       = req.num_inlets,
+        inlet_width_m    = req.inlet_width_m,
+        inlet_height_m   = req.inlet_height_m,
     )
     r: TunnelSpeedResult = calculate_tunnel_speed(inp)
     return TunnelSpeedResponse(
-        cross_section_m2       = r.cross_section_m2,
-        total_airflow_m3h      = r.total_airflow_m3h,
-        air_velocity_ms        = r.air_velocity_ms,
-        air_velocity_fpm       = r.air_velocity_fpm,
-        wind_chill_c           = r.wind_chill_c,
-        effective_temp_c       = r.effective_temp_c,
-        thi_value              = r.thi_value,
-        thi_status             = r.thi_status,
-        dynamic_pressure_pa    = r.dynamic_pressure_pa,
-        total_pressure_pa      = r.total_pressure_pa,
-        target_v_min_ms        = r.target_v_min_ms,
-        target_v_max_ms        = r.target_v_max_ms,
-        velocity_status        = r.velocity_status,
-        fans_needed_for_target = r.fans_needed_for_target,
-        status_label           = r.status_label,
+        cross_section_m2          = r.cross_section_m2,
+        total_airflow_m3h         = r.total_airflow_m3h,
+        air_velocity_ms           = r.air_velocity_ms,
+        air_velocity_fpm          = r.air_velocity_fpm,
+        wind_chill_c              = r.wind_chill_c,
+        effective_temp_c          = r.effective_temp_c,
+        thi_value                 = r.thi_value,
+        thi_status                = r.thi_status,
+        dynamic_pressure_pa       = r.dynamic_pressure_pa,
+        inlet_area_m2             = r.inlet_area_m2,
+        inlet_velocity_ms         = r.inlet_velocity_ms,
+        inlet_sp_pa               = r.inlet_sp_pa,
+        inlet_status              = r.inlet_status,
+        total_pressure_pa         = r.total_pressure_pa,
+        target_v_min_ms           = r.target_v_min_ms,
+        target_v_max_ms           = r.target_v_max_ms,
+        velocity_status           = r.velocity_status,
+        fans_needed_for_target    = r.fans_needed_for_target,
+        status_label              = r.status_label,
+        bird_comfort_target_c     = r.bird_comfort_target_c,
+        tunnel_sufficient         = r.tunnel_sufficient,
+        t_outdoor_tunnel_limit_c  = r.t_outdoor_tunnel_limit_c,
+        temp_margin_c             = r.temp_margin_c,
     )
 
 
@@ -321,24 +353,15 @@ def calc_leakage(req: LeakageRequest) -> LeakageResponse:
         house_width_m         = req.house_width_m,
         fan_capacity_m3h      = req.fan_capacity_m3h,
         measured_pressure_pa  = req.measured_pressure_pa,
-        min_vent_fan_m3h      = req.min_vent_fan_m3h,
-        num_inlets            = req.num_inlets,
-        inlet_height_cm       = req.inlet_height_cm,
-        inlet_length_cm       = req.inlet_length_cm,
     )
     result: LeakageResult = calculate_leakage(inp)
 
     return LeakageResponse(
-        fan_corrected_m3h      = result.fan_corrected_m3h,
-        ela_m2                 = result.ela_m2,
-        house_area_m2          = result.house_area_m2,
-        relative_leakage       = result.relative_leakage,
-        tightness_class        = result.tightness_class,
-        tightness_label_ru     = result.tightness_label_ru,
-        inlet_area_m2          = result.inlet_area_m2,
-        required_total_area_m2 = result.required_total_area_m2,
-        net_inlet_area_m2      = result.net_inlet_area_m2,
-        pct_air_via_inlets     = result.pct_air_via_inlets,
-        required_opening_cm    = result.required_opening_cm,
-        static_pressure_pa     = result.static_pressure_pa,
+        fan_corrected_m3h  = result.fan_corrected_m3h,
+        ela_m2             = result.ela_m2,
+        house_area_m2      = result.house_area_m2,
+        relative_leakage   = result.relative_leakage,
+        tightness_class    = result.tightness_class,
+        tightness_label_ru = result.tightness_label_ru,
+        static_pressure_pa = result.static_pressure_pa,
     )

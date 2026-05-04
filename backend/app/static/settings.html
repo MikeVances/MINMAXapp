@@ -3,40 +3,27 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Settings — 42-day Profile</title>
+  <title>Farm Settings</title>
   <link rel="stylesheet" href="/styles.css" />
+  <script src="/i18n/en.js"></script>
+  <script src="/i18n/ru.js"></script>
+  <script src="/i18n/pl.js"></script>
+  <script src="/i18n/de.js"></script>
+  <script src="/i18n/fr.js"></script>
   <script src="/i18n.js"></script>
 </head>
 <body data-page-title="settings_title">
   <main class="container">
-    <h1 data-i18n="settings_h1">Settings: 42-day profile</h1>
-    <p class="muted" data-i18n="settings_desc">Define anchor points for the ventilation profile. Values between points are automatically interpolated to produce a full 42-day profile.</p>
 
-    <div style="margin:16px 0; display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:10px;">
+      <h1 style="margin:0;" data-i18n="settings_h1">Farm Settings</h1>
       <a class="btn btn-secondary" href="/" data-i18n="nav_home">← Home</a>
-      <button id="saveBtn" class="btn" data-i18n="btn_save_interp">Save &amp; interpolate</button>
-      <span id="status" class="muted"></span>
     </div>
+    <p class="muted" style="margin-bottom:20px;" data-i18n="settings_desc">Define anchor points for the growth and ventilation profile. Values between points are automatically interpolated to fill the full cycle.</p>
 
-    <!-- Anchor points configuration -->
-    <div class="card" style="margin-bottom:16px;">
-      <h2 data-i18n="anchors_h2">Anchor points</h2>
-      <div style="display:flex; gap:16px; align-items:center; flex-wrap:wrap;">
-        <label style="display:flex; align-items:center; gap:8px;">
-          <span data-i18n="anchors_num_lbl">Number of points:</span>
-          <input id="numPoints" type="number" min="3" max="10" value="7" style="width:80px;" />
-        </label>
-        <button id="updatePointsBtn" class="btn btn-secondary" data-i18n="btn_apply">Apply</button>
-        <span class="muted" style="font-size:12px;" data-i18n="anchors_hint">Recommended: 7 points (weekly profile)</span>
-      </div>
-    </div>
-
-    <!-- Global config -->
     <div id="configSection"></div>
 
-    <!-- Anchor points table -->
-    <div id="table"></div>
   </main>
-  <script src="/settings.js?v=6"></script>
+  <script src="/settings.js?v=13"></script>
 </body>
 </html>

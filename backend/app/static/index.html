@@ -3,8 +3,13 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Ventilation Min/Max — Poultry House</title>
+  <title>MINIMAX — Poultry House</title>
   <link rel="stylesheet" href="/styles.css" />
+  <script src="/i18n/en.js"></script>
+  <script src="/i18n/ru.js"></script>
+  <script src="/i18n/pl.js"></script>
+  <script src="/i18n/de.js"></script>
+  <script src="/i18n/fr.js"></script>
   <script src="/i18n.js"></script>
 </head>
 <body data-page-title="index_title">
@@ -75,35 +80,64 @@
             </span>
           </label>
 
-          <label>
-            <span data-i18n="label_sys_max">System max capacity (m³/h)</span>
+          <!-- Building dimensions -->
+          <p class="muted" style="font-size:12px; margin:12px 0 4px;" data-i18n="label_bldg_dims_grp">Building dimensions</p>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+            <label>
+              <span data-i18n="label_length_idx">Length, m</span>
+              <input id="houseLength" type="number" step="0.5" min="10" max="500" placeholder="96" />
+            </label>
+            <label>
+              <span data-i18n="label_width_idx">Width, m</span>
+              <input id="houseWidth" type="number" step="0.5" min="5" max="100" placeholder="18" />
+            </label>
+            <label>
+              <span data-i18n="label_height_wall_idx">Wall height, m</span>
+              <input id="houseHeightWall" type="number" step="0.1" min="1" max="10" placeholder="2.5" />
+            </label>
+            <label>
+              <span data-i18n="label_height_ridge_idx">Ridge height, m</span>
+              <input id="houseHeightRidge" type="number" step="0.1" min="1" max="20" placeholder="4.5" />
+            </label>
+          </div>
+
+          <div id="uaBadge" style="display:none; margin-top:8px; padding:6px 12px; background:#0f1f15; border-left:3px solid #4ade80; border-radius:4px; font-size:12px;"></div>
+
+          <p class="muted" style="font-size:12px; margin:12px 0 4px;" data-i18n="label_tunnel_fans_grp">Tunnel ventilation fans</p>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+            <label>
+              <span data-i18n="label_num_fans">Tunnel fans, qty</span>
+              <input id="numFans" type="number" min="1" max="50" placeholder="8" />
+            </label>
+            <label>
+              <span data-i18n="label_fan_cap_m3h">Fan capacity, m³/h</span>
+              <input id="fanCapM3h" type="number" min="1000" step="1000" placeholder="25000" />
+            </label>
+          </div>
+
+          <p class="muted" style="font-size:12px; margin:12px 0 4px;" data-i18n="label_min_fans_grp">Min-ventilation fans</p>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+            <label>
+              <span data-i18n="label_num_min_fans">Min-vent fans, qty</span>
+              <input id="numMinFans" type="number" min="1" max="50" placeholder="2" />
+            </label>
+            <label>
+              <span data-i18n="label_min_fan_cap_m3h">Min-vent fan capacity, m³/h</span>
+              <input id="minFanCapM3h" type="number" min="100" step="100" placeholder="5000" />
+            </label>
+          </div>
+
+          <label style="margin-top:8px;">
+            <span style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+              <span data-i18n="label_sys_max">System max capacity (m³/h)</span>
+              <span id="capAutoNote" class="muted" style="font-size:11px;"></span>
+            </span>
             <input id="cap" type="number" min="0"
                    data-i18n-placeholder="placeholder_cap"
                    placeholder="leave blank if unknown" />
           </label>
-          <button id="sumBtn" class="btn" data-i18n="btn_calc_profile">Calculate profile</button>
-        </div>
-
-        <div class="card">
-          <h2 data-i18n="results_h2">Results</h2>
-          <div style="margin-bottom:10px">
-            <label>
-              <span data-i18n="label_outdoor_t">Outdoor temperature, °C</span>
-              <input id="outsideTemp" type="number" step="1" min="-40" max="50" value="15">
-            </label>
-          </div>
-          <div id="result" class="result muted" data-i18n="result_placeholder">Fill in the fields and click "Calculate profile" to get ventilation rates for days 1, 7, 14, 21, 28, 35, 42.</div>
-          <div id="summary"></div>
-          <div style="margin-top:10px">
-            <label>
-              <span data-i18n="label_disp_mode">Display mode</span>
-              <select id="viewMode">
-                <option value="total"    data-i18n="mode_total">m³/h total flock</option>
-                <option value="percent"  data-i18n="mode_pct">% of capacity</option>
-                <option value="per_bird" data-i18n="mode_per_bird">m³/h per bird</option>
-                <option value="per_kg"   data-i18n="mode_per_kg">m³/h per kg LW</option>
-              </select>
-            </label>
+          <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:4px;">
+            <button id="sumBtn" class="btn" data-i18n="btn_save_house">Save house data</button>
           </div>
         </div>
       </section>

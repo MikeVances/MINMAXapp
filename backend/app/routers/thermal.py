@@ -42,9 +42,12 @@ class CalibrationTestModel(BaseModel):
     t_final_c: float = Field(..., ge=-20, le=50, description="Конечная температура, °C")
     t_outside_c: float = Field(..., ge=-40, le=50, description="Температура снаружи, °C")
     time_minutes: float = Field(..., gt=0, le=60, description="Время теста, минуты")
+    # Возвращается только в GET /config (не требуется при PUT — вычисляется на сервере)
+    ua_coefficient: float | None = Field(None, description="Рассчитанный коэффициент теплопотерь, Вт/°C")
 
 
 class ThermalConfigModel(BaseModel):
+    house_id: str | None = None
     building: BuildingDimensionsModel | None = None
     heater: HeaterConfigModel | None = None
     calibration: CalibrationTestModel | None = None
@@ -96,6 +99,7 @@ def get_thermal_config():
     config = load_thermal_config()
 
     result = ThermalConfigModel(
+        house_id=config.house_id,
         building=BuildingDimensionsModel(**config.building.__dict__) if config.building else None,
         heater=HeaterConfigModel(**config.heater.__dict__) if config.heater else None,
         calibration=CalibrationTestModel(
@@ -103,6 +107,7 @@ def get_thermal_config():
             t_final_c=config.calibration.t_final_c,
             t_outside_c=config.calibration.t_outside_c,
             time_minutes=config.calibration.time_minutes,
+            ua_coefficient=config.calibration.ua_coefficient,
         ) if config.calibration else None,
     )
 
@@ -112,7 +117,7 @@ def get_thermal_config():
 @router.put("/config")
 def update_thermal_config(payload: ThermalConfigModel):
     """Обновить конфигурацию теплотехнических параметров"""
-    config = ThermalConfig()
+    config = ThermalConfig(house_id=payload.house_id)
 
     if payload.building:
         config.building = BuildingDimensions(
@@ -128,29 +133,36 @@ def update_thermal_config(payload: ThermalConfigModel):
         )
 
     if payload.calibration:
-        # Рассчитать UA коэффициент
-        if not config.building:
-            raise HTTPException(status_code=400, detail="Building dimensions required for calibration")
-
-        try:
-            ua = calculate_ua_coefficient(
-                volume_m3=config.building.volume_m3,
-                t_initial=payload.calibration.t_initial_c,
-                t_final=payload.calibration.t_final_c,
-                t_outside=payload.calibration.t_outside_c,
-                time_minutes=payload.calibration.time_minutes,
-            )
-
+        if payload.calibration.ua_coefficient is not None:
+            # UA уже рассчитан (round-trip из loadConfig или явное сохранение) — сохраняем как есть
             config.calibration = CalibrationTest(
                 t_initial_c=payload.calibration.t_initial_c,
                 t_final_c=payload.calibration.t_final_c,
                 t_outside_c=payload.calibration.t_outside_c,
                 time_minutes=payload.calibration.time_minutes,
-                ua_coefficient=ua,
+                ua_coefficient=payload.calibration.ua_coefficient,
             )
-
-        except ValueError as e:
-            raise HTTPException(status_code=400, detail=str(e))
+        else:
+            # UA не задан — рассчитать из данных теста охлаждения
+            if not config.building:
+                raise HTTPException(status_code=400, detail="Building dimensions required for calibration")
+            try:
+                ua = calculate_ua_coefficient(
+                    volume_m3=config.building.volume_m3,
+                    t_initial=payload.calibration.t_initial_c,
+                    t_final=payload.calibration.t_final_c,
+                    t_outside=payload.calibration.t_outside_c,
+                    time_minutes=payload.calibration.time_minutes,
+                )
+                config.calibration = CalibrationTest(
+                    t_initial_c=payload.calibration.t_initial_c,
+                    t_final_c=payload.calibration.t_final_c,
+                    t_outside_c=payload.calibration.t_outside_c,
+                    time_minutes=payload.calibration.time_minutes,
+                    ua_coefficient=ua,
+                )
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=str(e))
 
     save_thermal_config(config)
 

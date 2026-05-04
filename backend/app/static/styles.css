@@ -39,6 +39,8 @@ select { width: 100%; padding: 8px 10px; background: #0e1013; color: var(--text)
 table { width: 100%; border-collapse: collapse; margin-top: 12px; }
 th, td { border-bottom: 1px solid var(--border); padding: 8px 6px; text-align: right; }
 th:first-child, td:first-child { text-align: left; }
+/* input внутри td создаёт свой formatting context — наследование text-align не работает */
+td input[type="number"], td input[type="text"] { text-align: right; }
 footer { margin-top: 18px; color: var(--muted); }
 code { background: #0e1013; padding: 2px 6px; border-radius: 6px; border: 1px solid var(--border); }
 

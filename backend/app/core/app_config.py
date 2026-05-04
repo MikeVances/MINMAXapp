@@ -33,6 +33,18 @@ class AppConfig:
     temp_spring_c: float = 10.0      # Температура весны/осени (середина диапазона)
     temp_summer_c: float = 25.0      # Температура лета (≥ этого значения)
 
+    # Длина производственного цикла (последний день выращивания)
+    cycle_days: int = 42
+
+    # Параметры расчёта норм вентиляции из первых принципов (CIGR 1984)
+    n_birds_initial: int = 30000         # посадочное поголовье, гол.
+    v_tunnel_ms: float = 2.5            # целевая скорость туннеля, м/с
+    safety_factor_qmin: float = 1.5     # коэффициент запаса к CO₂-расчёту q_min
+
+    # Ограничения туннельного режима вентиляции
+    tunnel_min_day: int = 14            # минимальный возраст (дней) для включения туннеля
+    tunnel_min_temp_c: float = 18.0     # минимальная наружная температура для туннеля (°C)
+
 
 def load_app_config(path: str = APP_CONFIG_PATH) -> AppConfig:
     if not os.path.exists(path):

@@ -5,6 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Farm Audit — MINMAXapp</title>
   <link rel="stylesheet" href="/styles.css" />
+  <script src="/i18n/en.js"></script>
+  <script src="/i18n/ru.js"></script>
+  <script src="/i18n/pl.js"></script>
+  <script src="/i18n/de.js"></script>
+  <script src="/i18n/fr.js"></script>
   <script src="/i18n.js"></script>
   <style>
     .tool-tabs   { display:flex; gap:8px; margin-bottom:20px; flex-wrap:wrap; }
@@ -58,16 +63,69 @@
 
   <!-- Tool tabs -->
   <div class="tool-tabs">
-    <button class="tool-tab active" data-tool="leakage" data-i18n="tab_leakage">🏠 House tightness</button>
-    <button class="tool-tab" data-tool="evap"    data-i18n="tab_evap">💧 Evaporative cooling</button>
-    <button class="tool-tab" data-tool="tunnel"  data-i18n="tab_tunnel">🌬️ Tunnel air speed</button>
-    <button class="tool-tab" data-tool="calibration" data-i18n="tab_calibration">🔬 Calibration</button>
+    <button class="tool-tab active" data-tool="profile"     data-i18n="tab_profile">📊 Ventilation Profile</button>
+    <button class="tool-tab" data-tool="leakage"      data-i18n="tab_leakage">🏠 House tightness</button>
+    <button class="tool-tab" data-tool="evap"         data-i18n="tab_evap">💧 Evaporative cooling</button>
+    <button class="tool-tab" data-tool="tunnel"       data-i18n="tab_tunnel">🌬️ Tunnel air speed</button>
+    <button class="tool-tab" data-tool="calibration"  data-i18n="tab_calibration">🌡️ Heat loss</button>
+    <button class="tool-tab" data-tool="help"          data-i18n="tab_help">📖 Methodology</button>
   </div>
+
+  <!-- ═══════════════════════════════════════════════════
+       TOOL: VENTILATION PROFILE (summary7 from main page)
+  ═══════════════════════════════════════════════════ -->
+  <div class="tool-panel active" id="panel-profile">
+
+    <!-- Profile charts with unit toggle -->
+    <div id="profile-charts" style="margin-bottom:16px;"></div>
+
+    <div class="card" style="margin-bottom:16px;">
+
+      <!-- House selector — reads from main-page localStorage data -->
+      <div style="margin-bottom:14px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+        <label style="display:flex; align-items:center; gap:8px; margin:0;">
+          <span class="muted" style="font-size:12px; white-space:nowrap;" data-i18n="prof_from_house">House:</span>
+          <select id="prof-house-select" style="min-width:200px;"></select>
+        </label>
+      </div>
+
+      <!-- Parameters row -->
+      <div class="field-row" style="margin-bottom:14px;">
+        <label>
+          <span data-i18n="label_outdoor_t">Outdoor temperature, °C</span>
+          <input id="prof-outside-t" type="number" step="1" min="-40" max="50" value="15">
+        </label>
+        <label>
+          <span data-i18n="label_outdoor_rh">Outdoor humidity, %</span>
+          <input id="prof-outside-rh" type="number" step="1" min="0" max="100" value="60">
+        </label>
+        <label>
+          <span data-i18n="label_disp_mode">Display mode</span>
+          <select id="prof-view-mode">
+            <option value="total"    data-i18n="mode_total">m³/h total flock</option>
+            <option value="percent"  data-i18n="mode_pct">% of capacity</option>
+            <option value="per_bird" data-i18n="mode_per_bird">m³/h per bird</option>
+            <option value="per_kg"   data-i18n="mode_per_kg">m³/h per kg LW</option>
+            <option value="per_m2"   data-i18n="mode_per_m2">m³/h per m² floor</option>
+          </select>
+        </label>
+      </div>
+
+      <button id="prof-calc-btn" class="btn" data-i18n="btn_calc_profile">Calculate profile</button>
+    </div>
+
+    <!-- Results rendered here by JS -->
+    <div id="prof-summary" style="display:none; margin-bottom:16px;"></div>
+
+    <!-- Editable anchor table + save/CIGR -->
+    <div id="profile-editor" style="margin-bottom:16px;"></div>
+
+  </div><!-- /panel-profile -->
 
   <!-- ═══════════════════════════════════════════════════
        TOOL: HOUSE TIGHTNESS (ELA)
   ═══════════════════════════════════════════════════ -->
-  <div class="tool-panel active" id="panel-leakage">
+  <div class="tool-panel" id="panel-leakage">
 
     <div class="info-block" style="margin-bottom:20px;" data-i18n-html="leakage_method_html"></div>
 
@@ -77,12 +135,20 @@
       <div class="card">
         <h2 data-i18n="leakage_h2">Test parameters</h2>
 
+        <!-- House selector -->
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:16px; flex-wrap:wrap;">
+          <span class="muted" style="font-size:12px; white-space:nowrap;" data-i18n="prof_from_house">House:</span>
+          <select id="l-house-sel" style="flex:1; min-width:160px;"><option value="">—</option></select>
+        </div>
+
         <p class="muted" style="font-size:12px; margin:0 0 14px;" data-i18n="leakage_dims_grp">House dimensions</p>
         <div class="field-row">
-          <label data-i18n="label_l_length">Length, m
+          <label>
+            <span data-i18n="label_l_length">Length, m</span>
             <input id="l-length" type="number" step="0.5" min="10" value="96" />
           </label>
-          <label data-i18n="label_l_width">Width, m
+          <label>
+            <span data-i18n="label_l_width">Width, m</span>
             <input id="l-width" type="number" step="0.5" min="5" value="18" />
           </label>
         </div>
@@ -98,24 +164,6 @@
           <span data-i18n="label_test_pa">Static pressure at test, Pa</span>
           <input id="l-pressure" type="number" step="1" min="5" max="250" value="25" />
           <span class="muted" style="font-size:11px;" data-i18n="hint_pa_val">25 Pa ≈ 0.10″, 63 Pa ≈ 0.25″</span>
-        </label>
-
-        <hr class="section-divider" />
-        <p class="muted" style="font-size:12px; margin:0 0 14px;" data-i18n="leakage_minvent_grp">Minimum ventilation</p>
-        <label>
-          <span data-i18n="label_min_vent_m3h">Total min-vent fan flow, m³/h</span>
-          <input id="l-min-fan" type="number" step="500" min="500" value="34000" />
-        </label>
-        <div class="field-row">
-          <label data-i18n="label_num_inlets">Number of inlets
-            <input id="l-inlets" type="number" step="1" min="1" value="40" />
-          </label>
-          <label data-i18n="label_inlet_h_cm">Opening height, cm
-            <input id="l-inlet-h" type="number" step="0.5" min="1" value="15" />
-          </label>
-        </div>
-        <label data-i18n="label_inlet_len_cm">Inlet length, cm
-          <input id="l-inlet-len" type="number" step="1" min="10" value="107" />
         </label>
 
         <button class="btn" id="l-calc-btn" style="margin-top:16px; width:100%;" data-i18n="btn_calc_leakage">
@@ -153,46 +201,6 @@
           <div class="info-block" id="l-class-tip" style="margin-top:12px;"></div>
         </div>
 
-        <!-- Inlet system analysis -->
-        <div class="card">
-          <h2 data-i18n="leakage_inlet_h2">Inlet system at min ventilation</h2>
-          <div class="result">
-            <div class="kv">
-              <span data-i18n="lbl_req_total">Required total inlet area</span>
-              <span id="l-req-total"></span>
-            </div>
-            <div class="kv">
-              <span data-i18n="lbl_ela2">Gap area (ELA)</span>
-              <span id="l-ela2"></span>
-            </div>
-            <div class="kv">
-              <span data-i18n="lbl_net_inlet">Net required inlet area</span>
-              <span id="l-net"></span>
-            </div>
-          </div>
-
-          <div style="margin-top:14px;">
-            <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
-              <span data-i18n="lbl_via_inlets">Air via inlets</span>
-              <span id="l-pct-text" class="big"></span>
-            </div>
-            <div class="pct-bar-wrap">
-              <div id="l-pct-bar" class="pct-bar"></div>
-            </div>
-            <div style="display:flex; justify-content:space-between; font-size:11px; margin-top:4px;" class="muted">
-              <span data-i18n="lbl_via_gaps">↑ via gaps</span>
-              <span data-i18n="lbl_via_valves">via inlets ↑</span>
-            </div>
-          </div>
-
-          <div class="kv" style="margin-top:12px;">
-            <span data-i18n="lbl_req_opening">Required inlet opening</span>
-            <span id="l-opening" class="big"></span>
-          </div>
-
-          <div class="info-block" id="l-inlet-tip" style="margin-top:12px;"></div>
-        </div>
-
       </div><!-- /l-results -->
 
     </div><!-- /grid -->
@@ -212,12 +220,20 @@
         <h2 data-i18n="evap_h2">System parameters</h2>
         <form id="evap-form">
 
-          <h3 style="font-size:13px; color:var(--muted); margin:12px 0 6px;" data-i18n="evap_dims_grp">House dimensions</h3>
+          <!-- House selector -->
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:16px; flex-wrap:wrap;">
+            <span class="muted" style="font-size:12px; white-space:nowrap;" data-i18n="prof_from_house">House:</span>
+            <select id="ev-house-sel" style="flex:1; min-width:160px;"><option value="">—</option></select>
+          </div>
+
+          <h3 style="font-size:13px; color:var(--muted); margin:0 0 6px;" data-i18n="evap_dims_grp">House dimensions</h3>
           <div class="field-row">
-            <label data-i18n="label_l_length">Length, m
+            <label>
+              <span data-i18n="label_l_length">Length, m</span>
               <input id="ev-length" type="number" step="0.1" min="10" max="300" placeholder="120" required />
             </label>
-            <label data-i18n="label_l_width">Width, m
+            <label>
+              <span data-i18n="label_l_width">Width, m</span>
               <input id="ev-width" type="number" step="0.1" min="5" max="30" placeholder="12" required />
             </label>
           </div>
@@ -225,42 +241,68 @@
           <hr class="section-divider" />
           <h3 style="font-size:13px; color:var(--muted); margin:0 0 6px;" data-i18n="evap_climate_grp">Outdoor climate</h3>
           <div class="field-row">
-            <label data-i18n="label_tdb">Dry-bulb temperature, °C
+            <label>
+              <span data-i18n="label_tdb">Dry-bulb temperature, °C</span>
               <input id="ev-tdb" type="number" step="0.5" min="-10" max="55" placeholder="32" required />
             </label>
-            <label data-i18n="label_rh">Relative humidity, %
+            <label>
+              <span data-i18n="label_rh">Relative humidity, %</span>
               <input id="ev-rh" type="number" step="1" min="5" max="100" placeholder="45" required />
             </label>
           </div>
 
           <hr class="section-divider" />
           <h3 style="font-size:13px; color:var(--muted); margin:0 0 6px;" data-i18n="evap_fans_grp">Ventilation</h3>
-          <label data-i18n="label_total_fans">Total fan capacity, m³/h
+          <label>
+            <span data-i18n="label_total_fans">Total fan capacity, m³/h</span>
             <input id="ev-fans" type="number" step="100" min="1000" placeholder="180000" required />
           </label>
 
           <hr class="section-divider" />
           <h3 style="font-size:13px; color:var(--muted); margin:0 0 6px;" data-i18n="evap_pad_grp">Pad (evaporative media)</h3>
           <div class="field-row">
-            <label data-i18n="label_pad_thick">Pad thickness
-              <select id="ev-thickness">
-                <option value="100" data-i18n="opt_pad_100">100 mm (η ≈ 73%, v_rec 1.14 m/s)</option>
-                <option value="150" data-i18n="opt_pad_150">150 mm (η ≈ 75%, v_rec 1.78 m/s)</option>
+            <label>
+              <span data-i18n="label_pad_type">Pad type (SANHE)</span>
+              <select id="ev-pad-type">
+                <option value="7090" data-i18n="opt_pad_7090">7090 — max η, higher ΔP</option>
+                <option value="7060" data-i18n="opt_pad_7060">7060 — standard, low ΔP</option>
+                <option value="5090" data-i18n="opt_pad_5090">5090 — compact, high η</option>
               </select>
             </label>
-            <label data-i18n="label_pad_height">Pad height (gable wall), m
-              <input id="ev-padh" type="number" step="0.1" min="1" max="5" placeholder="2.4" required />
+            <label>
+              <span data-i18n="label_pad_thick">Pad thickness, mm</span>
+              <select id="ev-thickness">
+                <!-- populated by JS based on pad type -->
+              </select>
             </label>
           </div>
-          <label data-i18n="label_pad_cov">Pad coverage of gable wall, %
-            <input id="ev-coverage" type="number" step="1" min="10" max="100" value="80" required />
-          </label>
+          <div class="field-row">
+            <label>
+              <span data-i18n="label_pad_length">Panel length (total installed), m</span>
+              <input id="ev-pad-length" type="number" step="0.1" min="1" max="100" placeholder="12" required />
+            </label>
+            <label>
+              <span data-i18n="label_pad_height">Panel height, m</span>
+              <input id="ev-padh" type="number" step="0.1" min="0.5" max="5" placeholder="1.5" required />
+            </label>
+          </div>
 
           <hr class="section-divider" />
           <h3 style="font-size:13px; color:var(--muted); margin:0 0 6px;" data-i18n="evap_target_grp">Target</h3>
-          <label data-i18n="label_target_t">Target indoor temperature, °C
+          <label>
+            <span data-i18n="label_target_t">Target indoor temperature, °C</span>
             <input id="ev-target" type="number" step="0.5" min="15" max="40" value="28" required />
           </label>
+
+          <hr class="section-divider" />
+          <h3 style="font-size:13px; color:var(--muted); margin:0 0 6px;" data-i18n="evap_water_src_grp">Water supply (optional)</h3>
+          <label>
+            <span data-i18n="label_water_t">Water supply temperature, °C</span>
+            <input id="ev-water-t" type="number" step="0.5" min="1" max="40" placeholder="—" />
+          </label>
+          <p class="muted" style="font-size:11px; margin:4px 0 0; line-height:1.5;" data-i18n="evap_water_t_hint">
+            Well water: typically 8–12 °C
+          </p>
 
           <button type="submit" id="evap-btn" class="btn" style="margin-top:16px;" data-i18n="btn_calc_evap">Calculate</button>
         </form>
@@ -276,10 +318,14 @@
           <table style="width:100%; font-size:14px; border-collapse:collapse;">
             <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_twb">Wet-bulb temperature (T_wb)</td>
                 <td style="text-align:right;" id="ev-r-twb">—</td></tr>
+            <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_tdew">Dew point (T_dp)</td>
+                <td style="text-align:right;" id="ev-r-tdew">—</td></tr>
             <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_tpad">Air temperature after pad</td>
                 <td style="text-align:right; font-size:18px; font-weight:700;" id="ev-r-tpad">—</td></tr>
             <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_cooling">Cooling achieved</td>
                 <td style="text-align:right;" id="ev-r-cool">—</td></tr>
+            <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_max_cooling">Max possible cooling (T_wb limit)</td>
+                <td style="text-align:right; color:var(--muted);" id="ev-r-max-cool">—</td></tr>
             <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_eta">Pad efficiency</td>
                 <td style="text-align:right;" id="ev-r-eta">—</td></tr>
             <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_margin">Margin to target temp</td>
@@ -297,6 +343,8 @@
             <tr><td class="muted" style="padding:4px 0;" colspan="2" id="ev-r-velstatus" style="font-size:12px;"></td></tr>
             <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_rec_area">Recommended pad area</td>
                 <td style="text-align:right;" id="ev-r-rec-area">—</td></tr>
+            <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_pad_dp">Pad pressure drop</td>
+                <td style="text-align:right;" id="ev-r-dp">—</td></tr>
           </table>
         </div>
 
@@ -308,6 +356,18 @@
             <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_water_h">Per hour</td>
                 <td style="text-align:right;" id="ev-r-water-h">—</td></tr>
           </table>
+        </div>
+
+        <!-- Water supply check card — visible only when water_supply_t_c was provided -->
+        <div id="ev-water-card" class="card" style="display:none;">
+          <h3 style="font-size:13px; color:var(--muted); margin:0 0 8px;" data-i18n="evap_water_effect_h3">Water supply check</h3>
+          <table style="width:100%; font-size:14px; border-collapse:collapse;">
+            <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_water_src_t">Water supply temperature</td>
+                <td style="text-align:right;" id="ev-r-water-t">—</td></tr>
+            <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_water_min">Min. recommended water temperature</td>
+                <td style="text-align:right; font-weight:600;" id="ev-r-water-min">—</td></tr>
+          </table>
+          <p id="ev-water-note" class="muted" style="font-size:12px; margin:10px 0 0; line-height:1.6; padding:8px; border-radius:6px;"></p>
         </div>
 
       </div><!-- /ev-results -->
@@ -329,22 +389,34 @@
         <h2 data-i18n="tunnel_h2">Tunnel parameters</h2>
         <form id="tunnel-form">
 
-          <h3 style="font-size:13px; color:var(--muted); margin:12px 0 6px;" data-i18n="tunnel_sect_grp">Tunnel cross-section</h3>
+          <!-- House selector -->
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:16px; flex-wrap:wrap;">
+            <span class="muted" style="font-size:12px; white-space:nowrap;" data-i18n="prof_from_house">House:</span>
+            <select id="tn-house-sel" style="flex:1; min-width:160px;"><option value="">—</option></select>
+          </div>
+
+          <h3 style="font-size:13px; color:var(--muted); margin:0 0 6px;" data-i18n="tunnel_sect_grp">Tunnel cross-section</h3>
           <div class="field-row">
-            <label data-i18n="label_tn_width">House width, m
+            <label>
+              <span data-i18n="label_tn_width">House width, m</span>
               <input id="tn-width" type="number" step="0.1" min="5" max="30" placeholder="12" required />
             </label>
             <label>
               <span data-i18n="label_tn_height">Free cross-section height, m</span>
-              <input id="tn-height" type="number" step="0.1" min="1" max="5" placeholder="2.0"
+              <input id="tn-height" type="number" step="0.1" min="1" max="8" placeholder="2.0"
                      data-i18n-title="hint_tn_height" required />
             </label>
           </div>
+          <p id="tn-height-hint" class="muted" style="font-size:11px; margin:2px 0 0; display:none;"
+             data-i18n="hint_tn_height_auto"></p>
 
           <hr class="section-divider" />
-          <h3 style="font-size:13px; color:var(--muted); margin:0 0 6px;" data-i18n="tunnel_fans_grp">Fans</h3>
+          <h3 style="font-size:13px; color:var(--muted); margin:0 0 4px;" data-i18n="tunnel_fans_grp">Fans</h3>
+          <p id="tn-fans-missing" class="muted" style="font-size:11px; margin:0 0 6px; display:none;"
+             data-i18n="hint_tn_fans_missing"></p>
           <div class="field-row">
-            <label data-i18n="label_tn_fans">Number of fans
+            <label>
+              <span data-i18n="label_tn_fans">Number of fans</span>
               <input id="tn-fans" type="number" step="1" min="1" max="30" placeholder="8" required />
             </label>
             <label>
@@ -355,26 +427,46 @@
           </div>
 
           <hr class="section-divider" />
-          <h3 style="font-size:13px; color:var(--muted); margin:0 0 6px;" data-i18n="tunnel_climate_grp">Climate and birds</h3>
+          <h3 style="font-size:13px; color:var(--muted); margin:0 0 4px;" data-i18n="tunnel_climate_grp">Climate and birds</h3>
+          <p class="muted" style="font-size:11px; margin:0 0 8px;" data-i18n="hint_tunnel_design_day">For house readiness assessment use the last day of the cycle — the worst-case thermal and ventilation load.</p>
           <div class="field-row">
-            <label data-i18n="label_tn_tdb">Outdoor temperature, °C
+            <label>
+              <span data-i18n="label_tn_tdb">Outdoor temperature, °C</span>
               <input id="tn-tdb" type="number" step="0.5" min="0" max="55" placeholder="33" required />
             </label>
-            <label data-i18n="label_tn_rh">Relative humidity, %
+            <label>
+              <span data-i18n="label_tn_rh">Relative humidity, %</span>
               <input id="tn-rh" type="number" step="1" min="5" max="100" placeholder="50" required />
             </label>
           </div>
-          <label data-i18n="label_tn_age">Bird age, days
-            <input id="tn-age" type="number" step="1" min="1" max="60" placeholder="35" required />
-          </label>
+          <div class="field-row">
+            <label>
+              <span data-i18n="label_tn_age">Design day (last cycle day), days</span>
+              <input id="tn-age" type="number" step="1" min="1" max="60" placeholder="42" required />
+            </label>
+            <label>
+              <span data-i18n="label_tn_birds">Bird count</span>
+              <input id="tn-birds" type="number" step="100" min="1000" max="100000" placeholder="35000" />
+            </label>
+          </div>
 
           <hr class="section-divider" />
-          <h3 style="font-size:13px; color:var(--muted); margin:0 0 6px;" data-i18n="tunnel_inlet_grp">Inlet resistance</h3>
+          <h3 style="font-size:13px; color:var(--muted); margin:0 0 4px;" data-i18n="tunnel_inlet_grp">Inlet system</h3>
+          <p class="muted" style="font-size:11px; margin:0 0 8px; line-height:1.5;" data-i18n="hint_inlet_measure">Open end: 1 section × house width × tunnel height. Curtain panels: count sections × width × height each.</p>
           <label>
-            <span data-i18n="label_tn_inlet_pa">Inlet pressure (curtains / pads), Pa</span>
-            <input id="tn-inlet-pa" type="number" step="1" min="0" max="50" value="10"
-                   data-i18n-title="hint_tn_inlet_pa" />
+            <span data-i18n="label_num_inlets">Number of openings, qty</span>
+            <input id="tn-num-inlets" type="number" min="1" max="500" value="1" />
           </label>
+          <div class="field-row" style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:4px;">
+            <label>
+              <span data-i18n="label_inlet_width">Opening width, m</span>
+              <input id="tn-inlet-w" type="number" step="0.1" min="0.5" max="30" placeholder="18" />
+            </label>
+            <label>
+              <span data-i18n="label_inlet_height">Opening height, m</span>
+              <input id="tn-inlet-h" type="number" step="0.1" min="0.5" max="5" placeholder="2.2" />
+            </label>
+          </div>
 
           <button type="submit" id="tunnel-btn" class="btn" style="margin-top:16px;" data-i18n="btn_calc_tunnel">Calculate</button>
         </form>
@@ -394,8 +486,6 @@
                 <td style="text-align:right;" id="tn-r-total">—</td></tr>
             <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_air_speed">Air speed</td>
                 <td style="text-align:right; font-size:20px; font-weight:700;" id="tn-r-vel">—</td></tr>
-            <tr><td class="muted" style="padding:4px 0 2px;" data-i18n="lbl_fpm">Speed, FPM</td>
-                <td style="text-align:right; font-size:11px; color:var(--muted);" id="tn-r-fpm">—</td></tr>
           </table>
           <div class="info-block" style="margin-top:8px; font-size:12px;" id="tn-r-vel-status"></div>
         </div>
@@ -425,6 +515,20 @@
           </div>
         </div>
 
+        <!-- Inlet system -->
+        <div class="card" style="margin-bottom:12px;">
+          <h3 style="font-size:13px; color:var(--muted); margin:0 0 8px;" data-i18n="tunnel_inlet_res_h3">Inlet system</h3>
+          <table style="width:100%; font-size:14px; border-collapse:collapse;">
+            <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_inlet_area">Inlet area</td>
+                <td style="text-align:right;" id="tn-r-inlet-area">—</td></tr>
+            <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_inlet_vel">Inlet velocity</td>
+                <td style="text-align:right; font-weight:700;" id="tn-r-inlet-vel">—</td></tr>
+            <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_inlet_sp">Inlet static pressure</td>
+                <td style="text-align:right;" id="tn-r-inlet-sp">—</td></tr>
+          </table>
+          <div class="info-block" style="margin-top:8px; font-size:12px;" id="tn-r-inlet-status"></div>
+        </div>
+
         <!-- Pressure & recommendations -->
         <div class="card">
           <h3 style="font-size:13px; color:var(--muted); margin:0 0 8px;" data-i18n="tunnel_press_h3">Pressure and recommendations</h3>
@@ -440,6 +544,21 @@
           </table>
         </div>
 
+        <!-- Decision card: tunnel vs evaporative cooling -->
+        <div id="tn-decision-card" class="card" style="margin-top:12px; border-left:4px solid var(--border); display:none;">
+          <h3 style="font-size:14px; margin:0 0 10px;" data-i18n="tn_decision_h3">Tunnel mode — is it enough?</h3>
+          <table style="width:100%; font-size:14px; border-collapse:collapse;">
+            <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_comfort_target">Comfort target (age)</td>
+                <td style="text-align:right;" id="tn-r-comfort-target">—</td></tr>
+            <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_eff_temp_margin">Effective temp / margin</td>
+                <td style="text-align:right; font-weight:700;" id="tn-r-margin">—</td></tr>
+            <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_tunnel_limit">Tunnel effective up to</td>
+                <td style="text-align:right; font-size:16px; font-weight:700;" id="tn-r-tunnel-limit">—</td></tr>
+          </table>
+          <p id="tn-decision-note" style="font-size:13px; margin:10px 0 0; line-height:1.5;"></p>
+          <button id="tn-to-evap-btn" class="btn btn-secondary" style="margin-top:10px; display:none;" data-i18n="btn_go_to_evap">→ Evaporative cooling</button>
+        </div>
+
       </div><!-- /tn-results -->
 
     </div><!-- /grid -->
@@ -448,6 +567,50 @@
 </main>
 
 <script>
+// ─────── Audit store (localStorage, Render-compatible) ───────
+const auditStore = (() => {
+  const KEY = 'minmax_audit_v1';
+  const load = () => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; } };
+  return {
+    record(houseId, tool, payload) {
+      const d = load();
+      const hid = String(houseId || '_unknown');
+      if (!d[hid]) d[hid] = { house_id: hid, results: {}, _updated: null };
+      d[hid].results[tool] = { ...payload, _ts: new Date().toISOString() };
+      d[hid]._updated = new Date().toISOString();
+      localStorage.setItem(KEY, JSON.stringify(d));
+    },
+    getAll()      { return load(); },
+    getHouse(hid) { return load()[String(hid)] || null; },
+    clear()       { localStorage.removeItem(KEY); },
+  };
+})();
+
+// ─────── Shared house selector utility ───────
+// Заполняет <select> птичниками из localStorage главной страницы.
+// При смене выбора вызывает onSelect(tab) — tab-объект с полями профиля.
+function initHouseSelector(selId, onSelect) {
+  const sel = document.getElementById(selId);
+  if (!sel) return;
+  try {
+    const tabs = JSON.parse(localStorage.getItem('vent_mvp_tabs_v1') || '[]');
+    sel.innerHTML = `<option value="">— ${t('dims_no_houses') || '…'} —</option>`;
+    tabs.forEach((tab, i) => {
+      const opt = document.createElement('option');
+      opt.value = i;
+      const name = tab.id ? t('house_tab', { id: tab.id }) : `#${i + 1}`;
+      opt.textContent = name + (tab.birds ? ` — ${Number(tab.birds).toLocaleString()}` : '');
+      sel.appendChild(opt);
+    });
+    sel.addEventListener('change', () => {
+      const i = parseInt(sel.value, 10);
+      if (!isNaN(i) && tabs[i]) onSelect(tabs[i]);
+    });
+  } catch(e) { console.warn('house selector:', e); }
+}
+
+function _setVal(id, v) { if (v != null && v !== '') { const el = document.getElementById(id); if (el) el.value = v; } }
+
 // ─────── Tab switching ───────
 document.querySelectorAll('.tool-tab:not([disabled])').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -459,6 +622,256 @@ document.querySelectorAll('.tool-tab:not([disabled])').forEach(btn => {
   });
 });
 
+// ─────── Ventilation Profile ───────
+(function() {
+  const STORE_KEY = 'vent_mvp_tabs_v1';
+  const selEl     = document.getElementById('prof-house-select');
+  const profBtn   = document.getElementById('prof-calc-btn');
+  const profSummary = document.getElementById('prof-summary');
+
+  let profileTabs = [];
+  let selIdx = 0;
+
+  function buildSelector() {
+    try {
+      const raw = localStorage.getItem(STORE_KEY);
+      if (raw) profileTabs = JSON.parse(raw) || [];
+    } catch {}
+
+    selEl.innerHTML = '';
+    if (!profileTabs.length) {
+      const opt = document.createElement('option');
+      opt.textContent = t('dims_no_houses');
+      opt.value = '';
+      selEl.appendChild(opt);
+      return;
+    }
+
+    profileTabs.forEach((tab, idx) => {
+      const opt = document.createElement('option');
+      opt.value = idx;
+      const name = tab.id ? t('house_tab', { id: tab.id }) : `#${idx + 1}`;
+      const extra = tab.birds ? ` — ${tab.birds.toLocaleString(I18N.lang)}` : '';
+      opt.textContent = name + extra;
+      selEl.appendChild(opt);
+    });
+
+    selEl.addEventListener('change', () => { selIdx = parseInt(selEl.value, 10) || 0; });
+  }
+
+  async function calcProfile() {
+    const tab = profileTabs[selIdx];
+    if (!tab) return;
+
+    const outsideT  = Number(document.getElementById('prof-outside-t').value) || 15;
+    const outsideRH = Number(document.getElementById('prof-outside-rh').value) || 60;
+    const mode      = document.getElementById('prof-view-mode').value;
+
+    const payload = {
+      house:        tab.id,
+      birds:        tab.birds,
+      mode_id:      'summer',
+      user_max_m3h: (tab.cap == null || tab.cap === '') ? null : Number(tab.cap),
+      heater_on:    !!tab.heater_on,
+      display_unit: tab.unit || 'per_bird',
+      outside_t:    outsideT,
+      outside_rh:   outsideRH,
+    };
+
+    profBtn.disabled = true; profBtn.textContent = t('btn_calculating');
+    try {
+      const r = await fetch('/calc/summary7', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!r.ok) {
+        const txt = await r.text();
+        throw new Error(`${r.status} ${r.statusText}: ${txt}`);
+      }
+      renderProfileHtml(await r.json(), tab, mode, outsideT, outsideRH);
+    } catch (e) {
+      profSummary.innerHTML = `<div class="card"><div class="danger">${t('err_prefix')}${String(e)}</div></div>`;
+      profSummary.style.display = 'block';
+    } finally {
+      profBtn.disabled = false; profBtn.textContent = t('btn_calc_profile');
+    }
+  }
+
+  function renderProfileHtml(d, tab, mode, outsideT, outsideRH) {
+    // Геометрия птичника
+    const L = tab.length_m, W = tab.width_m;
+    const Hw = tab.height_wall_m, Hr = tab.height_ridge_m;
+    const S_floor = (L && W) ? L * W : null;
+    const H_eff   = (Hw && Hr) ? (Hw + Hr) / 2 : (Hw || Hr || null);
+    const V_house = (S_floor && H_eff) ? S_floor * H_eff : null;
+    const S_cross = (W && H_eff) ? W * H_eff : null;
+
+    const head = `
+      <div class="kv"><span>${t('sum_outdoor')}</span><span>${outsideT} °C / ${outsideRH ?? 60} %</span></div>
+      <div class="kv"><span>${t('sum_house_birds')}</span><span>${d.house} / ${d.birds}</span></div>
+      <div class="kv"><span>${t('sum_sys_max')}</span><span>${d.user_max_m3h ?? '—'} ${t('unit_m3h_plain')}</span></div>`;
+
+    const headerByMode = {
+      total:    [t('hdr_qmin_m3h'), t('hdr_qmax_m3h')],
+      percent:  [t('hdr_qmin_pct'), t('hdr_qmax_pct')],
+      per_bird: [t('hdr_qmin_bird'), t('hdr_qmax_bird')],
+      per_kg:   [t('hdr_qmin_kg'),  t('hdr_qmax_kg')],
+      per_m2:   [t('hdr_qmin_m2'),  t('hdr_qmax_m2')]
+    };
+    const headCols = headerByMode[mode] || headerByMode.total;
+
+    const rows = d.rows.map(r => {
+      let c1 = '—', c2 = '—';
+      if (mode === 'total') {
+        c1 = Math.round(r.q_min_m3h).toString();
+        c2 = Math.round(r.q_max_m3h).toString();
+      } else if (mode === 'percent') {
+        c1 = r.q_min_pct != null ? (r.q_min_pct.toFixed(1) + '%') : '—';
+        c2 = r.q_max_pct != null ? (r.q_max_pct.toFixed(1) + '%') : '—';
+      } else if (mode === 'per_bird') {
+        const be = r.birds_eff || d.birds;
+        if (be > 0) { c1 = (r.q_min_m3h / be).toFixed(4); c2 = (r.q_max_m3h / be).toFixed(4); }
+      } else if (mode === 'per_kg') {
+        const be = r.birds_eff || d.birds;
+        const wkg = (r.weight_g || 0) / 1000.0;
+        const totalKg = be * wkg;
+        if (totalKg > 0) { c1 = (r.q_min_m3h / totalKg).toFixed(4); c2 = (r.q_max_m3h / totalKg).toFixed(4); }
+      } else if (mode === 'per_m2' && S_floor) {
+        c1 = (r.q_min_m3h / S_floor).toFixed(1);
+        c2 = (r.q_max_m3h / S_floor).toFixed(1);
+      }
+      return `<tr>
+        <td>${r.day}</td><td>${r.min_temp_c ?? '—'}</td>
+        <td>${r.weight_g != null ? Math.round(r.weight_g) : '—'}</td>
+        <td>${c1}</td><td>${c2}</td>
+      </tr>`;
+    }).join('');
+
+    // Физическая проверка (Cobb 2021 §9)
+    let physBlock = '';
+    if (S_floor) {
+      const r0  = d.rows[0];
+      const r42 = d.rows[d.rows.length - 1];
+      const qMinM2 = r0 ? r0.q_min_m3h / S_floor : null;
+      const q_sys  = d.user_max_m3h ?? (r42 ? r42.q_max_nominal_m3h : null);
+      const qMaxM2 = q_sys && S_floor ? q_sys / S_floor : null;
+      const T_exch = (V_house && q_sys && q_sys > 0) ? Math.round(V_house / q_sys * 3600) : null;
+      const v_tun  = (S_cross && q_sys && q_sys > 0) ? q_sys / 3600 / S_cross : null;
+
+      const hasSysCap = !!d.user_max_m3h;
+      const cls_qmin  = '';
+      const cls_qmax  = hasSysCap && qMaxM2 != null ? (qMaxM2 >= 150 ? 'ok' : qMaxM2 >= 100 ? '' : 'warn') : '';
+      const cls_texch = hasSysCap && T_exch != null ? (T_exch <= 60 ? 'ok' : T_exch <= 90 ? '' : 'warn') : '';
+      // Цель ≥3.0 м/с (Cobb §9.7) — ниже 3 плохо, не "≤2.5 хорошо"
+      const cls_vtun  = hasSysCap && v_tun != null ? (v_tun >= 3.0 ? 'ok' : v_tun >= 2.0 ? '' : 'warn') : '';
+
+      physBlock = `
+        <div style="margin-top:14px; padding-top:12px; border-top:1px solid var(--border);">
+          <div class="muted" style="font-size:12px; margin-bottom:6px; font-weight:500;">${t('phys_title')}</div>
+          <div class="kv"><span>${t('phys_floor_area')}</span><span>${S_floor.toFixed(0)} ${t('unit_m2')}</span></div>
+          ${V_house ? `<div class="kv"><span>${t('phys_volume')}</span><span>${V_house.toFixed(0)} ${t('unit_m3')}</span></div>` : ''}
+          ${S_cross  ? `<div class="kv"><span>${t('phys_cross_section')}</span><span>${S_cross.toFixed(1)} ${t('unit_m2')}</span></div>` : ''}
+          <div style="margin-top:6px;">
+            ${qMinM2 != null ? `<div class="kv"><span>${t('phys_min_vent_check')}</span><span class="${cls_qmin}">${qMinM2.toFixed(1)} ${t('unit_m3h_m2')} <span class="muted">[≥18]</span></span></div>` : ''}
+            ${qMaxM2 != null ? `<div class="kv"><span>${t('phys_max_vent_check')}</span><span class="${cls_qmax}">${qMaxM2.toFixed(1)} ${t('unit_m3h_m2')} <span class="muted">[165–200]</span></span></div>` : ''}
+            ${T_exch  != null ? `<div class="kv"><span>${t('phys_exchange_time')}</span><span class="${cls_texch}">${T_exch} ${t('unit_sec')} <span class="muted">[40–60]</span></span></div>` : ''}
+            ${v_tun   != null ? `<div class="kv"><span>${t('phys_airspeed_tunnel')}</span><span class="${cls_vtun}">${v_tun.toFixed(2)} ${t('unit_ms')} <span class="muted">[${t('phys_airspeed_target')}]</span></span></div>` : ''}
+          </div>
+          <p class="muted" style="font-size:10px; margin:8px 0 0;">${t('phys_cobb_source')}</p>
+        </div>`;
+    } else {
+      physBlock = `<p class="muted" style="font-size:11px; margin-top:10px;">${t('phys_dims_needed')}</p>`;
+    }
+
+    profSummary.innerHTML = `<div class="card">${head}
+      <table>
+        <thead><tr>
+          <th>${t('col_day')}</th><th>${t('col_min_temp')}</th><th>${t('col_weight')}</th>
+          <th>${headCols[0]}</th><th>${headCols[1]}</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      ${physBlock}
+    </div>`;
+    profSummary.style.display = 'block';
+  }
+
+  profBtn.addEventListener('click', calcProfile);
+  buildSelector();
+})();
+
+// ─────── House selectors for tool panels ───────
+// Каждый инструмент подтягивает из профиля то что хранится:
+// leakage ← length, width, fan_cap_m3h (один вентилятор для теста)
+// evap    ← length, width, cap (полная мощность системы)
+// tunnel  ← width, num_fans, fan_cap_m3h, age_days, outside_t
+initHouseSelector('l-house-sel', tab => {
+  _setVal('l-length',  tab.length_m);
+  _setVal('l-width',   tab.width_m);
+  _setVal('l-fan-cap', tab.fan_cap_m3h);   // один вентилятор = типичный объём теста
+});
+
+initHouseSelector('ev-house-sel', tab => {
+  _setVal('ev-length',     tab.length_m);
+  _setVal('ev-width',      tab.width_m);
+  // Панели занимают всю ширину торца птичника по умолчанию
+  _setVal('ev-pad-length', tab.width_m);
+  // Общая мощность системы = num_fans × fan_cap, или используем cap напрямую
+  const totalCap = (tab.num_fans && tab.fan_cap_m3h)
+    ? tab.num_fans * tab.fan_cap_m3h
+    : tab.cap;
+  _setVal('ev-fans', totalCap);
+});
+
+// Глобальный объект конфига — обновляется IIFE профиля при загрузке настроек
+var profileCfg = { cycle_days: 42 };
+
+initHouseSelector('tn-house-sel', tab => {
+  _setVal('tn-width',  tab.width_m);
+  // Для оценки готовности птичника всегда используем последний день цикла
+  _setVal('tn-age',    profileCfg.cycle_days ?? 42);
+  _setVal('tn-tdb',    tab.outside_t);
+  _setVal('tn-birds',  tab.birds);
+
+  // Высота свободного сечения туннеля:
+  // Если задан конёк — среднее сечение гребневой крыши: (стена + конёк) / 2
+  // Только стена — прямоугольное сечение. В обоих случаях × 0.80 (оборудование, шторы)
+  const hintHeight = document.getElementById('tn-height-hint');
+  if (tab.height_wall_m) {
+    const hasRidge = tab.height_ridge_m && tab.height_ridge_m > tab.height_wall_m;
+    const baseH  = hasRidge
+      ? (tab.height_wall_m + tab.height_ridge_m) / 2
+      : tab.height_wall_m;
+    const freeH = +(baseH * 0.80).toFixed(1);
+    _setVal('tn-height', freeH);
+    if (hintHeight) {
+      hintHeight.textContent = hasRidge
+        ? t('hint_tn_height_gable', { wall: tab.height_wall_m, ridge: tab.height_ridge_m, result: freeH })
+        : t('hint_tn_height_auto');
+      hintHeight.style.color = '';
+      hintHeight.style.display = 'block';
+    }
+  } else {
+    if (hintHeight) {
+      hintHeight.textContent = t('hint_tn_height_missing');
+      hintHeight.style.color = 'var(--warn, #fbbf24)';
+      hintHeight.style.display = 'block';
+    }
+  }
+
+  // Вентиляторы: подтягиваем из профиля если заполнены
+  const fansMissing = document.getElementById('tn-fans-missing');
+  const hasFans = tab.num_fans && tab.fan_cap_m3h;
+  if (hasFans) {
+    _setVal('tn-fans',    tab.num_fans);
+    _setVal('tn-fan-cap', tab.fan_cap_m3h);
+    if (fansMissing) fansMissing.style.display = 'none';
+  } else {
+    // Данных нет — показываем подсказку
+    if (fansMissing) fansMissing.style.display = 'block';
+  }
+});
+
 // ─────── Tightness class config (tips via i18n) ───────
 const TIGHTNESS = {
   tight:      { css: 'badge-tight',      tipKey: 'tip_tight' },
@@ -467,12 +880,6 @@ const TIGHTNESS = {
   very_leaky: { css: 'badge-very_leaky', tipKey: 'tip_very_leaky' },
 };
 
-function pctColor(pct) {
-  if (pct >= 0.85) return '#4ade80';
-  if (pct >= 0.65) return '#fbbf24';
-  return '#f87171';
-}
-
 // ─────── Leakage calculation ───────
 document.getElementById('l-calc-btn').addEventListener('click', async () => {
   const body = {
@@ -480,10 +887,6 @@ document.getElementById('l-calc-btn').addEventListener('click', async () => {
     house_width_m:        +document.getElementById('l-width').value,
     fan_capacity_m3h:     +document.getElementById('l-fan-cap').value,
     measured_pressure_pa: +document.getElementById('l-pressure').value,
-    min_vent_fan_m3h:     +document.getElementById('l-min-fan').value,
-    num_inlets:           +document.getElementById('l-inlets').value,
-    inlet_height_cm:      +document.getElementById('l-inlet-h').value,
-    inlet_length_cm:      +document.getElementById('l-inlet-len').value,
   };
 
   if (Object.values(body).some(v => !v || v <= 0)) {
@@ -518,57 +921,28 @@ document.getElementById('l-calc-btn').addEventListener('click', async () => {
 
 function renderLeakage(d) {
   const tc  = TIGHTNESS[d.tightness_class] || TIGHTNESS.very_leaky;
-  const pct = d.pct_air_via_inlets;
   const relClass = d.relative_leakage < 0.25 ? 'ok'
                  : d.relative_leakage < 0.50 ? 'warn' : 'danger';
   const u = t('unit_m2');
 
-  // Badge — use i18n key mapped from tightness_class
   const badge = document.getElementById('l-badge');
   badge.textContent = t('tightness_' + d.tightness_class);
   badge.className   = 'result-badge ' + tc.css;
 
-  // Test result KVs
   document.getElementById('l-ela').innerHTML =
     `<span class="${relClass}">${d.ela_m2.toFixed(3)} ${u}</span>`;
   document.getElementById('l-rel').innerHTML =
     `<span class="${relClass}">${d.relative_leakage.toFixed(3)} ${u}/1000${u}</span>`;
-  document.getElementById('l-area').textContent    = `${d.house_area_m2.toFixed(0)} ${u}`;
+  document.getElementById('l-area').textContent     = `${d.house_area_m2.toFixed(0)} ${u}`;
   document.getElementById('l-fan-corr').textContent = `${d.fan_corrected_m3h.toFixed(0)} ${t('unit_m3h')}`;
   document.getElementById('l-class-tip').textContent = t(tc.tipKey);
 
-  // Inlet system
-  document.getElementById('l-ela2').textContent      = `${d.ela_m2.toFixed(3)} ${u}`;
-  document.getElementById('l-req-total').textContent = `${d.required_total_area_m2.toFixed(3)} ${u}`;
-  document.getElementById('l-net').textContent       = `${d.net_inlet_area_m2.toFixed(3)} ${u}`;
-
-  // Percentage bar
-  const pctText = document.getElementById('l-pct-text');
-  const pctPct  = Math.round(pct * 100);
-  pctText.textContent = pctPct + '%';
-  pctText.className   = 'big ' + (pctPct >= 85 ? 'ok' : pctPct >= 65 ? 'warn' : 'danger');
-  document.getElementById('l-pct-bar').style.cssText =
-    `width:${pctPct}%; background:${pctColor(pct)};`;
-
-  // Required opening
-  const opEl = document.getElementById('l-opening');
-  opEl.textContent = `${d.required_opening_cm.toFixed(1)} ${t('unit_cm')}`;
-  opEl.className   = 'big ' + (d.required_opening_cm > 0 ? 'ok' : 'muted');
-
-  // Inlet tip
-  let inletTip;
-  if (pct >= 0.85) {
-    inletTip = t('inlet_tip_good', { pct: pctPct });
-  } else if (pct >= 0.65) {
-    inletTip = t('inlet_tip_moderate', { pct: pctPct });
-  } else {
-    inletTip = t('inlet_tip_poor', { pct: pctPct });
-  }
-  if (d.required_opening_cm === 0) {
-    inletTip += t('inlet_tip_no_valves');
-  }
-  document.getElementById('l-inlet-tip').textContent = inletTip;
-
+  auditStore.record(
+    document.getElementById('l-house-sel').selectedOptions[0]?.textContent,
+    'leakage',
+    { ela_m2: d.ela_m2, relative_leakage: d.relative_leakage, tightness_class: d.tightness_class,
+      house_area_m2: d.house_area_m2, static_pressure_pa: d.static_pressure_pa }
+  );
   document.getElementById('l-results').style.display = 'block';
 }
 
@@ -583,14 +957,16 @@ document.getElementById('tunnel-form').addEventListener('submit', async e => {
 
   try {
     const payload = {
-      house_width_m:     +document.getElementById('tn-width').value,
-      tunnel_height_m:   +document.getElementById('tn-height').value,
-      num_fans:          +document.getElementById('tn-fans').value,
-      fan_capacity_m3h:  +document.getElementById('tn-fan-cap').value,
-      t_outdoor_db_c:    +document.getElementById('tn-tdb').value,
-      rh_outdoor_pct:    +document.getElementById('tn-rh').value,
-      bird_age_days:     +document.getElementById('tn-age').value,
-      inlet_pressure_pa: +document.getElementById('tn-inlet-pa').value,
+      house_width_m:    +document.getElementById('tn-width').value,
+      tunnel_height_m:  +document.getElementById('tn-height').value,
+      num_fans:         +document.getElementById('tn-fans').value,
+      fan_capacity_m3h: +document.getElementById('tn-fan-cap').value,
+      t_outdoor_db_c:   +document.getElementById('tn-tdb').value,
+      rh_outdoor_pct:   +document.getElementById('tn-rh').value,
+      bird_age_days:    +document.getElementById('tn-age').value,
+      num_inlets:       +document.getElementById('tn-num-inlets').value || 1,
+      inlet_width_m:    +document.getElementById('tn-inlet-w').value  || 0,
+      inlet_height_m:   +document.getElementById('tn-inlet-h').value  || 0,
     };
 
     const resp = await fetch('/calc/tools/tunnel_speed', {
@@ -633,7 +1009,6 @@ function renderTunnel(d, t_real) {
   const vHigh = d.air_velocity_ms > d.target_v_max_ms;
   document.getElementById('tn-r-vel').innerHTML =
     `<span class="${vOk ? 'ok' : vHigh ? 'warn' : 'danger'}">${d.air_velocity_ms.toFixed(2)} ${uMs}</span>`;
-  document.getElementById('tn-r-fpm').textContent    = d.air_velocity_fpm.toFixed(0) + ' FPM';
   document.getElementById('tn-r-vel-status').textContent = d.velocity_status;
 
   // Wind cooling
@@ -645,10 +1020,23 @@ function renderTunnel(d, t_real) {
   const thiEl = document.getElementById('tn-r-thi');
   thiEl.textContent = d.thi_value.toFixed(1);
   thiEl.style.color = d.thi_value < 74 ? '#4ade80'
-                    : d.thi_value < 78 ? '#fbbf24'
-                    : d.thi_value < 83 ? '#fb923c'
+                    : d.thi_value < 79 ? '#fbbf24'
+                    : d.thi_value < 84 ? '#fb923c'
                     : '#f87171';
   document.getElementById('tn-r-thi-status').textContent = d.thi_status;
+
+  // Inlet system
+  document.getElementById('tn-r-inlet-area').textContent =
+    d.inlet_area_m2.toFixed(1) + ' ' + uM2;
+  const inletVelColor = d.inlet_velocity_ms < 2.0 ? '#4ade80'
+                      : d.inlet_velocity_ms < 3.0 ? '#fbbf24'
+                      : d.inlet_velocity_ms < 4.0 ? '#fb923c'
+                      : '#f87171';
+  document.getElementById('tn-r-inlet-vel').innerHTML =
+    `<span style="color:${inletVelColor};">${d.inlet_velocity_ms.toFixed(2)} ${uMs}</span>`;
+  document.getElementById('tn-r-inlet-sp').textContent =
+    d.inlet_sp_pa.toFixed(1) + ' ' + uPa;
+  document.getElementById('tn-r-inlet-status').textContent = d.inlet_status;
 
   // Pressure & recommendations
   document.getElementById('tn-r-dyn-pa').textContent  = d.dynamic_pressure_pa.toFixed(1) + ' ' + uPa;
@@ -658,12 +1046,86 @@ function renderTunnel(d, t_real) {
   document.getElementById('tn-r-fans-need').textContent =
     t('fans_needed_fmt', { n: d.fans_needed_for_target, v_min: d.target_v_min_ms });
 
+  // Decision card: tunnel vs evaporative cooling
+  const decCard  = document.getElementById('tn-decision-card');
+  const noteEl   = document.getElementById('tn-decision-note');
+  const evapBtn  = document.getElementById('tn-to-evap-btn');
+  const limitOk  = d.tunnel_sufficient;
+  const accentOk   = '#6fcf97';
+  const accentWarn = '#ff7a7a';
+
+  decCard.style.borderLeftColor = limitOk ? accentOk : accentWarn;
+  decCard.style.display = 'block';
+
+  document.getElementById('tn-r-comfort-target').textContent =
+    d.bird_comfort_target_c.toFixed(1) + ' °C';
+
+  const marginAbs  = Math.abs(d.temp_margin_c).toFixed(1);
+  const marginSign = d.temp_margin_c >= 0 ? '−' : '+';
+  document.getElementById('tn-r-margin').innerHTML =
+    `${d.effective_temp_c.toFixed(1)} °C &nbsp;` +
+    `<span style="color:${limitOk ? accentOk : accentWarn};">(${marginSign}${marginAbs} °C)</span>`;
+
+  const atCap = d.t_outdoor_tunnel_limit_c >= 42;
+  document.getElementById('tn-r-tunnel-limit').textContent =
+    atCap ? t('tunnel_limit_no_limit') : d.t_outdoor_tunnel_limit_c.toFixed(1) + ' °C';
+  document.getElementById('tn-r-tunnel-limit').style.color =
+    atCap ? accentOk : (d.t_outdoor_tunnel_limit_c > t_real ? accentOk : accentWarn);
+
+  if (limitOk) {
+    noteEl.textContent = t('tn_note_ok', { limit: d.t_outdoor_tunnel_limit_c.toFixed(1) });
+    evapBtn.style.display = 'none';
+  } else {
+    noteEl.textContent = t('tn_note_need_evap');
+    evapBtn.style.display = 'block';
+  }
+
+  auditStore.record(
+    document.getElementById('tn-house-sel').selectedOptions[0]?.textContent,
+    'tunnel',
+    { air_speed_ms: d.air_speed_ms, total_flow_m3h: d.total_flow_m3h,
+      cross_section_m2: d.cross_section_m2, status_label: d.status_label }
+  );
   document.getElementById('tn-results').style.display = 'block';
 }
+
+// Кнопка "Перейти к испарительному охлаждению" — переключает вкладку
+document.getElementById('tn-to-evap-btn').addEventListener('click', () => {
+  document.querySelectorAll('.tool-tab').forEach(tb => tb.classList.remove('active'));
+  document.querySelectorAll('.tool-panel').forEach(p => p.classList.remove('active'));
+  const evapTab   = document.querySelector('[data-tool="evap"]');
+  const evapPanel = document.getElementById('panel-evap');
+  if (evapTab)   evapTab.classList.add('active');
+  if (evapPanel) evapPanel.classList.add('active');
+  evapPanel?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
 
 // ═══════════════════════════════════════════════════
 // EVAPORATIVE COOLING
 // ═══════════════════════════════════════════════════
+
+// Доступные толщины для каждого типа пэда SANHE
+const SANHE_THICKNESSES = {
+  '7090': [75, 100, 150, 200, 300],
+  '7060': [75, 100, 150, 200, 300],
+  '5090': [50, 75, 100, 150],
+};
+
+function updatePadThicknessOptions() {
+  const padType  = document.getElementById('ev-pad-type').value;
+  const thickSel = document.getElementById('ev-thickness');
+  const prev     = +thickSel.value;
+  const opts     = SANHE_THICKNESSES[padType] || [75, 100, 150];
+  thickSel.innerHTML = opts.map(mm =>
+    `<option value="${mm}"${mm === prev ? ' selected' : ''}>${mm} mm</option>`
+  ).join('');
+  // Если предыдущее значение недоступно — берём первое из списка
+  if (!opts.includes(prev)) thickSel.value = opts[0];
+}
+
+// Инициализация и обработчик изменения типа пэда
+updatePadThicknessOptions();
+document.getElementById('ev-pad-type').addEventListener('change', updatePadThicknessOptions);
 
 document.getElementById('evap-form').addEventListener('submit', async e => {
   e.preventDefault();
@@ -671,16 +1133,19 @@ document.getElementById('evap-form').addEventListener('submit', async e => {
   btn.disabled = true; btn.textContent = t('btn_evap_busy');
 
   try {
+    const waterTVal = document.getElementById('ev-water-t').value;
     const payload = {
       house_length_m:    +document.getElementById('ev-length').value,
-      house_width_m:     +document.getElementById('ev-width').value,
       t_outdoor_db_c:    +document.getElementById('ev-tdb').value,
       rh_outdoor_pct:    +document.getElementById('ev-rh').value,
       total_fan_m3h:     +document.getElementById('ev-fans').value,
+      pad_type:           document.getElementById('ev-pad-type').value,
       pad_thickness_mm:  +document.getElementById('ev-thickness').value,
+      pad_length_m:      +document.getElementById('ev-pad-length').value,
       pad_height_m:      +document.getElementById('ev-padh').value,
-      pad_coverage_pct:  +document.getElementById('ev-coverage').value,
       t_inside_target_c: +document.getElementById('ev-target').value,
+      // Опционально: температура воды. null = стандартный адиабатический расчёт
+      ...(waterTVal !== '' ? { water_supply_t_c: +waterTVal } : {}),
     };
 
     const resp = await fetch('/calc/tools/evap_cooling', {
@@ -720,8 +1185,16 @@ function renderEvap(d) {
 
   // Psychrometrics
   document.getElementById('ev-r-twb').textContent     = d.t_wb_c.toFixed(1) + ' °C';
+  document.getElementById('ev-r-tdew').textContent    = d.t_dew_c.toFixed(1) + ' °C';
   document.getElementById('ev-r-tpad').textContent    = d.t_pad_out_c.toFixed(1) + ' °C';
   document.getElementById('ev-r-cool').textContent    = d.cooling_achieved_c.toFixed(1) + ' °C';
+  // Максимально достижимое охлаждение (предел T_wb) и % реализации потенциала
+  // t_outdoor_db_c не возвращается API — восстанавливаем из cooling_achieved + t_pad_out
+  const t_db_rec = d.t_pad_out_c + d.cooling_achieved_c;
+  const maxCool  = +(t_db_rec - d.t_wb_c).toFixed(1);
+  const potPct  = maxCool > 0 ? Math.round(d.cooling_achieved_c / maxCool * 100) : 100;
+  document.getElementById('ev-r-max-cool').textContent =
+    maxCool.toFixed(1) + ' °C  (' + potPct + '% ' + t('lbl_of_potential') + ')';
   document.getElementById('ev-r-eta').textContent     = Math.round(d.pad_efficiency * 100) + ' %';
   document.getElementById('ev-r-margin').innerHTML    = (() => {
     const cls = d.temp_margin_c >= 2 ? 'ok' : d.temp_margin_c >= 0 ? 'warn' : 'danger';
@@ -736,11 +1209,44 @@ function renderEvap(d) {
   })();
   document.getElementById('ev-r-velstatus').textContent = d.velocity_status;
   document.getElementById('ev-r-rec-area').textContent  = d.recommended_pad_area_m2.toFixed(2) + ' ' + uM2;
+  if (d.pad_pressure_drop_pa != null)
+    document.getElementById('ev-r-dp').textContent      = d.pad_pressure_drop_pa.toFixed(0) + ' Па';
 
-  // Water
+  // Water consumption
   document.getElementById('ev-r-water-lpm').textContent = d.water_flow_lpm.toFixed(1) + ' ' + uLpm;
   document.getElementById('ev-r-water-h').textContent   = d.water_per_hour_l.toFixed(0) + ' ' + uLh;
 
+  // Water supply check card
+  const waterCard = document.getElementById('ev-water-card');
+  if (d.water_regime !== null && d.water_regime !== undefined) {
+    document.getElementById('ev-r-water-t').textContent   = d.water_supply_t_c.toFixed(1) + ' °C';
+    document.getElementById('ev-r-water-min').textContent = d.t_dew_c.toFixed(1) + ' °C';
+
+    const noteEl = document.getElementById('ev-water-note');
+    const minT   = d.t_dew_c.toFixed(1);
+    if (d.water_regime === 'safe') {
+      waterCard.style.borderLeft = '3px solid var(--ok, #6fcf97)';
+      noteEl.style.background    = 'rgba(111,207,151,0.08)';
+      noteEl.textContent = `✅ Температура воды (${d.water_supply_t_c.toFixed(1)} °C) выше точки росы (${minT} °C). Испарение на пэде не нарушено — вода работает в штатном режиме.`;
+    } else {
+      waterCard.style.borderLeft = '3px solid var(--danger, #ff7a7a)';
+      noteEl.style.background    = 'rgba(255,122,122,0.08)';
+      noteEl.textContent = `⚠️ Вода (${d.water_supply_t_c.toFixed(1)} °C) холоднее точки росы (${minT} °C). На поверхности пэда будет конденсироваться влага из воздуха, выделяя скрытую теплоту 2430 кДж/кг — это снижает эффективность насыщения пэда. Подогрейте воду минимум до ${minT} °C или используйте рециркуляцию.`;
+    }
+
+    waterCard.style.display = 'block';
+  } else {
+    waterCard.style.display = 'none';
+  }
+
+  auditStore.record(
+    document.getElementById('ev-house-sel').selectedOptions[0]?.textContent,
+    'evap',
+    { t_pad_out_c: d.t_pad_out_c, cooling_achieved_c: d.cooling_achieved_c,
+      pad_efficiency: d.pad_efficiency, air_velocity_ms: d.air_velocity_ms,
+      temp_margin_c: d.temp_margin_c, delta_t_water_c: d.delta_t_water_c,
+      t_pad_corrected_c: d.t_pad_corrected_c }
+  );
   document.getElementById('ev-results').style.display = 'block';
 }
 </script>
@@ -758,10 +1264,20 @@ function renderEvap(d) {
   <div class="card" style="margin-bottom:16px;">
     <h2 data-i18n="step1_h2">Step 1: Building dimensions</h2>
     <p class="muted" style="margin-bottom:12px;" data-i18n="step1_desc"></p>
-    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:12px;">
-      <label data-i18n="label_length_m">Length, m<input id="length" type="number" step="0.1" min="1" max="500" placeholder="100"></label>
-      <label data-i18n="label_width_m">Width, m<input id="width" type="number" step="0.1" min="1" max="200" placeholder="20"></label>
-      <label data-i18n="label_height_m">Height, m<input id="height" type="number" step="0.1" min="1" max="20" placeholder="3"></label>
+
+    <!-- House selector — loads from main-page localStorage data -->
+    <div style="margin-bottom:14px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+      <label style="display:flex; align-items:center; gap:8px; margin:0;">
+        <span class="muted" style="font-size:12px; white-space:nowrap;" data-i18n="dims_from_house_lbl">Load from house:</span>
+        <select id="dimHouseSelect" style="min-width:160px;"></select>
+      </label>
+    </div>
+
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:12px;">
+      <label><span data-i18n="label_length_m">Length, m</span><input id="length" type="number" step="0.5" min="1" max="500" placeholder="96"></label>
+      <label><span data-i18n="label_width_m">Width, m</span><input id="width" type="number" step="0.5" min="1" max="200" placeholder="18"></label>
+      <label><span data-i18n="label_height_wall_m">Wall height, m</span><input id="height-wall" type="number" step="0.1" min="1" max="10" placeholder="2.5"></label>
+      <label><span data-i18n="label_height_ridge_m">Ridge height, m</span><input id="height-ridge" type="number" step="0.1" min="1" max="20" placeholder="4.5"></label>
     </div>
     <div style="margin-top:12px; padding:12px; background:var(--bg); border-radius:8px;">
       <div class="kv"><span data-i18n="bldg_volume_lbl">Volume</span><span id="volumeDisplay" style="font-weight:600;" data-i18n="vol_default">— m³</span></div>
@@ -779,11 +1295,11 @@ function renderEvap(d) {
       <label>
         <span data-i18n="heater_type_lbl">Heater type</span>
         <select id="heaterType">
-          <option value="gas_open" data-i18n="opt_gas_open">Open-flame gas brooders</option>
+          <option value="gas_open" data-i18n="opt_gas_open">Open-flame gas heaters</option>
           <option value="electric" data-i18n="opt_electric">Electric heaters</option>
         </select>
       </label>
-      <label data-i18n="heating_cap_lbl">Total capacity, kW<input id="heaterPower" type="number" step="1" min="0" max="10000" placeholder="500"></label>
+      <label><span data-i18n="heating_cap_lbl">Total capacity, kW</span><input id="heaterPower" type="number" step="1" min="0" max="10000" placeholder="500"></label>
     </div>
     <div id="gasInfo" style="margin-top:12px; padding:12px; background:var(--warning-bg,#3a2f1a); border-left:3px solid var(--warning,#f4b942); border-radius:4px;" data-i18n-html="gas_info_html"></div>
     <button id="saveHeaterBtn" class="btn" style="margin-top:12px;" data-i18n="btn_save_heater">Save configuration</button>
@@ -794,10 +1310,16 @@ function renderEvap(d) {
   <div class="card" style="margin-bottom:16px;">
     <h2 data-i18n="step3_h2">Step 3: Cooling test</h2>
     <div style="margin-bottom:16px;" data-i18n-html="step3_proc_html"></div>
-    <label style="max-width:280px;">
-      <span data-i18n="label_t_outside">Outdoor temperature, °C</span>
-      <input id="tOutside" type="number" step="0.1" min="-40" max="50" placeholder="-5.0">
-    </label>
+    <div style="display:flex; gap:16px; flex-wrap:wrap; align-items:flex-end;">
+      <label style="flex:1; min-width:200px;">
+        <span data-i18n="label_t_outside">Outdoor temperature, °C</span>
+        <input id="tOutside" type="number" step="0.1" min="-40" max="50" placeholder="-5.0">
+      </label>
+      <label style="min-width:140px;">
+        <span data-i18n="label_zone_count">Heating zones</span>
+        <input id="zoneCount" type="number" min="1" max="8" value="1" style="text-align:center;">
+      </label>
+    </div>
     <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;">
       <div class="kv" style="flex:1; min-width:130px;"><span data-i18n="lbl_t_start">Start</span><span><strong>30 °C</strong></span></div>
       <div class="kv" style="flex:1; min-width:130px;"><span data-i18n="lbl_t_stop">Stop</span><span><strong>25 °C</strong></span></div>
@@ -807,6 +1329,8 @@ function renderEvap(d) {
       <div id="timerStatus" class="muted" style="margin:10px 0 18px; font-size:13px;" data-i18n="timer_ready"></div>
       <button id="timerBtn" class="btn" data-i18n="btn_start_test">▶ Start test</button>
     </div>
+    <!-- Кнопки зон (показываются только в мультизонном режиме) -->
+    <div id="zoneTimers" style="margin-top:12px; display:none;"></div>
     <input id="tInitial"    type="hidden" value="30">
     <input id="tFinal"      type="hidden" value="25">
     <input id="timeMinutes" type="hidden" value="">
@@ -820,8 +1344,11 @@ function renderEvap(d) {
     <h2 data-i18n="step4_h2">Step 4: Heater analysis</h2>
     <p class="muted" style="margin-bottom:12px;" data-i18n="step4_desc"></p>
     <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:12px;">
-      <label data-i18n="label_t_inside">Target indoor temp, °C<input id="tInsideTarget" type="number" step="0.1" min="-20" max="50" placeholder="33.0" value="33.0"></label>
-      <label data-i18n="label_t_outside2">Outdoor temp, °C<input id="tOutsideAnalysis" type="number" step="0.1" min="-40" max="50" placeholder="-5.0" value="-5.0"></label>
+      <label><span data-i18n="label_t_inside">Target indoor temp, °C</span><input id="tInsideTarget" type="number" step="0.1" min="-20" max="50" placeholder="33.0" value="33.0"></label>
+      <label><span data-i18n="label_t_outside2">Outdoor temp, °C</span><input id="tOutsideAnalysis" type="number" step="0.1" min="-40" max="50" placeholder="-5.0" value="-5.0"></label>
+      <label><span data-i18n="label_q_min_analysis">Min. ventilation Q_min, m³/h</span><input id="qMinAnalysis" type="number" step="100" min="0" placeholder="15000"></label>
+      <label><span data-i18n="label_num_birds_analysis">Number of birds</span><input id="numBirdsAnalysis" type="number" step="1000" min="0" placeholder="35000"></label>
+      <label><span data-i18n="label_bird_weight_analysis">Avg. bird weight, kg</span><input id="birdWeightAnalysis" type="number" step="0.1" min="0.04" max="20" placeholder="1.5"></label>
     </div>
     <button id="analyzeBtn" class="btn" style="margin-top:12px;" data-i18n="btn_analyse">🔍 Analyse</button>
     <div id="analysisResult" style="margin-top:12px;"></div>
@@ -835,6 +1362,426 @@ function renderEvap(d) {
 
 </div><!-- /panel-calibration -->
 
-<script src="/calibration.js?v=3"></script>
+<!-- ═══════════════════════════════════════════════════
+     TOOL: METHODOLOGY (help/справка)
+     ═══════════════════════════════════════════════════ -->
+<div class="tool-panel" id="panel-help">
+  <div class="card">
+    <div data-i18n-html="help_body_html"></div>
+  </div>
+</div><!-- /panel-help -->
+
+<script src="/calibration.js?v=4"></script>
+<script>
+// ── House selector for Step 1 (loads dims from main-page localStorage) ──────
+(function () {
+  const STORE_KEY = 'vent_mvp_tabs_v1';
+  const selEl     = document.getElementById('dimHouseSelect');
+  const elL       = document.getElementById('length');
+  const elW       = document.getElementById('width');
+  const elHW      = document.getElementById('height-wall');
+  const elHR      = document.getElementById('height-ridge');
+
+  function fireInput(el) {
+    // Triggers calibration.js event listeners so volume/area update
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  function fillDims(tab) {
+    if (!tab) return;
+    if (tab.length_m)       { elL.value  = tab.length_m;       fireInput(elL);  }
+    if (tab.width_m)        { elW.value  = tab.width_m;        fireInput(elW);  }
+    if (tab.height_wall_m)  { elHW.value = tab.height_wall_m;  fireInput(elHW); }
+    if (tab.height_ridge_m) { elHR.value = tab.height_ridge_m; fireInput(elHR); }
+  }
+
+  function buildSelector() {
+    let tabs = [];
+    try {
+      const raw = localStorage.getItem(STORE_KEY);
+      if (raw) tabs = JSON.parse(raw) || [];
+    } catch {}
+
+    // Only show houses that have at least length or width saved
+    const withDims = tabs.filter(t => t.length_m || t.width_m);
+
+    if (withDims.length === 0) {
+      const opt = document.createElement('option');
+      opt.textContent = t('dims_no_houses');
+      opt.value = '';
+      selEl.appendChild(opt);
+      return;
+    }
+
+    withDims.forEach((tab, idx) => {
+      const opt  = document.createElement('option');
+      opt.value  = idx;
+      opt.dataset.houseId = tab.id ?? '';   // для calibration.js — читает при сохранении
+      const name = tab.id ? t('house_tab', { id: tab.id }) : `#${idx + 1}`;
+      const l = tab.length_m, w = tab.width_m;
+      const hw = tab.height_wall_m, hr = tab.height_ridge_m;
+      let dimStr = '';
+      if (l && w) dimStr = `${l}×${w}`;
+      if (hw && hr) dimStr += ` h${hw}/${hr}`;
+      opt.textContent = dimStr ? `${name} (${dimStr})` : name;
+      selEl.appendChild(opt);
+    });
+
+    // Auto-fill from the first house on page load
+    fillDims(withDims[0]);
+
+    selEl.addEventListener('change', () => {
+      const idx = parseInt(selEl.value, 10);
+      if (!isNaN(idx)) fillDims(withDims[idx]);
+    });
+  }
+
+  buildSelector();
+})();
+</script>
+
+<!-- ── Profile editor for panel-profile ── -->
+<script>
+(function () {
+  // ── SVG chart renderer ───────────────────────────────────────────────────
+  function makeSVGChart({ series, title, yUnit }) {
+    yUnit = yUnit || '';
+    const W = 300, H = 180;
+    const P = { t: 26, r: 10, b: 30, l: 46 };
+    const CW = W - P.l - P.r, CH = H - P.t - P.b;
+
+    const allY = series.flatMap(s => s.data.map(p => p.y).filter(v => v != null));
+    if (!allY.length) return '';
+    const allX = series[0].data.map(p => p.x);
+    const xMin = allX[0], xMax = allX[allX.length - 1];
+    let yLo = Math.min(...allY), yHi = Math.max(...allY);
+    const pad = (yHi - yLo) * 0.08 || 1;
+    yLo = Math.max(0, yLo - pad); yHi += pad;
+
+    const tx = x => P.l + (x - xMin) / (xMax - xMin) * CW;
+    const ty = y => P.t + (1 - (y - yLo) / (yHi - yLo)) * CH;
+
+    const rawStep = (yHi - yLo) / 4;
+    const mag = Math.pow(10, Math.floor(Math.log10(rawStep || 1)));
+    const niceStep = [1, 2, 2.5, 5, 10].map(f => f * mag).find(s => s >= rawStep) || rawStep;
+    const yTicks = [];
+    for (let y = Math.ceil(yLo / niceStep) * niceStep; y <= yHi + niceStep * 0.01; y += niceStep) yTicks.push(y);
+
+    const xTicks  = allX.filter(x => x === 1 || x % 7 === 0);
+    const xLabels = allX.filter(x => x === 1 || x % 14 === 0 || x === xMax);
+
+    let o = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block;">`;
+    o += `<rect width="${W}" height="${H}" fill="#15161a" rx="8"/>`;
+    o += `<text x="${P.l}" y="17" fill="#e6e7eb" font-size="12" font-weight="600" font-family="system-ui,Arial">${title}</text>`;
+    o += `<text x="${W - P.r}" y="17" fill="#9aa0a6" font-size="10" text-anchor="end" font-family="system-ui,Arial">${yUnit}</text>`;
+
+    for (const y of yTicks) {
+      const cy = ty(y);
+      if (cy < P.t - 2 || cy > P.t + CH + 2) continue;
+      o += `<line x1="${P.l}" y1="${cy.toFixed(1)}" x2="${P.l + CW}" y2="${cy.toFixed(1)}" stroke="#26272c"/>`;
+      const lbl = y >= 1000 ? (Math.round(y / 100) / 10) + 'k' : (y >= 10 ? Math.round(y) : y.toFixed(1));
+      o += `<text x="${P.l - 4}" y="${(cy + 3.5).toFixed(1)}" fill="#9aa0a6" font-size="9" text-anchor="end" font-family="system-ui,Arial">${lbl}</text>`;
+    }
+
+    o += `<line x1="${P.l}" y1="${P.t}" x2="${P.l}" y2="${P.t + CH}" stroke="#26272c"/>`;
+    o += `<line x1="${P.l}" y1="${P.t + CH}" x2="${P.l + CW}" y2="${P.t + CH}" stroke="#26272c"/>`;
+
+    for (const x of xTicks)  { const cx = tx(x); o += `<line x1="${cx.toFixed(1)}" y1="${P.t + CH}" x2="${cx.toFixed(1)}" y2="${P.t + CH + 4}" stroke="#9aa0a6"/>`; }
+    for (const x of xLabels) { const cx = tx(x); o += `<text x="${cx.toFixed(1)}" y="${P.t + CH + 16}" fill="#9aa0a6" font-size="9" text-anchor="middle" font-family="system-ui,Arial">${x}</text>`; }
+
+    if (series.length >= 2) {
+      const top = series[0].data.filter(p => p.y != null).map(p => `${tx(p.x).toFixed(1)},${ty(p.y).toFixed(1)}`).join(' ');
+      const bot = [...series[1].data].reverse().filter(p => p.y != null).map(p => `${tx(p.x).toFixed(1)},${ty(p.y).toFixed(1)}`).join(' ');
+      if (top && bot) o += `<polygon points="${top} ${bot}" fill="${series[0].color}" fill-opacity="0.15"/>`;
+    }
+
+    for (const s of series) {
+      const pts = s.data.filter(p => p.y != null).map(p => `${tx(p.x).toFixed(1)},${ty(p.y).toFixed(1)}`).join(' ');
+      o += `<polyline points="${pts}" fill="none" stroke="${s.color}" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>`;
+    }
+
+    // Anchor dots (editable points) — rendered on top
+    for (const s of series) {
+      if (!s.anchors) continue;
+      for (const a of s.anchors) {
+        if (a.y == null) continue;
+        o += `<circle cx="${tx(a.x).toFixed(1)}" cy="${ty(a.y).toFixed(1)}" r="3.5" fill="${s.color}" stroke="#0b0c10" stroke-width="1.5"/>`;
+      }
+    }
+
+    return o + '</svg>';
+  }
+
+  // ── API helper ───────────────────────────────────────────────────────────
+  async function fetchJSON(url, opts) {
+    const r = await fetch(url, opts);
+    if (!r.ok) throw new Error(await r.text());
+    return r.json();
+  }
+
+  // ── State ────────────────────────────────────────────────────────────────
+  // profileCfg объявлен глобально (var) в основном script-блоке — здесь только обновляем
+  profileCfg = { cycle_days: 42 };
+  let fullDayMaster = [];
+  let anchorPoints  = [];
+  let chartUnit     = 'per_bird';
+
+  // ── Weekly anchor helpers (same logic as old settings.js) ────────────────
+  function generateWeeklyDays(cycleDays) {
+    const last = cycleDays || 42;
+    const days = [1];
+    for (let d = 7; d < last; d += 7) days.push(d);
+    if (days[days.length - 1] !== last) days.push(last);
+    return days;
+  }
+
+  function pointFromMaster(day) {
+    if (!fullDayMaster.length) return null;
+    const sorted = [...fullDayMaster].sort((a, b) => a.day - b.day);
+    const exact  = sorted.find(p => p.day === day);
+    if (exact && exact.body_weight_g != null) return { ...exact };
+    const lo = [...sorted].reverse().find(p => p.day < day && p.body_weight_g != null);
+    const hi = sorted.find(p => p.day > day && p.body_weight_g != null);
+    if (!lo && !hi) return null;
+    if (!lo) return { ...hi, day };
+    if (!hi) {
+      const prev = [...sorted].reverse().find(p => p.day < lo.day && p.body_weight_g != null);
+      if (!prev) return { ...lo, day };
+      const steps = day - lo.day, dstep = lo.day - prev.day;
+      const ext = (a, b) => (a == null || b == null) ? null : +(a + (a - b) / dstep * steps).toFixed(2);
+      return {
+        day,
+        body_weight_g:  Math.max(0, ext(lo.body_weight_g,  prev.body_weight_g)),
+        min_temp_c:     ext(lo.min_temp_c,    prev.min_temp_c),
+        rv_percent:     lo.rv_percent ?? prev.rv_percent ?? 60,
+        q_min_per_bird: ext(lo.q_min_per_bird, prev.q_min_per_bird),
+        q_max_per_bird: ext(lo.q_max_per_bird, prev.q_max_per_bird),
+      };
+    }
+    const t2   = (day - lo.day) / (hi.day - lo.day);
+    const lerp = (a, b) => (a == null || b == null) ? null : +(a + (b - a) * t2).toFixed(2);
+    return {
+      day,
+      body_weight_g:  lerp(lo.body_weight_g,  hi.body_weight_g),
+      min_temp_c:     lerp(lo.min_temp_c,    hi.min_temp_c),
+      rv_percent:     lo.rv_percent ?? hi.rv_percent ?? 60,
+      q_min_per_bird: lerp(lo.q_min_per_bird, hi.q_min_per_bird),
+      q_max_per_bird: lerp(lo.q_max_per_bird, hi.q_max_per_bird),
+    };
+  }
+
+  function extractWeeklyFromMaster(cycleDays) {
+    return generateWeeklyDays(cycleDays).map(d => pointFromMaster(d)).filter(Boolean);
+  }
+
+  // ── Charts ───────────────────────────────────────────────────────────────
+  function renderCharts() {
+    const container = document.getElementById('profile-charts');
+    if (!container) return;
+
+    const cycleDays = profileCfg.cycle_days || 42;
+    const chartData = [];
+    for (let d = 1; d <= cycleDays; d++) {
+      const p = pointFromMaster(d);
+      if (p) chartData.push(p);
+    }
+    if (!chartData.length) return;
+
+    const birdLabel = t('unit_bird');
+    const kgLabel   = t('unit_kg');
+    const unitLabel = chartUnit === 'per_kg' ? kgLabel : birdLabel;
+
+    const ventVal = (p, field) => {
+      const v = p[field];
+      if (v == null) return null;
+      if (chartUnit === 'per_kg' && p.body_weight_g > 0) return +(v / (p.body_weight_g / 1000)).toFixed(3);
+      return v;
+    };
+
+    const wChart = makeSVGChart({
+      series: [{
+        data:    chartData.map(p => ({ x: p.day, y: p.body_weight_g })),
+        color:   '#6aa0ff',
+        anchors: anchorPoints.map(p => ({ x: p.day, y: p.body_weight_g })),
+      }],
+      title: t('chart_weight'), yUnit: t('unit_g'),
+    });
+    const tChart = makeSVGChart({
+      series: [{
+        data:    chartData.map(p => ({ x: p.day, y: p.min_temp_c })),
+        color:   '#ffcf6b',
+        anchors: anchorPoints.map(p => ({ x: p.day, y: p.min_temp_c })),
+      }],
+      title: t('chart_temp'), yUnit: '°C',
+    });
+    const vChart = makeSVGChart({
+      series: [
+        {
+          data:    chartData.map(p => ({ x: p.day, y: ventVal(p, 'q_max_per_bird') })),
+          color:   '#74d69b',
+          anchors: anchorPoints.map(p => ({ x: p.day, y: ventVal(p, 'q_max_per_bird') })),
+        },
+        {
+          data:    chartData.map(p => ({ x: p.day, y: ventVal(p, 'q_min_per_bird') })),
+          color:   '#74d69b',
+          anchors: anchorPoints.map(p => ({ x: p.day, y: ventVal(p, 'q_min_per_bird') })),
+        },
+      ],
+      title: t('chart_vent'), yUnit: unitLabel,
+    });
+
+    const bB = `<button id="pu-bird" class="btn btn-secondary" style="padding:4px 12px;font-size:12px;${chartUnit==='per_bird'?'':'opacity:.45;'}">${birdLabel}</button>`;
+    const bK = `<button id="pu-kg"   class="btn btn-secondary" style="padding:4px 12px;font-size:12px;${chartUnit==='per_kg'  ?'':'opacity:.45;'}">${kgLabel}</button>`;
+
+    container.innerHTML = `
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
+          <h2 style="margin:0;">${t('charts_h2')}</h2>
+          <div style="display:flex;gap:6px;">${bB}${bK}</div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;">
+          ${wChart}${tChart}${vChart}
+        </div>
+      </div>`;
+
+    document.getElementById('pu-bird').addEventListener('click', () => { chartUnit = 'per_bird'; renderCharts(); renderTable(); });
+    document.getElementById('pu-kg').addEventListener('click',   () => { chartUnit = 'per_kg';   renderCharts(); renderTable(); });
+  }
+
+  // ── Anchor table ─────────────────────────────────────────────────────────
+  function rowHTML(d, idx) {
+    const bw_kg = (d.body_weight_g || 1000) / 1000;
+    const qminB = d.q_min_per_bird ?? +(0.15 + 0.85 * (d.day - 1) / 41).toFixed(2);
+    const qmaxB = d.q_max_per_bird ?? +(0.45 + 5.55 * (d.day - 1) / 41).toFixed(2);
+    const qmin  = chartUnit === 'per_kg' ? +(qminB / bw_kg).toFixed(3) : qminB;
+    const qmax  = chartUnit === 'per_kg' ? +(qmaxB / bw_kg).toFixed(3) : qmaxB;
+    return `<tr>
+      <td><strong>${d.day}</strong></td>
+      <td><input type="number" step="1"    min="0"           value="${d.body_weight_g ?? ''}" data-key="bw"   data-idx="${idx}"/></td>
+      <td><input type="number" step="0.1"                    value="${d.min_temp_c    ?? ''}" data-key="t"    data-idx="${idx}"/></td>
+      <td><input type="number" step="0.1"  min="0" max="100" value="${d.rv_percent    ?? ''}" data-key="rv"   data-idx="${idx}"/></td>
+      <td><input type="number" step="0.01" min="0"           value="${qmin}"                  data-key="qmin" data-idx="${idx}"/></td>
+      <td><input type="number" step="0.01" min="0"           value="${qmax}"                  data-key="qmax" data-idx="${idx}"/></td>
+    </tr>`;
+  }
+
+  function renderTable() {
+    const container = document.getElementById('profile-editor');
+    if (!container) return;
+    const unitLabel = chartUnit === 'per_kg' ? t('unit_kg') : t('unit_bird');
+
+    container.innerHTML = `
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:4px;">
+          <h2 style="margin:0;">${t('profile_h2')}</h2>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <button id="prof-save-btn" class="btn">${t('btn_save_interp')}</button>
+            <button id="prof-cigr-btn" class="btn btn-secondary" title="${t('cigr_hint')}">${t('btn_recalc_vent')}</button>
+            <span   id="prof-status"   class="muted" style="font-size:12px;"></span>
+          </div>
+        </div>
+        <p class="muted" style="font-size:11px;margin:0 0 12px;">${t('cigr_hint')}</p>
+        <div style="overflow-x:auto;">
+          <table>
+            <thead><tr>
+              <th>${t('col_day')}</th>
+              <th>${t('col_weight')}</th>
+              <th>${t('col_min_temp')}</th>
+              <th>${t('col_rh')}</th>
+              <th>Qmin, ${unitLabel}</th>
+              <th>Qmax, ${unitLabel}</th>
+            </tr></thead>
+            <tbody>${anchorPoints.map((d, i) => rowHTML(d, i)).join('')}</tbody>
+          </table>
+        </div>
+      </div>`;
+
+    container.querySelectorAll('tbody input').forEach(inp => {
+      inp.addEventListener('change', () => {
+        const idx = Number(inp.dataset.idx);
+        const key = inp.dataset.key;
+        const val = inp.value === '' ? null : Number(inp.value);
+        const pt  = anchorPoints[idx];
+        if (!pt) return;
+        if (key === 'bw')  pt.body_weight_g  = val;
+        if (key === 't')   pt.min_temp_c     = val;
+        if (key === 'rv')  pt.rv_percent     = val;
+        if (key === 'qmin' || key === 'qmax') {
+          const bw_kg  = (pt.body_weight_g || 1000) / 1000;
+          const stored = (chartUnit === 'per_kg' && val !== null) ? +(val * bw_kg).toFixed(4) : val;
+          if (key === 'qmin') pt.q_min_per_bird = stored;
+          if (key === 'qmax') pt.q_max_per_bird = stored;
+        }
+      });
+    });
+
+    document.getElementById('prof-save-btn').addEventListener('click', saveProfile);
+    document.getElementById('prof-cigr-btn').addEventListener('click', recalcCIGR);
+  }
+
+  // ── API actions ──────────────────────────────────────────────────────────
+  function setStatus(msg, delay) {
+    const el = document.getElementById('prof-status');
+    if (el) {
+      el.textContent = msg;
+      if (delay) setTimeout(() => { const s = document.getElementById('prof-status'); if (s) s.textContent = ''; }, delay);
+    }
+  }
+
+  async function saveProfile() {
+    const btn = document.getElementById('prof-save-btn');
+    const st  = document.getElementById('prof-status');
+    if (btn) btn.disabled = true;
+    if (st)  st.textContent = t('status_saving');
+    try {
+      fullDayMaster = await fetchJSON('/settings/day-master?auto_interpolate=true', {
+        method:  'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(anchorPoints),
+      });
+      anchorPoints = extractWeeklyFromMaster(profileCfg.cycle_days);
+      renderCharts();
+      renderTable();
+      // После renderTable() старые btn/st уничтожены — перезапрашиваем
+      setStatus(t('status_saved_ok'), 3000);
+    } catch(e) {
+      if (btn) btn.disabled = false;
+      if (st)  st.textContent = t('status_err') + String(e);
+    }
+  }
+
+  async function recalcCIGR() {
+    const btn = document.getElementById('prof-cigr-btn');
+    const st  = document.getElementById('prof-status');
+    if (btn) btn.disabled = true;
+    if (st)  st.textContent = t('status_saving');
+    try {
+      fullDayMaster = await fetchJSON('/settings/recalculate-ventilation', { method: 'POST' });
+      anchorPoints  = extractWeeklyFromMaster(profileCfg.cycle_days);
+      renderCharts();
+      renderTable();
+      setStatus(t('recalc_ok'), 4000);
+    } catch(e) {
+      if (btn) btn.disabled = false;
+      if (st)  st.textContent = t('status_err') + String(e);
+    }
+  }
+
+  // ── Load ─────────────────────────────────────────────────────────────────
+  async function loadProfile() {
+    try {
+      profileCfg    = await fetchJSON('/settings/app-config');
+      fullDayMaster = await fetchJSON('/settings/day-master?mode=full');
+      anchorPoints  = extractWeeklyFromMaster(profileCfg.cycle_days);
+      renderCharts();
+      renderTable();
+    } catch(e) {
+      console.warn('Profile load failed:', e);
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', loadProfile);
+})();
+</script>
 </body>
 </html>
