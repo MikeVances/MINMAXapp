@@ -3,7 +3,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from fastapi import FastAPI
 
-load_dotenv()  # загружает .env локально; на Render переменные берутся из дашборда
+load_dotenv(Path(__file__).parent.parent / ".env")  # backend/.env — работает из любой рабочей директории
 from fastapi.staticfiles import StaticFiles
 from .routers import calc
 from .routers import settings as settings_router
