@@ -478,4 +478,13 @@
     tn_note_ok:           'La ventilation en tunnel est suffisante. À la vitesse d\'air et à l\'humidité actuelles, elle gère les températures extérieures jusqu\'à {limit} °C. Au-delà — le refroidissement évaporatif (Pad & Fan) est recommandé.',
     tn_note_need_evap:    'Les conditions extérieures actuelles dépassent la capacité du tunnel. La température ressentie est supérieure à l\'objectif de confort des animaux. Le refroidissement évaporatif (Pad & Fan) est recommandé.',
     btn_go_to_evap:       '→ Calculateur de refroidissement évaporatif',
+
+    // ── Retour ─────────────────────────────────────────────────────────────────
+    feedback_btn:         '💬 Retour',
+    feedback_title:       'Envoyer un retour',
+    feedback_placeholder: 'Votre suggestion, signalement de bug ou question…',
+    feedback_send:        'Envoyer',
+    feedback_cancel:      'Annuler',
+    feedback_sent:        '✓ Envoyé ! Merci.',
+    feedback_error:       'Erreur d\'envoi. Veuillez réessayer.',
 };

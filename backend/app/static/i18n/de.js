@@ -478,4 +478,13 @@
     tn_note_ok:           'Tunnellüftung ist ausreichend. Bei aktueller Luftgeschwindigkeit und Feuchte werden Außentemperaturen bis {limit} °C bewältigt. Darüber — Verdunstungskühlung (Pad &amp; Fan) empfohlen.',
     tn_note_need_evap:    'Aktuelle Außenbedingungen übersteigen die Tunnelkapazität. Die gefühlte Temperatur liegt über dem Tierwohl-Zielwert. Verdunstungskühlung (Pad &amp; Fan) empfohlen.',
     btn_go_to_evap:       '→ Verdunstungskühlungs-Rechner',
+
+    // ── Feedback ───────────────────────────────────────────────────────────────
+    feedback_btn:         '💬 Feedback',
+    feedback_title:       'Feedback senden',
+    feedback_placeholder: 'Ihr Vorschlag, eine Fehlermeldung oder Frage…',
+    feedback_send:        'Senden',
+    feedback_cancel:      'Abbrechen',
+    feedback_sent:        '✓ Gesendet! Vielen Dank.',
+    feedback_error:       'Fehler beim Senden. Bitte erneut versuchen.',
 };

@@ -478,4 +478,13 @@
     tn_note_ok:           'Tunnel ventilation is sufficient. At current air speed and humidity it handles outdoor temperatures up to {limit} °C. Above this — evaporative cooling (Pad & Fan) recommended.',
     tn_note_need_evap:    'Current outdoor conditions exceed tunnel capacity. Effective temperature is above the bird comfort target. Evaporative cooling (Pad & Fan) recommended.',
     btn_go_to_evap:       '→ Evaporative cooling calculator',
+
+    // ── Feedback ───────────────────────────────────────────────────────────────
+    feedback_btn:         '💬 Feedback',
+    feedback_title:       'Send Feedback',
+    feedback_placeholder: 'Your suggestion, bug report, or question…',
+    feedback_send:        'Send',
+    feedback_cancel:      'Cancel',
+    feedback_sent:        '✓ Sent! Thank you.',
+    feedback_error:       'Failed to send. Please try again.',
 };

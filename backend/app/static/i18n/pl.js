@@ -478,4 +478,13 @@
     tn_note_ok:           'Wentylacja tunelowa jest wystarczająca. Przy aktualnej prędkości powietrza i wilgotności radzi sobie z temperaturami zewnętrznymi do {limit} °C. Powyżej — zalecane chłodzenie ewaporacyjne (Pad & Fan).',
     tn_note_need_evap:    'Aktualne warunki zewnętrzne przekraczają możliwości tunelu. Temperatura odczuwalna przekracza docelowy komfort ptaków. Zalecane chłodzenie ewaporacyjne (Pad & Fan).',
     btn_go_to_evap:       '→ Kalkulator chłodzenia ewaporacyjnego',
+
+    // ── Opinie ─────────────────────────────────────────────────────────────────
+    feedback_btn:         '💬 Opinie',
+    feedback_title:       'Wyślij opinię',
+    feedback_placeholder: 'Twoja sugestia, zgłoszenie błędu lub pytanie…',
+    feedback_send:        'Wyślij',
+    feedback_cancel:      'Anuluj',
+    feedback_sent:        '✓ Wysłano! Dziękujemy.',
+    feedback_error:       'Błąd wysyłania. Spróbuj ponownie.',
 };

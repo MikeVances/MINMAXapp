@@ -10,6 +10,7 @@ from .routers import settings as settings_router
 from .routers import flock
 from .routers import thermal
 from .routers import tools
+from .routers import feedback as feedback_router
 
 app = FastAPI(title="Ventilation Min/Max API", version="0.2.0")
 
@@ -31,6 +32,7 @@ app.include_router(settings_router.router, prefix="/settings", tags=["settings"]
 app.include_router(flock.router, tags=["flock"])
 app.include_router(thermal.router, prefix="/thermal", tags=["thermal"])
 app.include_router(tools.router, prefix="/calc/tools", tags=["tools"])
+app.include_router(feedback_router.router, tags=["feedback"])
 
 # Static UI (no Node/Next.js needed for MVP)
 _static_dir = Path(__file__).parent / "static"
