@@ -1,5 +1,7 @@
 import os
-import httpx
+import json
+import asyncio
+import urllib.request
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
@@ -9,6 +11,17 @@ router = APIRouter()
 class FeedbackPayload(BaseModel):
     message: str
     page: str = ""
+
+
+def _post_telegram(token: str, chat_id: str, text: str) -> int:
+    """Синхронный HTTP POST к Telegram API (запускается в thread pool)."""
+    url  = f"https://api.telegram.org/bot{token}/sendMessage"
+    body = json.dumps({"chat_id": chat_id, "text": text, "parse_mode": "Markdown"})
+    req  = urllib.request.Request(
+        url, data=body.encode(), headers={"Content-Type": "application/json"}
+    )
+    with urllib.request.urlopen(req, timeout=10) as resp:
+        return resp.status
 
 
 @router.post("/feedback")
@@ -22,18 +35,17 @@ async def send_feedback(payload: FeedbackPayload):
     if not payload.message.strip():
         raise HTTPException(status_code=400, detail="Empty message")
 
-    text = f"📬 *MINMAXapp Feedback*\n"
+    text = "📬 *MINMAXapp Feedback*\n"
     if payload.page:
         text += f"📄 Page: `{payload.page}`\n"
     text += f"\n{payload.message}"
 
-    async with httpx.AsyncClient(timeout=10) as client:
-        resp = await client.post(
-            f"https://api.telegram.org/bot{token}/sendMessage",
-            json={"chat_id": chat_id, "text": text, "parse_mode": "Markdown"},
-        )
+    try:
+        status = await asyncio.to_thread(_post_telegram, token, chat_id, text)
+    except Exception:
+        raise HTTPException(status_code=502, detail="Telegram delivery failed")
 
-    if resp.status_code != 200:
+    if status != 200:
         raise HTTPException(status_code=502, detail="Telegram delivery failed")
 
     return {"ok": True}
