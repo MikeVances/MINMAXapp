@@ -89,7 +89,7 @@
     diary_text:        'Flock diary will be available in a future update. Daily weight and mortality entry form coming soon.',
     analytics_h2:      '📊 Plan vs Actual Analytics',
     analytics_text:    'Analytics charts comparing planned and actual performance coming in a future update.',
-    footer_text:       'API: /calc/minmax. Profile data from data/vent_profile_seed.json or built-in defaults.',
+    footer_text:       'Reference tool only. Verify all setpoints with your breed guide and technical advisor.',
     modal_title:       'Remove house?',
     modal_default_txt: 'Are you sure you want to remove this house?',
     modal_cancel:      'Cancel',
@@ -487,4 +487,8 @@
     feedback_cancel:      'Cancel',
     feedback_sent:        '✓ Sent! Thank you.',
     feedback_error:       'Failed to send. Please try again.',
+
+    // ── Footer cross-link ─────────────────────────────────────────────────────
+    footer_see_also:      'Also see:',
+    footer_related_pig:   'Pig house ventilation calculator',
 };

@@ -89,7 +89,7 @@
     diary_text:        'Dziennik stada będzie dostępny w przyszłej aktualizacji. Formularz dziennego ważenia i padnięć — wkrótce.',
     analytics_h2:      '📊 Analityka: Plan vs Rzeczywistość',
     analytics_text:    'Wykresy analityczne porównujące planowane i rzeczywiste wyniki pojawią się w przyszłej aktualizacji.',
-    footer_text:       'API: /calc/minmax. Dane profilu z data/vent_profile_seed.json lub wbudowanych wartości domyślnych.',
+    footer_text:       'Tylko narzędzie referencyjne. Weryfikuj wszystkie nastawy z przewodnikiem rasy i doradcą technicznym.',
     modal_title:       'Usunąć kurnik?',
     modal_default_txt: 'Czy na pewno chcesz usunąć ten kurnik?',
     modal_cancel:      'Anuluj',
@@ -487,4 +487,8 @@
     feedback_cancel:      'Anuluj',
     feedback_sent:        '✓ Wysłano! Dziękujemy.',
     feedback_error:       'Błąd wysyłania. Spróbuj ponownie.',
+
+    // ── Footer cross-link ─────────────────────────────────────────────────────
+    footer_see_also:      'Zobacz też:',
+    footer_related_pig:   'Kalkulator wentylacji chlewni',
 };

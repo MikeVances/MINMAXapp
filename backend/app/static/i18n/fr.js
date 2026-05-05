@@ -89,7 +89,7 @@
     diary_text:        'Le cahier d\'élevage sera disponible dans une prochaine mise à jour. Formulaire de saisie quotidienne du poids et de la mortalité à venir.',
     analytics_h2:      '📊 Analytique : Prévu vs Réalisé',
     analytics_text:    'Les graphiques analytiques comparant les performances planifiées et réelles seront disponibles dans une prochaine mise à jour.',
-    footer_text:       'API : /calc/minmax. Données de profil issues de data/vent_profile_seed.json ou des valeurs par défaut.',
+    footer_text:       'Outil de référence uniquement. Vérifiez tous les réglages avec votre guide de race et votre conseiller technique.',
     modal_title:       'Supprimer le bâtiment ?',
     modal_default_txt: 'Êtes-vous sûr de vouloir supprimer ce bâtiment ?',
     modal_cancel:      'Annuler',
@@ -487,4 +487,8 @@
     feedback_cancel:      'Annuler',
     feedback_sent:        '✓ Envoyé ! Merci.',
     feedback_error:       'Erreur d\'envoi. Veuillez réessayer.',
+
+    // ── Footer cross-link ─────────────────────────────────────────────────────
+    footer_see_also:      'Voir aussi :',
+    footer_related_pig:   'Calculateur ventilation porcherie',
 };

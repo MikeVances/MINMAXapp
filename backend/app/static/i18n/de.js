@@ -89,7 +89,7 @@
     diary_text:        'Das Herdentagebuch wird in einem zukünftigen Update verfügbar sein. Formular zur täglichen Gewichts- und Verlusteingabe folgt.',
     analytics_h2:      '📊 Soll-Ist-Analytik',
     analytics_text:    'Analyseberichte zum Vergleich von Soll- und Ist-Leistung folgen in einem zukünftigen Update.',
-    footer_text:       'API: /calc/minmax. Profildaten aus data/vent_profile_seed.json oder integrierten Standardwerten.',
+    footer_text:       'Nur als Referenzwerkzeug. Alle Sollwerte mit Herdenhandbuch und Fachberater prüfen.',
     modal_title:       'Stall entfernen?',
     modal_default_txt: 'Soll dieser Stall wirklich entfernt werden?',
     modal_cancel:      'Abbrechen',
@@ -487,4 +487,8 @@
     feedback_cancel:      'Abbrechen',
     feedback_sent:        '✓ Gesendet! Vielen Dank.',
     feedback_error:       'Fehler beim Senden. Bitte erneut versuchen.',
+
+    // ── Footer cross-link ─────────────────────────────────────────────────────
+    footer_see_also:      'Auch interessant:',
+    footer_related_pig:   'Lüftungsrechner Schweinestall',
 };
