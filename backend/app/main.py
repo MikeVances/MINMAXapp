@@ -1,6 +1,9 @@
 import os
 from pathlib import Path
+from dotenv import load_dotenv
 from fastapi import FastAPI
+
+load_dotenv()  # загружает .env локально; на Render переменные берутся из дашборда
 from fastapi.staticfiles import StaticFiles
 from .routers import calc
 from .routers import settings as settings_router

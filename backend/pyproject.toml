@@ -7,6 +7,8 @@ dependencies = [
     "fastapi>=0.115.0",
     "uvicorn[standard]",
     "pydantic>=2",
+    "python-dotenv>=1.0",
+    "httpx>=0.27",
 ]
 
 [tool.uvicorn]
