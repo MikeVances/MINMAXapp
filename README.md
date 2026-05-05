@@ -1,74 +1,94 @@
 # 🐔 MINMAXapp — Broiler House Ventilation Calculator
 
-Web application for calculating ventilation parameters in broiler poultry houses.  
-Based on Ross/Cobb/Aviagen breed guides and CIGR thermal standards.
+Open-source web tool for poultry farm engineers and technologists.  
+Calculates ventilation parameters, heat balance, and cooling requirements for broiler houses — directly in the browser, no installation needed.
+
+> Built for practical use on real farms. Physics-based, not rule-of-thumb.
 
 ---
 
-## Features
+## What it does
 
-- **Ventilation min/max** — target airflow by flock age and outside conditions
-- **Farm Audit** — step-by-step heat balance analysis:
-  - Building dimensions & UA coefficient calibration
-  - Heater duty cycle estimation
-  - Evaporative (Pad & Fan) cooling calculator
-  - Tunnel ventilation speed calculator
-- **5 languages** — EN / RU / PL / DE / FR with native poultry industry terminology
-- **Feedback** — in-app form → Telegram bot
-- **Single-page UI** — no build step, pure HTML/CSS/JS
+### Ventilation Min/Max
+Enter flock age and outside temperature — get target airflow ranges for the current grow-out day. Supports multi-house farms with independent tabs per house.
 
-## Tech Stack
+### Farm Audit (Heat Balance)
+Step-by-step analysis of the thermal envelope:
 
-| Layer | Technology |
-|-------|-----------|
-| Backend | FastAPI (Python 3.10+) |
-| Data storage | JSON files (single-farm MVP) |
-| Frontend | Vanilla JS + CSS custom properties |
-| i18n | Synchronous `window.LOCALES` engine |
-| Deploy | Render (free tier) |
+1. **Building dimensions** — volume, wall/roof area
+2. **Heater configuration** — gas or electric, total installed capacity
+3. **UA calibration** — measure the building's actual heat loss coefficient from a temperature-drop test in an empty house
+4. **Heater cycle analysis** — required heating power vs. installed capacity at any outside temperature, bird age and stocking density
+
+### Evaporative Cooling (Pad & Fan)
+Calculates effective temperature reduction from wet pad systems. Accounts for outside humidity and pad efficiency.
+
+### Tunnel Ventilation
+Minimum cross-section airspeed for effective tunnel mode. Flags when evaporative cooling becomes necessary.
+
+---
 
 ## Physics
 
-- Bird heat: `Q = 6.90 × W^0.75 × N` W (CIGR standard)
-- Ventilation heat loss: `Q = V̇_min × 0.335 × ΔT`
-- UA calibration: temperature drop method in empty house
-- Evaporative cooling: pad efficiency × psychrometric correction
+The app uses first-principles heat balance, not lookup tables:
 
-## Quick Start
+```
+Q_heater = Q_walls + Q_ventilation − Q_birds
+
+Q_walls        = UA × ΔT                          (W)
+Q_ventilation  = V̇_min × 0.335 × ΔT              (W)
+Q_birds        = 6.90 × W^0.75 × N                (W)   ← CIGR standard
+```
+
+Where:
+- `UA` — overall heat transfer coefficient of the building envelope (W/K), measured by calibration
+- `V̇_min` — minimum ventilation rate (m³/h)
+- `W` — average bird weight (kg), `N` — number of birds
+- `0.335` — volumetric heat capacity of air (Wh/m³·K)
+
+---
+
+## Interface
+
+- Single-page app — works offline after first load
+- **5 languages**: 🇬🇧 EN · 🇷🇺 RU · 🇵🇱 PL · 🇩🇪 DE · 🇫🇷 FR  
+  Translations use native poultry industry terminology, not literal translation
+- Inline feedback form → Telegram
+
+---
+
+## Run locally
 
 ```bash
-cd backend
+git clone https://github.com/MikeVances/MINMAXapp
+cd MINMAXapp/backend
 pip install .
-uvicorn app.main:app --reload --port 8000
-# Open http://localhost:8000
+uvicorn app.main:app --reload
+# → http://localhost:8000
 ```
 
-## Environment Variables
+Requires Python 3.10+. No database, no external services needed for core functionality.
 
-```bash
-cp backend/.env.example backend/.env
-# Fill in:
-TELEGRAM_BOT_TOKEN=...
-TELEGRAM_CHAT_ID=...
-```
-
-## Deploy to Render
-
-| Setting | Value |
-|---------|-------|
-| Root Directory | `backend` |
-| Build Command | `pip install .` |
-| Start Command | `uvicorn app.main:app --host 0.0.0.0 --port $PORT` |
-
-Set `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` in Render → Environment.
+---
 
 ## Data Sources
 
-- Ross 308 Broiler Performance Objectives 2022
-- Cobb Broiler Management Guide
-- Aviagen Essential Ventilation Management 2019
-- CIGR Report Vol. II — Climatization of Animal Houses
+| Source | Used for |
+|--------|---------|
+| Ross 308 Broiler Performance Objectives, 2022 | Temperature curves, live weight targets |
+| Cobb Broiler Management Guide | Ventilation profiles |
+| Aviagen Essential Ventilation Management, 2019 | Min/max airflow methodology |
+| CIGR Report Vol. II — Climatization of Animal Houses | Bird heat production formula |
+| EN 13779 / ASHRAE | Air properties, psychrometrics |
+
+---
+
+## Contributing
+
+Issues and pull requests are welcome. If you work in poultry production and notice something wrong with the numbers — please open an issue with the flock parameters and expected values. Real-world corrections are the most valuable contribution.
+
+---
 
 ## License
 
-MIT — open source, free to use and adapt.
+MIT — use freely, adapt for your farm or software.
