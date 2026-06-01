@@ -4,13 +4,13 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Farm Audit — MINMAXapp</title>
-  <link rel="stylesheet" href="/styles.css" />
-  <script src="/i18n/en.js"></script>
-  <script src="/i18n/ru.js"></script>
-  <script src="/i18n/pl.js"></script>
-  <script src="/i18n/de.js"></script>
-  <script src="/i18n/fr.js"></script>
-  <script src="/i18n.js"></script>
+  <link rel="stylesheet" href="./styles.css" />
+  <script src="./i18n/en.js"></script>
+  <script src="./i18n/ru.js"></script>
+  <script src="./i18n/pl.js"></script>
+  <script src="./i18n/de.js"></script>
+  <script src="./i18n/fr.js"></script>
+  <script src="./i18n.js"></script>
   <style>
     .tool-tabs   { display:flex; gap:8px; margin-bottom:20px; flex-wrap:wrap; }
     .tool-tab    { padding:8px 16px; border:1px solid var(--border); border-radius:999px;
@@ -52,8 +52,8 @@
   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
     <h1 style="margin:0;" data-i18n="calc_h1">🔧 Engineering tools</h1>
     <div style="display:flex; gap:8px;">
-      <a class="btn btn-secondary" href="/" data-i18n="nav_home">← Home</a>
-      <a class="btn btn-secondary" href="/settings.html" data-i18n="nav_settings">⚙️ Farm Settings</a>
+      <a class="btn btn-secondary" href="./" data-i18n="nav_home">← Home</a>
+      <a class="btn btn-secondary" href="./settings.html" data-i18n="nav_settings">⚙️ Farm Settings</a>
     </div>
   </div>
 
@@ -680,7 +680,7 @@ document.querySelectorAll('.tool-tab:not([disabled])').forEach(btn => {
 
     profBtn.disabled = true; profBtn.textContent = t('btn_calculating');
     try {
-      const r = await fetch('/calc/summary7', {
+      const r = await fetch('./calc/summary7', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
@@ -898,7 +898,7 @@ document.getElementById('l-calc-btn').addEventListener('click', async () => {
   btn.textContent = t('btn_leakage_busy'); btn.disabled = true;
 
   try {
-    const resp = await fetch('/calc/tools/leakage', {
+    const resp = await fetch('./calc/tools/leakage', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
@@ -969,7 +969,7 @@ document.getElementById('tunnel-form').addEventListener('submit', async e => {
       inlet_height_m:   +document.getElementById('tn-inlet-h').value  || 0,
     };
 
-    const resp = await fetch('/calc/tools/tunnel_speed', {
+    const resp = await fetch('./calc/tools/tunnel_speed', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -1148,7 +1148,7 @@ document.getElementById('evap-form').addEventListener('submit', async e => {
       ...(waterTVal !== '' ? { water_supply_t_c: +waterTVal } : {}),
     };
 
-    const resp = await fetch('/calc/tools/evap_cooling', {
+    const resp = await fetch('./calc/tools/evap_cooling', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -1371,7 +1371,7 @@ function renderEvap(d) {
   </div>
 </div><!-- /panel-help -->
 
-<script src="/calibration.js?v=4"></script>
+<script src="./calibration.js?v=4"></script>
 <script>
 // ── House selector for Step 1 (loads dims from main-page localStorage) ──────
 (function () {
@@ -1783,6 +1783,6 @@ function renderEvap(d) {
   document.addEventListener('DOMContentLoaded', loadProfile);
 })();
 </script>
-<script src="/feedback.js"></script>
+<script src="./feedback.js"></script>
 </body>
 </html>

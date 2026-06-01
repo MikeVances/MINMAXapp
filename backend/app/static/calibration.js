@@ -422,7 +422,7 @@ elSaveBuildingBtn.addEventListener('click', async () => {
     // Backend принимает height_m — передаём эффективную высоту (среднее стены и конька)
     config.building = { length_m: l, width_m: w, height_m: hEff };
 
-    const r = await fetch('/thermal/config', {
+    const r = await fetch('./thermal/config', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(config)
@@ -455,7 +455,7 @@ elSaveHeaterBtn.addEventListener('click', async () => {
     const config = await loadConfig();
     config.heater = { heater_type: heaterType, total_power_kw: power };
 
-    const r = await fetch('/thermal/config', {
+    const r = await fetch('./thermal/config', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(config)
@@ -491,7 +491,7 @@ elCalculateBtn.addEventListener('click', async () => {
   }
 
   try {
-    const r = await fetch('/thermal/calibrate', {
+    const r = await fetch('./thermal/calibrate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -581,7 +581,7 @@ elSaveCalibrationBtn.addEventListener('click', async () => {
       time_minutes: timeMinutes
     };
 
-    const r = await fetch('/thermal/config', {
+    const r = await fetch('./thermal/config', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(config)
@@ -611,7 +611,7 @@ elAnalyzeBtn.addEventListener('click', async () => {
   }
 
   try {
-    const r = await fetch('/thermal/analyze-heaters', {
+    const r = await fetch('./thermal/analyze-heaters', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({
@@ -696,7 +696,7 @@ elAnalyzeBtn.addEventListener('click', async () => {
 // Load current configuration
 async function loadConfig() {
   try {
-    const r = await fetch('/thermal/config');
+    const r = await fetch('./thermal/config');
     if (r.ok) return await r.json();
   } catch (e) {
     console.error('Failed to load config:', e);

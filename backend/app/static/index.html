@@ -4,21 +4,21 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>MINIMAX — Poultry House</title>
-  <link rel="stylesheet" href="/styles.css" />
-  <script src="/i18n/en.js"></script>
-  <script src="/i18n/ru.js"></script>
-  <script src="/i18n/pl.js"></script>
-  <script src="/i18n/de.js"></script>
-  <script src="/i18n/fr.js"></script>
-  <script src="/i18n.js"></script>
+  <link rel="stylesheet" href="./styles.css" />
+  <script src="./i18n/en.js"></script>
+  <script src="./i18n/ru.js"></script>
+  <script src="./i18n/pl.js"></script>
+  <script src="./i18n/de.js"></script>
+  <script src="./i18n/fr.js"></script>
+  <script src="./i18n.js"></script>
 </head>
 <body data-page-title="index_title">
   <main class="container">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
       <h1 style="margin:0;" data-i18n="index_h1">Ventilation Min/Max</h1>
       <div style="display:flex; gap:8px; flex-wrap:wrap;">
-        <a class="btn btn-secondary" href="/calculators.html" data-i18n="nav_calculators">🔧 Calculators</a>
-        <a class="btn btn-secondary" href="/settings.html" data-i18n="nav_settings">⚙️ Farm Settings</a>
+        <a class="btn btn-secondary" href="./calculators.html" data-i18n="nav_calculators">🔧 Calculators</a>
+        <a class="btn btn-secondary" href="./settings.html" data-i18n="nav_settings">⚙️ Farm Settings</a>
       </div>
     </div>
 
@@ -170,7 +170,7 @@
 
     <script>
       // Показываем хэш коммита из Render — моментальная проверка что деплой прошёл
-      fetch('/version').then(r => r.json()).then(d => {
+      fetch('./version').then(r => r.json()).then(d => {
         document.getElementById('buildVersion').textContent = d.commit;
       }).catch(() => {});
     </script>
@@ -188,7 +188,7 @@
     </div>
   </div>
 
-  <script src="/app.js"></script>
-  <script src="/feedback.js"></script>
+  <script src="./app.js"></script>
+  <script src="./feedback.js"></script>
 </body>
 </html>

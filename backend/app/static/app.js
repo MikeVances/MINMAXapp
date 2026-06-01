@@ -7,7 +7,7 @@ async function updateUaBadge(tabId) {
   if (_uaFetchController) _uaFetchController.abort();
   _uaFetchController = new AbortController();
   try {
-    const r = await fetch('/thermal/config', { signal: _uaFetchController.signal });
+    const r = await fetch('./thermal/config', { signal: _uaFetchController.signal });
     if (!r.ok) { el.style.display = 'none'; return; }
     const cfg = await r.json();
     const ua  = cfg.calibration?.ua_coefficient;
@@ -17,7 +17,7 @@ async function updateUaBadge(tabId) {
     // Корпус совпадает — показываем UA
     el.innerHTML = `🌡️ UA = <strong>${ua.toFixed(0)} Вт/°C</strong> &nbsp;—&nbsp;
       <span class="muted">${t('ua_calibrated_lbl')}</span>
-      &nbsp;<a href="/calculators.html" style="font-size:11px; opacity:.7;">${t('ua_recal_link')}</a>`;
+      &nbsp;<a href="./calculators.html" style="font-size:11px; opacity:.7;">${t('ua_recal_link')}</a>`;
     el.style.display = 'block';
   } catch (e) {
     if (e.name !== 'AbortError') el.style.display = 'none';
@@ -130,7 +130,7 @@ async function loadFlockInfo() {
   if (!tab || !elFlockInfo) return;
 
   try {
-    const r = await fetch(`/flock/${tab.id}/info`);
+    const r = await fetch(`./flock/${tab.id}/info`);
     if (r.ok) {
       const data = await r.json();
       elFlockInfo.style.display = 'block';
