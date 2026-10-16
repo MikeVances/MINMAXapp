@@ -140,6 +140,37 @@ def test_api_minmax_caps_qmax_by_user_capacity(client):
     body = r.json()
     assert body["q_max_nominal_m3h"] == pytest.approx(170_000.0)
     assert body["q_max_m3h"] == pytest.approx(100_000.0)
+    # Мощности хватает: Qmin 9 460 < 100 000
+    assert body["capacity_insufficient"] is False
+
+
+# Qmin по CO₂ = 9 460 м³/ч (день 21), установлено только 5 000 м³/ч
+_UNDERSIZED = dict(
+    house="1", birds=N_BIRDS, mode_id="summer",
+    outside_t=25.0, outside_rh=60.0, user_max_m3h=5_000,
+)
+
+
+def test_api_minmax_does_not_cut_qmin_to_capacity(client):
+    """
+    Минимум — биологическое требование: его нельзя «подогнать» под железо.
+    До исправления (ревью 2026-10-16) API отдавал q_min = 5 000 — нехватка
+    вентиляторов маскировалась заниженной нормой.
+    """
+    body = client.post("/calc/minmax", json={**_UNDERSIZED, "age_days": 21}).json()
+
+    assert body["q_min_m3h"] == pytest.approx(9_460.0)
+    assert body["q_max_m3h"] == pytest.approx(5_000.0)
+    assert body["capacity_insufficient"] is True
+
+
+def test_api_summary7_flags_rows_where_qmin_exceeds_capacity(client):
+    body = client.post("/calc/summary7", json=_UNDERSIZED).json()
+    day21 = next(row for row in body["rows"] if row["day"] == 21)
+
+    assert day21["q_min_m3h"] == pytest.approx(9_460.0)
+    assert day21["q_min_pct"] == pytest.approx(189.2)   # 9 460 / 5 000 — больше 100 %
+    assert day21["capacity_insufficient"] is True
 
 
 def test_api_minmax_rejects_numeric_house_id(client):

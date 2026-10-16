@@ -35,6 +35,8 @@ class CalcOut(BaseModel):
     heater_duty_cycle: float | None = None  # Heater duty cycle (0..1)
     tunnel_active: bool = False  # Tunnel mode active under current conditions
     qmin_basis: str = "co2"  # "co2" | "moisture"
+    # Qmin больше заданной мощности установки: вентиляторов не хватает даже на минимум
+    capacity_insufficient: bool = False
     ref_version: str = "seed-demo-1.0"
 
 
@@ -60,10 +62,13 @@ def minmax(payload: CalcIn):
     q_min = round(cr.q_min_m3h, 3)
     q_max_nominal = round(cr.q_max_m3h, 3)
     q_max_final = q_max_nominal
+    capacity_insufficient = False
     if payload.user_max_m3h is not None:
         q_max_final = min(q_max_nominal, float(payload.user_max_m3h))
-        # гарантируем, что min не превышает допустимый max
-        q_min = min(q_min, q_max_final)
+        # Qmin — биологическое требование (CO₂/влага), его НЕ подгоняем под железо:
+        # раньше здесь было q_min = min(q_min, q_max_final), и нехватка вентиляторов
+        # маскировалась заниженным минимумом. Теперь отдаём честный Qmin и флаг.
+        capacity_insufficient = q_min > q_max_final
 
     return CalcOut(
         q_min_m3h=q_min,
@@ -95,6 +100,7 @@ def minmax(payload: CalcIn):
         heater_duty_cycle=cr.heater_duty_cycle,
         tunnel_active=cr.tunnel_active,
         qmin_basis=cr.qmin_basis,
+        capacity_insufficient=capacity_insufficient,
     )
 
 
@@ -122,6 +128,8 @@ class SummaryRow(BaseModel):
     q_max_pct: float | None = None
     min_floor_bird: float | None = None
     basis_used: str | None = None
+    # Qmin больше заданной мощности установки (см. CalcOut.capacity_insufficient)
+    capacity_insufficient: bool = False
 
 
 class SummaryOut(BaseModel):
@@ -172,12 +180,14 @@ def summary7(payload: SummaryIn):
         q_max_final = q_max_nominal
         q_min_pct = None
         q_max_pct = None
+        capacity_insufficient = False
         # Эффективное число птиц на этот день (для последующих представлений на голову/кг)
         survival = (1.0 - daily_m) ** max(d - 1, 0)
         birds_eff = payload.birds * survival
         if payload.user_max_m3h is not None:
             q_max_final = min(q_max_nominal, float(payload.user_max_m3h))
-            q_min = min(q_min, q_max_final)
+            # Qmin не обрезаем — см. комментарий в minmax(); q_min_pct может быть > 100 %
+            capacity_insufficient = q_min > q_max_final
             if payload.user_max_m3h > 0:
                 q_min_pct = round(100.0 * q_min / payload.user_max_m3h, 3)
                 q_max_pct = round(100.0 * q_max_final / payload.user_max_m3h, 3)
@@ -195,6 +205,7 @@ def summary7(payload: SummaryIn):
                 q_max_pct=q_max_pct,
                 min_floor_bird=min_floor,
                 basis_used=cr.basis_used,
+                capacity_insufficient=capacity_insufficient,
             )
         )
 

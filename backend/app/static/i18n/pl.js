@@ -145,6 +145,7 @@
     phys_airspeed_target:'cel ≥3,0 m/s',
     phys_cobb_source:    'Cobb Broiler Management Guide 2021, §9 · Kontrola tunelowa wymaga podania maks. wydajności systemu',
     phys_dims_needed:    'Wprowadź wymiary budynku, aby włączyć kontrolę fizyczną',
+    cap_insufficient_note: 'Wentylacja minimalna przekracza wydajność zainstalowanych wentylatorów — nie zapewniają nawet minimum',
 
     // ── STRONA USTAWIEŃ ────────────────────────────
     settings_title:    'Ustawienia profilu',

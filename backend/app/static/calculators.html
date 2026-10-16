@@ -740,12 +740,18 @@ document.querySelectorAll('.tool-tab:not([disabled])').forEach(btn => {
         c1 = (r.q_min_m3h / S_floor).toFixed(1);
         c2 = (r.q_max_m3h / S_floor).toFixed(1);
       }
+      // Qmin больше мощности установки — подсветить: минимум сервер не обрезает
+      const c1Cell = r.capacity_insufficient ? `<span class="danger">${c1} ⚠</span>` : c1;
       return `<tr>
         <td>${r.day}</td><td>${r.min_temp_c ?? '—'}</td>
         <td>${r.weight_g != null ? Math.round(r.weight_g) : '—'}</td>
-        <td>${c1}</td><td>${c2}</td>
+        <td>${c1Cell}</td><td>${c2}</td>
       </tr>`;
     }).join('');
+
+    const capWarn = d.rows.some(r => r.capacity_insufficient)
+      ? `<p class="danger" style="font-size:12px; margin:8px 0 0;">⚠ ${t('cap_insufficient_note')}</p>`
+      : '';
 
     // Физическая проверка (Cobb 2021 §9)
     let physBlock = '';
@@ -791,6 +797,7 @@ document.querySelectorAll('.tool-tab:not([disabled])').forEach(btn => {
         </tr></thead>
         <tbody>${rows}</tbody>
       </table>
+      ${capWarn}
       ${physBlock}
     </div>`;
     profSummary.style.display = 'block';

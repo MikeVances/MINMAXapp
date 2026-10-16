@@ -145,6 +145,7 @@
     phys_airspeed_target:'Ziel ≥3,0 m/s',
     phys_cobb_source:    'Cobb Broiler Management Guide 2021, §9 · Tunnelprüfung erfordert eingetragenes Systemmaximum',
     phys_dims_needed:    'Gebäudeabmessungen eingeben, um die physikalische Prüfung zu aktivieren',
+    cap_insufficient_note: 'Mindestlüftung übersteigt die installierte Lüfterleistung — die Lüfter schaffen nicht einmal das Minimum',
 
     // ── SETTINGS PAGE ──────────────────────────────
     settings_title:    'Profileinstellungen',

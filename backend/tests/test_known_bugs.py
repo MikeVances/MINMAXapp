@@ -34,22 +34,6 @@ def test_tunnel_capacity_does_not_depend_on_entered_bird_count(profile):
     assert half.q_max_m3h == pytest.approx(full.q_max_m3h, rel=1e-9)
 
 
-@pytest.mark.xfail(reason="TODO P0: Qmin молча обрезается до мощности установки")
-def test_api_does_not_silently_cut_qmin_to_capacity(client):
-    """
-    Qmin по CO₂ = 9 460 м³/ч, установлено только 5 000 м³/ч.
-    Минимум — биологическое требование: его нельзя «подогнать» под железо,
-    недостаток мощности должен показываться как предупреждение.
-    """
-    payload = dict(
-        house="1", birds=10_000, age_days=21, mode_id="summer",
-        outside_t=25.0, outside_rh=60.0, user_max_m3h=5_000,
-    )
-    body = client.post("/calc/minmax", json=payload).json()
-
-    assert body["q_min_m3h"] == pytest.approx(9_460.0)
-
-
 @pytest.mark.xfail(reason="TODO P1: KeyError → 500 на недопустимой паре тип пэда / толщина")
 def test_evap_cooling_rejects_unknown_pad_thickness_with_422(client):
     """У SANHE 5090 нет толщины 200 мм — это ошибка ввода (422), а не падение сервера (500)."""

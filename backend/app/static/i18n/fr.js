@@ -145,6 +145,7 @@
     phys_airspeed_target:'cible ≥ 3,0 m/s',
     phys_cobb_source:    'Cobb Broiler Management Guide 2021, §9 · Les vérifications tunnel nécessitent la saisie de la capacité max. du système',
     phys_dims_needed:    'Saisir les dimensions du bâtiment pour activer la vérification physique',
+    cap_insufficient_note: "La ventilation minimale dépasse la capacité installée — les ventilateurs n'assurent même pas le minimum",
 
     // ── SETTINGS PAGE ────────────────────────────────
     settings_title:    'Paramètres du profil',
