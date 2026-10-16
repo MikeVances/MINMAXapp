@@ -84,6 +84,20 @@ def test_tunnel_stays_off_outside_its_limits(profile, age_days, outside_t, reaso
     assert r.tunnel_active is False, reason
 
 
+def test_qmax_heat_balance_uses_sensible_heat_only(profile):
+    """
+    День 35 (W = 2.296 кг), внутри 20 °C, снаружи 10 °C (туннель выключен), UA = 0.
+    Воздух уносит только ЯВНОЕ тепло (ρ·Cp·ΔT), скрытое уходит с паром:
+      H_явн = 6.90 × 2.296^0.75 × 10 000 = 128 690 Вт
+      ρ     = 353.05 / 283.15 = 1.2469 кг/м³
+      Qmax  = 128 690 × 3600 / (1.2469 × 1006 × 10) = 36 937 м³/ч  (3.694 м³/ч·гол)
+    До исправления (ревью 2026-10-16) код давал 56 851 м³/ч — с полным теплом 10.62.
+    """
+    r = _calc(profile, age_days=35, outside_t=10.0, outside_rh=60.0)
+
+    assert r.q_max_m3h == pytest.approx(36_937.1, rel=1e-3)
+
+
 def test_qmax_never_below_qmin_norm(profile):
     """
     Сильный мороз: тепла птицы на отвод почти не нужно, тепловой баланс даёт

@@ -141,16 +141,20 @@ def compute(profile: VentProfile, ci: CalcInput) -> CalcResult:
             #
             # Тепло, которое должна унести вентиляция:
             #   Q_vent = H_birds - Q_walls
-            #   H_birds = 10.62 × W^0.75 × N  [Вт]  (CIGR, весь метаболизм)
+            #   H_birds = 6.90 × W^0.75 × N  [Вт]  (CIGR, только ЯВНОЕ тепло)
             #   Q_walls = UA × (T_in - T_out)  [Вт]  (> 0 = тепло уходит через стены)
             #
             # В мороз Q_walls > 0: стены помогают охлаждению, нагрузка на вентиляцию ниже.
             # В жару T_out > T_in: Q_walls < 0, стены добавляют тепло → Qmax растёт.
             # Без данных калибровки UA = 0 (консервативно: не занижаем Qmax).
-            h_birds_total_w = 10.62 * (weight_kg ** 0.75) * birds_eff
-            q_wall_loss_w   = (_ua_coeff * (t_target_inside - ci.outside_t)
-                               if _ua_coeff is not None else 0.0)
-            q_vent_needed_w = max(0.0, h_birds_total_w - q_wall_loss_w)
+            #
+            # Почему 6.90, а не полное тепло 10.62: баланс ниже — по нагреву воздуха
+            # (ρ·Cp·ΔT). Скрытое тепло (3.72·W^0.75) уходит с паром дыхания и
+            # температуру воздуха не поднимает; с ним Qmax завышался на 54 %.
+            h_birds_sensible_w = 6.90 * (weight_kg ** 0.75) * birds_eff
+            q_wall_loss_w      = (_ua_coeff * (t_target_inside - ci.outside_t)
+                                  if _ua_coeff is not None else 0.0)
+            q_vent_needed_w    = max(0.0, h_birds_sensible_w - q_wall_loss_w)
 
             rho_air = 353.05 / (ci.outside_t + 273.15)
             delta_t = t_target_inside - ci.outside_t
