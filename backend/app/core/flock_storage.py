@@ -23,10 +23,11 @@ from pathlib import Path
 from typing import Optional, List
 
 from ..models.flock import FlockInfo, FlockDiaryEntry
+from .paths import data_path
 
 
 # Базовая директория для данных о стадах
-FLOCKS_DATA_DIR = Path(os.getenv("FLOCKS_DATA_DIR", "data/flocks"))
+FLOCKS_DATA_DIR = data_path("FLOCKS_DATA_DIR", "data/flocks")
 
 
 def _ensure_flocks_dir():

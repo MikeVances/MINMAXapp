@@ -1,12 +1,17 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 from dataclasses import dataclass
 from typing import Dict, Optional, Iterable
 
+from .paths import data_path
+
+logger = logging.getLogger(__name__)
+
 # Keep the same ENV var name already used in the app/UI
-DAY_MASTER_PATH = os.getenv("DAY_MASTER_JSON", "data/day_master.json")
+DAY_MASTER_PATH = str(data_path("DAY_MASTER_JSON", "data/day_master.json"))
 
 
 @dataclass
@@ -130,11 +135,14 @@ def _interpolate_missing(by_day: Dict[int, DayInfo], cycle_days: int = 42) -> Di
 
 def load_day_master(path: str = DAY_MASTER_PATH, cycle_days: int = 42) -> Dict[int, DayInfo]:
     if not os.path.exists(path):
+        # Без профиля роста расчёт уйдёт в запасные нормы — это должно быть видно в логе
+        logger.warning("day_master не найден: %s — расчёт пойдёт по запасным нормам", path)
         return {}
     try:
         with open(path, "r", encoding="utf-8") as f:
             raw = json.load(f)
     except Exception:
+        logger.exception("day_master не читается: %s — расчёт пойдёт по запасным нормам", path)
         return {}
 
     if isinstance(raw, list):

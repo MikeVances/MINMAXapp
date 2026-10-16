@@ -28,13 +28,18 @@
 from __future__ import annotations
 
 import json
+import logging
 import math
 import os
 from dataclasses import dataclass, asdict, field
 from typing import Optional
 
+from .paths import data_path
 
-THERMAL_CONFIG_PATH = os.getenv("THERMAL_CONFIG_JSON", "data/thermal_config.json")
+logger = logging.getLogger(__name__)
+
+
+THERMAL_CONFIG_PATH = str(data_path("THERMAL_CONFIG_JSON", "data/thermal_config.json"))
 
 
 @dataclass
@@ -369,6 +374,8 @@ def load_thermal_config(path: str = THERMAL_CONFIG_PATH) -> ThermalConfig:
         )
 
     except Exception:
+        # Калибровка UA потеряна — расчёт горелок пойдёт без неё, это должно быть видно в логе
+        logger.exception("thermal_config не читается: %s — используются значения по умолчанию", path)
         return ThermalConfig()
 
 

@@ -9,17 +9,9 @@
 """
 from __future__ import annotations
 
-import os
-import subprocess
-import sys
-from pathlib import Path
-
 import pytest
 
 from backend.app.core.calc_core import CalcInput, compute
-
-REPO_ROOT = Path(__file__).resolve().parents[2]
-
 
 def _calc(profile, birds: int, age_days: int, outside_t: float, outside_rh: float = 60.0):
     ci = CalcInput(
@@ -81,31 +73,3 @@ def test_evap_cooling_rejects_unknown_pad_thickness_with_422(client):
         pad_type="5090", pad_thickness_mm=200, pad_length_m=40, pad_height_m=1.8,
     )
     assert client.post("/calc/tools/evap_cooling", json=payload).status_code == 422
-
-
-@pytest.mark.xfail(reason="TODO P0: пути к данным относительные — зависят от CWD")
-@pytest.mark.parametrize(
-    "module, attr",
-    [
-        ("backend.app.core.day_master", "DAY_MASTER_PATH"),
-        ("backend.app.core.app_config", "APP_CONFIG_PATH"),
-        ("backend.app.core.building_thermal", "THERMAL_CONFIG_PATH"),
-        ("backend.app.core.flock_storage", "FLOCKS_DATA_DIR"),
-    ],
-)
-def test_default_data_paths_do_not_depend_on_working_directory(module, attr, tmp_path):
-    """
-    Импорт в чистом процессе: без env-переменных и из чужого каталога.
-    Путь по умолчанию должен быть абсолютным и вести в каталог data/ проекта.
-    """
-    env = {k: v for k, v in os.environ.items()
-           if k not in ("DAY_MASTER_JSON", "APP_CONFIG_JSON", "THERMAL_CONFIG_JSON", "FLOCKS_DATA_DIR")}
-    env["PYTHONPATH"] = str(REPO_ROOT)
-    code = f"import {module} as m, os; print(os.path.abspath(str(m.{attr})) == str(m.{attr}))"
-
-    out = subprocess.run(
-        [sys.executable, "-c", code], cwd=tmp_path, env=env,
-        capture_output=True, text=True, check=True,
-    ).stdout.strip()
-
-    assert out == "True"

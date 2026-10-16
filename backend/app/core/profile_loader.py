@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 from dataclasses import dataclass
 from typing import Dict, List, Literal, Optional, Tuple
@@ -15,6 +16,9 @@ def _to_float(v, default: float | None = None) -> float | None:
         return x if isfinite(x) else default
     except Exception:
         return default
+
+
+logger = logging.getLogger(__name__)
 
 
 Mode = Literal["winter", "summer", "spring_autumn", "tropical"]
@@ -194,13 +198,18 @@ def _write_tmp(data) -> str:
     return p
 
 
-def get_profile_from_day_master(dm_path: str = "data/day_master.json") -> VentProfile | None:
+def get_profile_from_day_master(dm_path: str | None = None) -> VentProfile | None:
     """Строит VentProfile из day_master.json — единственный источник правды.
 
     day_master хранит mode-независимый профиль; сезонная поправка (k_temp)
     применяется в calc_core в рантайме, поэтому все режимы получают одинаковые
     точки.
     """
+    # Путь берём из day_master.py, а не хардкодим: раньше здесь был "data/day_master.json",
+    # который игнорировал DAY_MASTER_JSON и зависел от рабочей директории
+    if dm_path is None:
+        from .day_master import DAY_MASTER_PATH
+        dm_path = DAY_MASTER_PATH
     if not os.path.exists(dm_path):
         return None
     try:
@@ -236,6 +245,7 @@ def get_profile_from_day_master(dm_path: str = "data/day_master.json") -> VentPr
         }
         return VentProfile(modes)
     except Exception:
+        logger.exception("day_master не разбирается в профиль: %s — переход на seed/demo", dm_path)
         return None
 
 

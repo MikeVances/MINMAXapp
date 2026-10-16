@@ -1,10 +1,15 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 from dataclasses import dataclass, asdict
 
-APP_CONFIG_PATH = os.getenv("APP_CONFIG_JSON", "data/app_config.json")
+from .paths import data_path
+
+logger = logging.getLogger(__name__)
+
+APP_CONFIG_PATH = str(data_path("APP_CONFIG_JSON", "data/app_config.json"))
 
 
 @dataclass
@@ -61,6 +66,8 @@ def load_app_config(path: str = APP_CONFIG_PATH) -> AppConfig:
         defaults = asdict(AppConfig())
         return AppConfig(**{**defaults, **(raw or {})})
     except Exception:
+        # Битый или устаревший конфиг: работаем на умолчаниях, но не молча
+        logger.exception("app_config не читается: %s — используются значения по умолчанию", path)
         return AppConfig()
 
 
