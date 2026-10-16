@@ -7,26 +7,11 @@ async function fetchJSON(url, opts) {
 const elConfigSection = document.getElementById('configSection');
 
 let cfg = {
-  total_mortality_pct: 4.0, min_floor_0_7: 0.15, min_floor_7_14: 0.25,
-  cycle_days: 42, n_birds_initial: 30000, v_tunnel_ms: 2.5, safety_factor_qmin: 1.5,
+  total_mortality_pct: 4.0, cycle_days: 42, v_tunnel_ms: 2.5, safety_factor_qmin: 1.5,
   tunnel_min_day: 14, tunnel_min_temp_c: 18.0,
 };
 
-// Читаем поголовье из localStorage главной страницы тихо
-function readBirdsFromStorage() {
-  try {
-    const tabs = JSON.parse(localStorage.getItem('vent_mvp_tabs_v1') || '[]');
-    const first = tabs.find(tab => tab.birds > 0);
-    return first ? Number(first.birds) : null;
-  } catch(e) {
-    return null;
-  }
-}
-
 function renderConfig() {
-  const birdsFromHouse = readBirdsFromStorage();
-  if (birdsFromHouse) cfg.n_birds_initial = birdsFromHouse;
-
   elConfigSection.innerHTML = `
     <div class="card" style="margin-bottom:16px;">
       <h2>${t('farm_params_h2')}</h2>
@@ -68,7 +53,7 @@ function renderConfig() {
     btn.disabled = true;
     st.textContent = t('status_saving');
     try {
-      await fetchJSON('/settings/app-config', {
+      await fetchJSON('./settings/app-config', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(cfg),
@@ -85,7 +70,7 @@ function renderConfig() {
 
 async function loadAll() {
   try {
-    cfg = await fetchJSON('/settings/app-config');
+    cfg = await fetchJSON('./settings/app-config');
     renderConfig();
   } catch(e) {
     console.error('Settings load error:', e);

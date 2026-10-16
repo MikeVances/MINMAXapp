@@ -138,8 +138,6 @@ $RECYCLE.BIN/
 # Project specific
 data/*.csv
 data/*.json
-!data/vent_profile_seed.json
-!data/day_master.json
 
 # Runtime user data (создаётся приложением, не хранится в репо)
 data/flocks/

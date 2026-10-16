@@ -14,13 +14,10 @@ class CalcIn(BaseModel):
     house: str = Field(..., min_length=1, max_length=64)
     birds: int = Field(..., ge=1, le=60000)
     age_days: int = Field(..., ge=1, le=63)
-    # Устарело: сезонный режим удалён (расчёт по наружной температуре), поле игнорируется
-    mode_id: str | None = Field(None, pattern=r"^(winter|summer|spring_autumn|tropical)$")
     # Профиль роста из библиотеки; не задан → профиль по умолчанию из настроек
     growth_profile_id: str | None = Field(None, pattern=r"^[a-z0-9][a-z0-9_-]{0,63}$")
     # Целевая RH в корпусе (таблица ощущаемой температуры Ross Handbook 2025 — 40–70 %)
     target_rh: float | None = Field(None, ge=40, le=70)
-    display_unit: str = Field("per_bird", pattern=r"^(per_bird|per_kg)$")
     outside_t: float = Field(..., ge=-40, le=50, description="Outside air temperature, °C")
     outside_rh: float = Field(60.0, ge=0, le=100, description="Outside relative humidity, %")
     heater_on: bool = Field(False, description="Heater correction enabled")
@@ -34,7 +31,6 @@ class CalcOut(BaseModel):
     q_min_m3h: float
     q_max_m3h: float  # final (capped if capacity provided)
     q_max_nominal_m3h: float  # before capacity capping
-    basis_used: str
     weight_used_g: float
     profile_day_resolved: int
     rates: dict
@@ -50,7 +46,6 @@ class CalcOut(BaseModel):
     tunnel_requirement_m3h: float | None = None
     # Нужен туннельный расход, а размеров нет: Qmax не посчитан (равен Qmin)
     house_geometry_missing: bool = False
-    ref_version: str = "seed-demo-1.0"
 
 
 @router.post("/minmax", response_model=CalcOut)
@@ -58,7 +53,6 @@ def minmax(payload: CalcIn):
     ci = CalcInput(
         birds=payload.birds,
         age_days=payload.age_days,
-        display_unit=payload.display_unit,  # type: ignore
         outside_t=payload.outside_t,
         outside_rh=payload.outside_rh,
         heater_on=payload.heater_on,
@@ -84,7 +78,6 @@ def minmax(payload: CalcIn):
         q_min_m3h=q_min,
         q_max_m3h=q_max_final,
         q_max_nominal_m3h=q_max_nominal,
-        basis_used=cr.basis_used,
         weight_used_g=cr.weight_used_g,
         profile_day_resolved=cr.profile_day_resolved,
         rates={
@@ -101,7 +94,6 @@ def minmax(payload: CalcIn):
             {
                 "min_temp_c": cr.min_temp_c,
                 "rv_percent": cr.rv_percent,
-                "basis_used": cr.basis_used,
             }
             if (cr.min_temp_c is not None or cr.rv_percent is not None)
             else None
@@ -131,8 +123,6 @@ def _compute_or_http_error(ci: CalcInput) -> CalcResult:
 class SummaryIn(BaseModel):
     house: str = Field(..., min_length=1, max_length=64)
     birds: int = Field(..., ge=1, le=60000)
-    # Устарело: сезонный режим удалён (расчёт по наружной температуре), поле игнорируется
-    mode_id: str | None = Field(None, pattern=r"^(winter|summer|spring_autumn|tropical)$")
     # Профиль роста из библиотеки; не задан → профиль по умолчанию из настроек
     growth_profile_id: str | None = Field(None, pattern=r"^[a-z0-9][a-z0-9_-]{0,63}$")
     # Целевая RH в корпусе (таблица ощущаемой температуры Ross Handbook 2025 — 40–70 %)
@@ -144,7 +134,6 @@ class SummaryIn(BaseModel):
     # Сечение корпуса для туннельного расхода (ширина и средняя высота стена/конёк)
     house_width_m: float | None = Field(None, gt=0, le=200)
     house_height_m: float | None = Field(None, gt=0, le=30)
-    display_unit: str = Field("per_bird", pattern=r"^(per_bird|per_kg)$")
 
 
 class SummaryRow(BaseModel):
@@ -157,8 +146,6 @@ class SummaryRow(BaseModel):
     q_max_nominal_m3h: float
     q_max_m3h: float
     q_max_pct: float | None = None
-    min_floor_bird: float | None = None
-    basis_used: str | None = None
     # Qmin больше заданной мощности установки (см. CalcOut.capacity_insufficient)
     capacity_insufficient: bool = False
     house_geometry_missing: bool = False
@@ -167,31 +154,25 @@ class SummaryRow(BaseModel):
 class SummaryOut(BaseModel):
     house: str
     birds: int
-    mode_id: str | None = None  # устарело, см. SummaryIn
     user_max_m3h: float | None
     growth_profile_id: str | None = None  # профиль роста, по которому шёл расчёт
-    ref_version: str = "seed-demo-1.0"
     rows: list[SummaryRow]
 
 
 @router.post("/summary7", response_model=SummaryOut)
 def summary7(payload: SummaryIn):
-    # Use outside_t from payload (new way), fallback to mode_id mapping (old way)
     outside_t = payload.outside_t
-    # рассчитываем эффективное количество птиц с учётом смертности и берём пороги min
+    # рассчитываем эффективное количество птиц с учётом смертности
     try:
         from ..core.app_config import load_app_config
         cfg = load_app_config()
         total_m = max(cfg.total_mortality_pct, 0.0) / 100.0
         cycle = max(cfg.cycle_days, 7)
         daily_m = 1.0 - (1.0 - total_m) ** (1.0 / max(cycle - 1, 1))
-        min0_7 = cfg.min_floor_0_7
-        min7_14 = cfg.min_floor_7_14
         # Еженедельные контрольные точки + последний день цикла
         days = sorted(set([1] + list(range(7, cycle, 7)) + [cycle]))
     except Exception:
         daily_m = 0.0
-        min0_7, min7_14 = 0.15, 0.25
         days = [1, 7, 14, 21, 28, 35, 42]
     rows: list[SummaryRow] = []
 
@@ -199,7 +180,6 @@ def summary7(payload: SummaryIn):
         ci = CalcInput(
             birds=payload.birds,
             age_days=d,
-            display_unit=payload.display_unit,  # type: ignore
             outside_t=outside_t,
             outside_rh=payload.outside_rh,
             heater_on=payload.heater_on,
@@ -225,7 +205,6 @@ def summary7(payload: SummaryIn):
             if payload.user_max_m3h > 0:
                 q_min_pct = round(100.0 * q_min / payload.user_max_m3h, 3)
                 q_max_pct = round(100.0 * q_max_final / payload.user_max_m3h, 3)
-        min_floor = min0_7 if d <= 7 else (min7_14 if d <= 14 else None)
         rows.append(
             SummaryRow(
                 day=d,
@@ -237,8 +216,6 @@ def summary7(payload: SummaryIn):
                 q_max_nominal_m3h=q_max_nominal,
                 q_max_m3h=q_max_final,
                 q_max_pct=q_max_pct,
-                min_floor_bird=min_floor,
-                basis_used=cr.basis_used,
                 capacity_insufficient=capacity_insufficient,
                 house_geometry_missing=cr.house_geometry_missing,
             )
@@ -247,29 +224,7 @@ def summary7(payload: SummaryIn):
     return SummaryOut(
         house=payload.house,
         birds=payload.birds,
-        mode_id=payload.mode_id,
         user_max_m3h=payload.user_max_m3h,
         growth_profile_id=cr.growth_profile_id,
         rows=rows,
     )
-
-
-from ..core.app_config import load_app_config
-
-@router.get("/config")
-def get_config():
-    cfg = load_app_config()
-    return {
-        "use_temp_blend": cfg.use_temp_blend,
-        "max_per_kg": {
-            "winter": cfg.max_per_kg_winter,
-            "spring_autumn": cfg.max_per_kg_spring_autumn,
-            "summer": cfg.max_per_kg_summer,
-            "tropical": cfg.max_per_kg_tropical,
-        },
-        "min_floor": {
-            "d0_7": cfg.min_floor_0_7,
-            "d7_14": cfg.min_floor_7_14,
-        },
-        "total_mortality_pct": cfg.total_mortality_pct,
-    }

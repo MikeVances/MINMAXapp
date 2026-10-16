@@ -707,7 +707,6 @@ document.querySelectorAll('.tool-tab:not([disabled])').forEach(btn => {
       target_rh:    targetRH,
       user_max_m3h: (tab.cap == null || tab.cap === '') ? null : Number(tab.cap),
       heater_on:    !!tab.heater_on,
-      display_unit: tab.unit || 'per_bird',
       outside_t:    outsideT,
       outside_rh:   outsideRH,
     };

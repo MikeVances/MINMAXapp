@@ -26,8 +26,8 @@ async function updateUaBadge(tabId) {
 
 // ── Simple in-memory + localStorage tabs for houses ──────────────────────────
 const defaultTabs = [
-  { id: '1', birds: 35000, age_days: 21, outside_t: 10, cap: 1000000, unit: 'per_bird' },
-  { id: '2', birds: 32000, age_days: 21, outside_t: 25, cap: 800000, unit: 'per_bird' },
+  { id: '1', birds: 35000, age_days: 21, outside_t: 10, cap: 1000000 },
+  { id: '2', birds: 32000, age_days: 21, outside_t: 25, cap: 800000 },
 ];
 
 const storeKey = 'vent_mvp_tabs_v1';
@@ -177,7 +177,6 @@ function fillForm() {
   if (elFanCapM3h)     elFanCapM3h.value     = tab.fan_cap_m3h    ?? '';
   if (elNumMinFans)    elNumMinFans.value    = tab.num_min_fans    ?? '';
   if (elMinFanCapM3h)  elMinFanCapM3h.value  = tab.min_fan_cap_m3h ?? '';
-  (document.querySelector(`input[name="unit"][value="${tab.unit || 'per_bird'}"]`) || {}).checked = true;
   // Если заданы параметры вентиляторов — авто-вычислить cap и показать подсказку
   syncCap();
   // Показать UA badge если корпус откалиброван
@@ -192,7 +191,6 @@ function readFormToTab() {
   const capVal = elCap.value === '' ? null : Number(elCap.value);
   tab.cap      = capVal;
   tab.heater_on = !!elHeater.checked;
-  tab.unit     = 'per_bird';
   // Building dimensions (used by audit / heat-loss calibration)
   tab.length_m       = elHouseLen      && elHouseLen.value      !== '' ? Number(elHouseLen.value)      : (tab.length_m       ?? null);
   tab.width_m        = elHouseWid      && elHouseWid.value      !== '' ? Number(elHouseWid.value)       : (tab.width_m        ?? null);
@@ -217,7 +215,7 @@ elAddTab.onclick = () => {
   const last = tabs[tabs.length - 1]?.id || '0';
   const nextNum = parseInt(last, 10);
   const nextId = isNaN(nextNum) ? `${tabs.length + 1}` : String(nextNum + 1);
-  tabs.push({ id: nextId, birds: 30000, age_days: 21, outside_t: 10, cap: null, unit: 'per_bird' });
+  tabs.push({ id: nextId, birds: 30000, age_days: 21, outside_t: 10, cap: null });
   active = tabs.length - 1;
   saveTabs(tabs);
   renderTabs(); fillForm();
@@ -257,7 +255,7 @@ elDelTab.onclick = () => {
 function applyDelete(index) {
   if (index == null) return;
   if (tabs.length <= 1) {
-    tabs = [{ id: '1', birds: 30000, age_days: 21, outside_t: 10, cap: null, unit: 'per_bird' }];
+    tabs = [{ id: '1', birds: 30000, age_days: 21, outside_t: 10, cap: null }];
     active = 0;
   } else {
     tabs.splice(index, 1);

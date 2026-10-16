@@ -21,7 +21,6 @@ def _calc(age_days: int, outside_t: float, outside_rh: float, **kw):
     ci = CalcInput(
         birds=N_BIRDS,
         age_days=age_days,
-        display_unit="per_bird",
         outside_t=outside_t,
         outside_rh=outside_rh,
         **kw,
@@ -85,7 +84,7 @@ def test_tunnel_requirement_does_not_depend_on_bird_count():
     """
     full = _calc(age_days=35, outside_t=30.0, outside_rh=60.0, **HOUSE)
     half = compute(CalcInput(
-        birds=N_BIRDS // 2, age_days=35, display_unit="per_bird",
+        birds=N_BIRDS // 2, age_days=35,
         outside_t=30.0, outside_rh=60.0, **HOUSE,
     ))
 
@@ -179,7 +178,7 @@ def test_survival_on_day_42_equals_configured_cycle_mortality(monkeypatch):
 
 def test_api_minmax_caps_qmax_by_user_capacity(client):
     payload = dict(
-        house="1", birds=N_BIRDS, age_days=21, mode_id="summer",
+        house="1", birds=N_BIRDS, age_days=21,
         outside_t=25.0, outside_rh=60.0, user_max_m3h=100_000, **HOUSE,
     )
     r = client.post("/calc/minmax", json=payload)
@@ -195,7 +194,7 @@ def test_api_minmax_caps_qmax_by_user_capacity(client):
 
 # Qmin по CO₂ = 9 460 м³/ч (день 21), установлено только 5 000 м³/ч
 _UNDERSIZED = dict(
-    house="1", birds=N_BIRDS, mode_id="summer",
+    house="1", birds=N_BIRDS,
     outside_t=25.0, outside_rh=60.0, user_max_m3h=5_000,
 )
 
@@ -224,6 +223,6 @@ def test_api_summary7_flags_rows_where_qmin_exceeds_capacity(client):
 
 def test_api_minmax_rejects_numeric_house_id(client):
     """house — строка; число Pydantic v2 не приводит молча (так ломался smoke_test)."""
-    payload = dict(house=1, birds=N_BIRDS, age_days=21, mode_id="summer", outside_t=25.0)
+    payload = dict(house=1, birds=N_BIRDS, age_days=21, outside_t=25.0)
 
     assert client.post("/calc/minmax", json=payload).status_code == 422

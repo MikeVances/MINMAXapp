@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import Literal, Optional
+from typing import Optional
 
 from .growth_profiles import load_profile
 from .apparent_temp import rh_temperature_shift
@@ -14,8 +14,6 @@ from .building_thermal import (
     heater_co2_dilution_m3h,
 )
 
-
-DisplayUnit = Literal["per_bird", "per_kg"]
 
 # ─── Психрометрические вспомогательные функции ───────────────────────────────
 
@@ -39,7 +37,6 @@ def humidity_ratio_g_per_kg(T_c: float, rh_pct: float) -> float:
 class CalcInput:
     birds: int
     age_days: int
-    display_unit: DisplayUnit
     outside_t: float    # °C
     heater_on: bool = False
     outside_rh: float = 60.0  # % относительная влажность снаружи
@@ -58,7 +55,6 @@ class CalcInput:
 class CalcResult:
     q_min_m3h: float
     q_max_m3h: float
-    basis_used: DisplayUnit
     weight_used_g: float
     profile_day_resolved: int
     rates_per_bird_min: float
@@ -200,7 +196,6 @@ def compute(ci: CalcInput) -> CalcResult:
     per_bird_max = q_max / max(birds_eff, 1.0)
     per_kg_min = per_bird_min / weight_kg if weight_kg > 0 else 0.0
     per_kg_max = per_bird_max / weight_kg if weight_kg > 0 else 0.0
-    basis = "per_bird"
 
     # --- Влагобаланс (ШАГ 1): птицы, без пара горелок ---
     # Вычисляем до секции горелок, чтобы duty_cycle учитывал полный Qmin.
@@ -289,7 +284,6 @@ def compute(ci: CalcInput) -> CalcResult:
     return CalcResult(
         q_min_m3h=float(q_min),
         q_max_m3h=float(q_max),
-        basis_used=basis,
         weight_used_g=body_weight_g,
         profile_day_resolved=age,
         rates_per_bird_min=per_bird_min,

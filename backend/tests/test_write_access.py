@@ -82,6 +82,6 @@ def test_without_server_token_write_is_open(client, monkeypatch, clean_thermal_c
 
 
 def test_calculations_do_not_require_token(client, token_set):
-    payload = dict(house="1", birds=10_000, age_days=21, mode_id="summer", outside_t=25.0)
+    payload = dict(house="1", birds=10_000, age_days=21, outside_t=25.0)
 
     assert client.post("/calc/minmax", json=payload).status_code == 200

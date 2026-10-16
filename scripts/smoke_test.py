@@ -38,9 +38,10 @@ def main() -> int:
     base_url = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_BASE_URL
     ok = True
 
-    # house — строка: API валидирует его как str, число даёт 422
-    base = dict(house="1", birds=35000, age_days=21, mode_id="winter",
-                display_unit="per_bird", outside_t=25)
+    # house — строка: API валидирует его как str, число даёт 422.
+    # Размеры корпуса нужны для туннельного Qmax (без них он равен Qmin)
+    base = dict(house="1", birds=35000, age_days=21, outside_t=25,
+                house_width_m=18, house_height_m=3.2)
 
     # Ограничение мощностью: итоговый Qmax не выше заданной мощности и не выше номинала
     cap = 10000
@@ -49,12 +50,11 @@ def main() -> int:
         print("[FAIL] capacity capping")
         ok = False
 
-    # Единица отображения не должна менять сами расходы — только представление норм
-    r_bird = post(base_url, "/calc/minmax", base)
-    r_kg = post(base_url, "/calc/minmax", {**base, "display_unit": "per_kg"})
-    if not (approx(r_bird["q_min_m3h"], r_kg["q_min_m3h"])
-            and approx(r_bird["q_max_nominal_m3h"], r_kg["q_max_nominal_m3h"])):
-        print("[FAIL] per_bird vs per_kg equivalence")
+    # Туннельный расход — свойство корпуса: вдвое меньше птицы, те же вентиляторы
+    r_full = post(base_url, "/calc/minmax", base)
+    r_half = post(base_url, "/calc/minmax", {**base, "birds": base["birds"] // 2})
+    if not (r_full["tunnel_active"] and approx(r_full["q_max_nominal_m3h"], r_half["q_max_nominal_m3h"])):
+        print("[FAIL] tunnel airflow depends on bird count")
         ok = False
 
     print("OK" if ok else "FAILED")

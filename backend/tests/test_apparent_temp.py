@@ -35,7 +35,7 @@ def test_rh_outside_table_is_refused():
 
 
 def _day35(**kw):
-    return compute(CalcInput(birds=10_000, age_days=35, display_unit="per_bird",
+    return compute(CalcInput(birds=10_000, age_days=35,
                              outside_t=10.0, outside_rh=60.0, **kw))
 
 
