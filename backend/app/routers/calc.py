@@ -18,6 +18,8 @@ class CalcIn(BaseModel):
     mode_id: str | None = Field(None, pattern=r"^(winter|summer|spring_autumn|tropical)$")
     # Профиль роста из библиотеки; не задан → профиль по умолчанию из настроек
     growth_profile_id: str | None = Field(None, pattern=r"^[a-z0-9][a-z0-9_-]{0,63}$")
+    # Целевая RH в корпусе (таблица ощущаемой температуры Ross Handbook 2025 — 40–70 %)
+    target_rh: float | None = Field(None, ge=40, le=70)
     display_unit: str = Field("per_bird", pattern=r"^(per_bird|per_kg)$")
     outside_t: float = Field(..., ge=-40, le=50, description="Outside air temperature, °C")
     outside_rh: float = Field(60.0, ge=0, le=100, description="Outside relative humidity, %")
@@ -63,6 +65,7 @@ def minmax(payload: CalcIn):
         house_width_m=payload.house_width_m,
         house_height_m=payload.house_height_m,
         growth_profile_id=payload.growth_profile_id,
+        target_rh=payload.target_rh,
     )
     cr = _compute_or_http_error(ci)
 
@@ -132,6 +135,8 @@ class SummaryIn(BaseModel):
     mode_id: str | None = Field(None, pattern=r"^(winter|summer|spring_autumn|tropical)$")
     # Профиль роста из библиотеки; не задан → профиль по умолчанию из настроек
     growth_profile_id: str | None = Field(None, pattern=r"^[a-z0-9][a-z0-9_-]{0,63}$")
+    # Целевая RH в корпусе (таблица ощущаемой температуры Ross Handbook 2025 — 40–70 %)
+    target_rh: float | None = Field(None, ge=40, le=70)
     outside_t: float = Field(15.0, ge=-40, le=50, description="Outside air temperature, °C")
     outside_rh: float = Field(60.0, ge=0, le=100, description="Outside relative humidity, %")
     user_max_m3h: float | None = Field(None, ge=0)
@@ -201,6 +206,7 @@ def summary7(payload: SummaryIn):
             house_width_m=payload.house_width_m,
             house_height_m=payload.house_height_m,
             growth_profile_id=payload.growth_profile_id,
+            target_rh=payload.target_rh,
         )
         cr = _compute_or_http_error(ci)
         q_min = round(cr.q_min_m3h, 3)

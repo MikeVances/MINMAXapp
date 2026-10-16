@@ -105,6 +105,11 @@
           <span data-i18n="label_outdoor_rh">Outdoor humidity, %</span>
           <input id="prof-outside-rh" type="number" step="1" min="0" max="100" value="60">
         </label>
+        <!-- Целевая RH в корпусе: сдвигает уставку T по ощущаемой температуре (Ross 2025, табл. 2.5) -->
+        <label>
+          <span data-i18n="label_target_rh">Target house RH, %</span>
+          <input id="prof-target-rh" type="number" step="1" min="40" max="70" value="60">
+        </label>
         <label>
           <span data-i18n="label_disp_mode">Display mode</span>
           <select id="prof-view-mode">
@@ -662,7 +667,11 @@ document.querySelectorAll('.tool-tab:not([disabled])').forEach(btn => {
       selEl.appendChild(opt);
     });
 
-    selEl.addEventListener('change', () => { selIdx = parseInt(selEl.value, 10) || 0; });
+    // Целевая RH — своя у каждого корпуса
+    const rhEl = document.getElementById('prof-target-rh');
+    const showRH = () => { const tb = profileTabs[selIdx]; rhEl.value = (tb && tb.target_rh != null) ? tb.target_rh : 60; };
+    selEl.addEventListener('change', () => { selIdx = parseInt(selEl.value, 10) || 0; showRH(); });
+    showRH();
   }
 
   async function calcProfile() {
@@ -671,6 +680,17 @@ document.querySelectorAll('.tool-tab:not([disabled])').forEach(btn => {
 
     const outsideT  = Number(document.getElementById('prof-outside-t').value) || 15;
     const outsideRH = Number(document.getElementById('prof-outside-rh').value) || 60;
+
+    // Целевая RH: вне 40–70 % таблица ощущаемой температуры не определена —
+    // пустое или неверное значение не отправляем (сервер возьмёт RH профиля)
+    const rhRaw    = document.getElementById('prof-target-rh').value;
+    const rhNum    = Number(rhRaw);
+    const targetRH = (rhRaw !== '' && rhNum >= 40 && rhNum <= 70) ? rhNum : null;
+    tab.target_rh  = targetRH;
+    try {
+      const tabs = JSON.parse(localStorage.getItem(STORE_KEY) || '[]');
+      if (tabs[selIdx]) { tabs[selIdx].target_rh = targetRH; localStorage.setItem(STORE_KEY, JSON.stringify(tabs)); }
+    } catch (e) { /* не запомнится — не критично */ }
     const mode      = document.getElementById('prof-view-mode').value;
 
     // Сечение корпуса для туннельного расхода: ширина × средняя высота (стена+конёк)/2
@@ -684,6 +704,7 @@ document.querySelectorAll('.tool-tab:not([disabled])').forEach(btn => {
       house_width_m:  Number(tab.width_m) || null,
       house_height_m: hAvg || null,
       growth_profile_id: document.getElementById('prof-growth-select').value || null,
+      target_rh:    targetRH,
       user_max_m3h: (tab.cap == null || tab.cap === '') ? null : Number(tab.cap),
       heater_on:    !!tab.heater_on,
       display_unit: tab.unit || 'per_bird',
@@ -702,6 +723,11 @@ document.querySelectorAll('.tool-tab:not([disabled])').forEach(btn => {
         throw new Error(`${r.status} ${r.statusText}: ${txt}`);
       }
       renderProfileHtml(await r.json(), tab, mode, outsideT, outsideRH);
+      // Значение вне таблицы не применено — сказать об этом, а не молча считать по профилю
+      if (rhRaw !== '' && targetRH === null) {
+        profSummary.insertAdjacentHTML('afterbegin',
+          `<p class="warn" style="font-size:12px;margin:0 0 8px;">⚠ ${t('target_rh_ignored')}</p>`);
+      }
     } catch (e) {
       profSummary.innerHTML = `<div class="card"><div class="danger">${t('err_prefix')}${String(e)}</div></div>`;
       profSummary.style.display = 'block';
@@ -756,7 +782,7 @@ document.querySelectorAll('.tool-tab:not([disabled])').forEach(btn => {
       // Qmin больше мощности установки — подсветить: минимум сервер не обрезает
       const c1Cell = r.capacity_insufficient ? `<span class="danger">${c1} ⚠</span>` : c1;
       return `<tr>
-        <td>${r.day}</td><td>${r.min_temp_c ?? '—'}</td>
+        <td>${r.day}</td><td>${r.min_temp_c != null ? Number(r.min_temp_c).toFixed(1) : '—'}</td>
         <td>${r.weight_g != null ? Math.round(r.weight_g) : '—'}</td>
         <td>${c1Cell}</td><td>${c2}</td>
       </tr>`;
@@ -1714,7 +1740,7 @@ function renderEvap(d) {
             <thead><tr>
               <th>${t('col_day')}</th>
               <th>${t('col_weight')}</th>
-              <th>${t('col_min_temp')}</th>
+              <th>${t('col_min_temp')} <span class="muted" style="font-weight:400;">${t('gp_temp_ref')}</span></th>
               <th>${t('col_rh')}</th>
             </tr></thead>
             <tbody>${weeklyDays().map(d => rowHTML(dayRow(d), ro)).join('')}</tbody>

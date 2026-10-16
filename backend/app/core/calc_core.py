@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import Literal, Optional
 
 from .growth_profiles import load_profile
+from .apparent_temp import rh_temperature_shift
 from .ventilation_calc import calc_q_min_per_bird
 from .app_config import load_app_config
 from .building_thermal import (
@@ -48,6 +49,9 @@ class CalcInput:
     house_height_m: Optional[float] = None
     # Профиль роста из библиотеки (кросс); None → default_growth_profile из настроек
     growth_profile_id: Optional[str] = None
+    # Целевая RH в корпусе, % (40–70). None → RH из профиля роста.
+    # Сдвигает уставку температуры (ощущаемая температура) и служит потолком влагобаланса
+    target_rh: Optional[float] = None
 
 
 @dataclass
@@ -108,8 +112,16 @@ def compute(ci: CalcInput) -> CalcResult:
 
     body_weight_g   = point.body_weight_g
     weight_kg       = max(body_weight_g / 1000.0, 0.0001)
+    rv_percent      = ci.target_rh if ci.target_rh is not None else point.rv_percent
+
+    # Температура профиля — опорная при RH 60 %. При другой целевой RH птица
+    # ощущает ту же сухую температуру иначе: суше — уставку выше, влажнее — ниже
+    # (Ross Handbook 2025, табл. 2.5). Та же RH ниже — потолок влагобаланса,
+    # поэтому уставка и влажностный Qmin меняются согласованно.
+    # RH профиля вне таблицы (свой профиль с 80 %) — поправку не применяем.
     t_target_inside = point.min_temp_c
-    rv_percent      = point.rv_percent   # None → влагобаланс пропускается
+    if rv_percent is not None and 40.0 <= rv_percent <= 70.0:
+        t_target_inside += rh_temperature_shift(body_weight_g, rv_percent)
 
     # --- Effective birds with mortality ---
     total_m = max(getattr(cfg, "total_mortality_pct", 0.0), 0.0) / 100.0
