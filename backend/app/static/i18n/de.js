@@ -39,9 +39,7 @@
     cigr_section_h:    'Lüftungsnormen (CIGR 1984)',
     v_tunnel_lbl:      'Ziel-Tunnelluftgeschwindigkeit',
     safety_factor_lbl: 'Sicherheitsfaktor Q_min',
-    btn_recalc_vent:   '🧮 Neu berechnen (CIGR)',
-    recalc_ok:         '✅ Profil neu berechnet',
-    cigr_hint:         'Mindestlüftung aus CO₂-Produktion (CIGR 1984). Maximum aus Tunnelluftgeschwindigkeit und Stallquerschnitt. Stallabmessungen werden von der Kalibrierungsseite übernommen.',
+    cigr_hint:         'Die Mindestlüftung wird aus dem Lebendgewicht nach der CO₂-Methode (CIGR 1984) berechnet. Das Maximum ergibt sich aus der Wärmebilanz und dem Stallquerschnitt (Stall-Tab).',
     tunnel_min_day_lbl:  'Tunnelmodus: Mindestalter (Tage)',
     tunnel_min_temp_lbl: 'Tunnelmodus: min. Außentemperatur',
     unit_celsius:        '°C',
@@ -146,6 +144,7 @@
     phys_cobb_source:    'Cobb Broiler Management Guide 2021, §9 · Tunnelprüfung erfordert eingetragenes Systemmaximum',
     phys_dims_needed:    'Gebäudeabmessungen eingeben, um die physikalische Prüfung zu aktivieren',
     cap_insufficient_note: 'Mindestlüftung übersteigt die installierte Lüfterleistung — die Lüfter schaffen nicht einmal das Minimum',
+    geometry_missing_note: 'Stallabmessungen (Breite und Höhe) eingeben, um das Tunnel-Qmax zu berechnen — ohne sie ist Qmax gleich Qmin',
     write_token_prompt: 'Speichern ist geschützt. Schreib-Token eingeben:',
 
     // ── SETTINGS PAGE ──────────────────────────────
@@ -157,7 +156,7 @@
     charts_h2:         'Zyklusprofil',
     chart_weight:      'Körpergewicht',
     chart_temp:        'Temperatur',
-    chart_vent:        'Lüftung Q_min/Q_max',
+    chart_vent:        'Qmin (CO₂, CIGR)',
     btn_save_interp:   'Speichern',
     anchors_h2:        'Stützpunkte',
     anchors_num_lbl:   'Anzahl der Punkte:',

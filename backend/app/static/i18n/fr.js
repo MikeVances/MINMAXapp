@@ -39,9 +39,7 @@
     cigr_section_h:    'Calcul des normes de ventilation (CIGR 1984)',
     v_tunnel_lbl:      'Vitesse d\'air cible en tunnel',
     safety_factor_lbl: 'Facteur de sécurité Qₘᴵⁿ',
-    btn_recalc_vent:   '🧮 Recalculer (CIGR)',
-    recalc_ok:         '✅ Profil recalculé',
-    cigr_hint:         'Ventilation minimale basée sur la production de CO₂ (CIGR 1984). Ventilation maximale calculée à partir de la vitesse d\'air en tunnel et de la section transversale du bâtiment. Les dimensions sont issues de la page Calibration.',
+    cigr_hint:         'La ventilation minimale est calculée à partir du poids vif par la méthode CO₂ (CIGR 1984). Le maximum provient du bilan thermique et de la section du bâtiment (onglet bâtiment).',
     tunnel_min_day_lbl:  'Âge min. pour le mode tunnel',
     tunnel_min_temp_lbl: 'Température extérieure min. pour le mode tunnel',
     unit_celsius:        '°C',
@@ -146,6 +144,7 @@
     phys_cobb_source:    'Cobb Broiler Management Guide 2021, §9 · Les vérifications tunnel nécessitent la saisie de la capacité max. du système',
     phys_dims_needed:    'Saisir les dimensions du bâtiment pour activer la vérification physique',
     cap_insufficient_note: "La ventilation minimale dépasse la capacité installée — les ventilateurs n'assurent même pas le minimum",
+    geometry_missing_note: 'Saisissez les dimensions du bâtiment (largeur et hauteur) pour calculer le Qmax tunnel — sans elles, Qmax est égal à Qmin',
     write_token_prompt: "L'enregistrement est protégé. Saisissez le jeton d'écriture :",
 
     // ── SETTINGS PAGE ────────────────────────────────
@@ -157,7 +156,7 @@
     charts_h2:         'Profil de bande',
     chart_weight:      'Poids vif',
     chart_temp:        'Température',
-    chart_vent:        'Ventilation Qmin/Qmax',
+    chart_vent:        'Qmin (CO₂, CIGR)',
     btn_save_interp:   'Enregistrer',
     anchors_h2:        'Points d\'ancrage',
     anchors_num_lbl:   'Nombre de points :',

@@ -18,7 +18,6 @@ TOKEN = "test-token-42"
 # Все эндпоинты, которые меняют сохранённые данные
 WRITE_ROUTES = [
     ("PUT", "/settings/day-master"),
-    ("POST", "/settings/recalculate-ventilation"),
     ("PUT", "/settings/app-config"),
     ("POST", "/flock/1/info"),
     ("DELETE", "/flock/1/info"),

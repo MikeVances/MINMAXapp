@@ -39,9 +39,7 @@
     cigr_section_h:    'Ventilation norms calculation (CIGR 1984)',
     v_tunnel_lbl:      'Target tunnel airspeed',
     safety_factor_lbl: 'Qₘᴵⁿ safety factor',
-    btn_recalc_vent:   '🧮 Recalculate (CIGR)',
-    recalc_ok:         '✅ Profile recalculated',
-    cigr_hint:         'Minimum ventilation from CO₂ production (CIGR 1984). Maximum from tunnel airspeed and house cross-section. House dimensions are taken from the Calibration page.',
+    cigr_hint:         'Minimum ventilation is computed from live weight by the CO₂ method (CIGR 1984). Maximum comes from the heat balance and the house cross-section (house tab).',
     tunnel_min_day_lbl:  'Tunnel mode min. age',
     tunnel_min_temp_lbl: 'Tunnel mode min. outside temp',
     unit_celsius:        '°C',
@@ -146,6 +144,7 @@
     phys_cobb_source:    'Cobb Broiler Management Guide 2021, §9 · Tunnel checks need system max entered',
     phys_dims_needed:    'Enter building dimensions to enable physical check',
     cap_insufficient_note: 'Minimum ventilation exceeds installed fan capacity — fans cannot provide even the minimum',
+    geometry_missing_note: 'Enter house dimensions (width and height) to compute tunnel Qmax — without them Qmax equals Qmin',
     write_token_prompt: 'Saving is protected. Enter the write token:',
 
     // ── SETTINGS PAGE ──────────────────────────────
@@ -157,7 +156,7 @@
     charts_h2:         'Cycle profile',
     chart_weight:      'Body weight',
     chart_temp:        'Temperature',
-    chart_vent:        'Ventilation Qmin/Qmax',
+    chart_vent:        'Qmin (CO₂, CIGR)',
     btn_save_interp:   'Save',
     anchors_h2:        'Anchor points',
     anchors_num_lbl:   'Number of points:',

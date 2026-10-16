@@ -10,9 +10,9 @@ Minimum ventilation (CO₂ method):
   q_min   = VCO₂ / 2.6 × safety_factor  [m³/h/bird]
              ΔCO₂ = 3 000 − 400 = 2 600 ppm = 2.6 L/m³
 
-Maximum ventilation (tunnel airspeed method):
-  q_max = v_tunnel × S_cross × 3 600 / N_birds  [m³/h/bird]
-  S_cross = house width × effective height  [m²]
+Maximum ventilation is NOT a per-bird norm: the tunnel airflow is a property of
+the house (v_tunnel × S_cross × 3 600, see calc_core.compute) and does not scale
+with the number of birds placed.
 
 Note: the coefficient 6.90 used in calc_core / building_thermal is sensible heat only
 (~65 % of total) and is NOT used here — CO₂ production requires total metabolic heat.
@@ -47,29 +47,3 @@ def calc_q_min_per_bird(weight_kg: float, safety_factor: float = 1.5) -> float:
     VCO2    = H_total * CO2_PER_WATT               # L CO₂/h/bird
     q_min   = (VCO2 / DELTA_CO2) * safety_factor   # m³/h/bird
     return round(q_min, 3)
-
-
-def calc_q_max_per_bird(
-    width_m: float,
-    height_m: float,
-    n_birds: float,
-    v_tunnel_ms: float = 2.5,
-) -> float:
-    """
-    Maximum ventilation per bird from tunnel airspeed target.
-
-    Industry standard: 2.0–2.5 m/s at bird level for effective wind-chill.
-    Above 3.0 m/s birds experience airstream stress (Aviagen 2019).
-
-    Args:
-        width_m:     House width, m
-        height_m:    Effective cross-section height, m (≈ 70–85% of wall height)
-        n_birds:     Number of birds alive on this day
-        v_tunnel_ms: Target tunnel airspeed, m/s (default 2.5)
-
-    Returns:
-        q_max in m³/h per bird
-    """
-    S_cross = width_m * height_m
-    q_max   = v_tunnel_ms * S_cross * 3600.0 / max(n_birds, 1.0)
-    return round(q_max, 3)

@@ -668,9 +668,16 @@ document.querySelectorAll('.tool-tab:not([disabled])').forEach(btn => {
     const outsideRH = Number(document.getElementById('prof-outside-rh').value) || 60;
     const mode      = document.getElementById('prof-view-mode').value;
 
+    // Сечение корпуса для туннельного расхода: ширина × средняя высота (стена+конёк)/2
+    const hWall  = Number(tab.height_wall_m) || null;
+    const hRidge = Number(tab.height_ridge_m) || null;
+    const hAvg   = (hWall && hRidge) ? (hWall + hRidge) / 2 : (hWall || hRidge);
+
     const payload = {
       house:        tab.id,
       birds:        tab.birds,
+      house_width_m:  Number(tab.width_m) || null,
+      house_height_m: hAvg || null,
       mode_id:      'summer',
       user_max_m3h: (tab.cap == null || tab.cap === '') ? null : Number(tab.cap),
       heater_on:    !!tab.heater_on,
@@ -753,6 +760,10 @@ document.querySelectorAll('.tool-tab:not([disabled])').forEach(btn => {
     const capWarn = d.rows.some(r => r.capacity_insufficient)
       ? `<p class="danger" style="font-size:12px; margin:8px 0 0;">⚠ ${t('cap_insufficient_note')}</p>`
       : '';
+    // Туннельный Qmax считается из сечения корпуса — без размеров он равен Qmin
+    const geomWarn = d.rows.some(r => r.house_geometry_missing)
+      ? `<p class="warn" style="font-size:12px; margin:8px 0 0;">⚠ ${t('geometry_missing_note')}</p>`
+      : '';
 
     // Физическая проверка (Cobb 2021 §9)
     let physBlock = '';
@@ -799,6 +810,7 @@ document.querySelectorAll('.tool-tab:not([disabled])').forEach(btn => {
         <tbody>${rows}</tbody>
       </table>
       ${capWarn}
+      ${geomWarn}
       ${physBlock}
     </div>`;
     profSummary.style.display = 'block';
@@ -1622,13 +1634,9 @@ function renderEvap(d) {
       }],
       title: t('chart_temp'), yUnit: '°C',
     });
+    // Только Qmin: норма CO₂ из веса (сервер). Qmax — величина корпуса, не профиля
     const vChart = makeSVGChart({
       series: [
-        {
-          data:    chartData.map(p => ({ x: p.day, y: ventVal(p, 'q_max_per_bird') })),
-          color:   '#74d69b',
-          anchors: anchorPoints.map(p => ({ x: p.day, y: ventVal(p, 'q_max_per_bird') })),
-        },
         {
           data:    chartData.map(p => ({ x: p.day, y: ventVal(p, 'q_min_per_bird') })),
           color:   '#74d69b',
@@ -1658,33 +1666,23 @@ function renderEvap(d) {
 
   // ── Anchor table ─────────────────────────────────────────────────────────
   function rowHTML(d, idx) {
-    const bw_kg = (d.body_weight_g || 1000) / 1000;
-    const qminB = d.q_min_per_bird ?? +(0.15 + 0.85 * (d.day - 1) / 41).toFixed(2);
-    const qmaxB = d.q_max_per_bird ?? +(0.45 + 5.55 * (d.day - 1) / 41).toFixed(2);
-    const qmin  = chartUnit === 'per_kg' ? +(qminB / bw_kg).toFixed(3) : qminB;
-    const qmax  = chartUnit === 'per_kg' ? +(qmaxB / bw_kg).toFixed(3) : qmaxB;
     return `<tr>
       <td><strong>${d.day}</strong></td>
       <td><input type="number" step="1"    min="0"           value="${d.body_weight_g ?? ''}" data-key="bw"   data-idx="${idx}"/></td>
       <td><input type="number" step="0.1"                    value="${d.min_temp_c    ?? ''}" data-key="t"    data-idx="${idx}"/></td>
       <td><input type="number" step="0.1"  min="0" max="100" value="${d.rv_percent    ?? ''}" data-key="rv"   data-idx="${idx}"/></td>
-      <td><input type="number" step="0.01" min="0"           value="${qmin}"                  data-key="qmin" data-idx="${idx}"/></td>
-      <td><input type="number" step="0.01" min="0"           value="${qmax}"                  data-key="qmax" data-idx="${idx}"/></td>
     </tr>`;
   }
 
   function renderTable() {
     const container = document.getElementById('profile-editor');
     if (!container) return;
-    const unitLabel = chartUnit === 'per_kg' ? t('unit_kg') : t('unit_bird');
-
     container.innerHTML = `
       <div class="card">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:4px;">
           <h2 style="margin:0;">${t('profile_h2')}</h2>
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
             <button id="prof-save-btn" class="btn">${t('btn_save_interp')}</button>
-            <button id="prof-cigr-btn" class="btn btn-secondary" title="${t('cigr_hint')}">${t('btn_recalc_vent')}</button>
             <span   id="prof-status"   class="muted" style="font-size:12px;"></span>
           </div>
         </div>
@@ -1696,8 +1694,6 @@ function renderEvap(d) {
               <th>${t('col_weight')}</th>
               <th>${t('col_min_temp')}</th>
               <th>${t('col_rh')}</th>
-              <th>Qmin, ${unitLabel}</th>
-              <th>Qmax, ${unitLabel}</th>
             </tr></thead>
             <tbody>${anchorPoints.map((d, i) => rowHTML(d, i)).join('')}</tbody>
           </table>
@@ -1714,17 +1710,10 @@ function renderEvap(d) {
         if (key === 'bw')  pt.body_weight_g  = val;
         if (key === 't')   pt.min_temp_c     = val;
         if (key === 'rv')  pt.rv_percent     = val;
-        if (key === 'qmin' || key === 'qmax') {
-          const bw_kg  = (pt.body_weight_g || 1000) / 1000;
-          const stored = (chartUnit === 'per_kg' && val !== null) ? +(val * bw_kg).toFixed(4) : val;
-          if (key === 'qmin') pt.q_min_per_bird = stored;
-          if (key === 'qmax') pt.q_max_per_bird = stored;
-        }
       });
     });
 
     document.getElementById('prof-save-btn').addEventListener('click', saveProfile);
-    document.getElementById('prof-cigr-btn').addEventListener('click', recalcCIGR);
   }
 
   // ── API actions ──────────────────────────────────────────────────────────
@@ -1742,7 +1731,7 @@ function renderEvap(d) {
     if (btn) btn.disabled = true;
     if (st)  st.textContent = t('status_saving');
     try {
-      fullDayMaster = await fetchJSON('/settings/day-master?auto_interpolate=true', {
+      fullDayMaster = await fetchJSON('./settings/day-master?auto_interpolate=true', {
         method:  'PUT',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify(anchorPoints),
@@ -1758,28 +1747,11 @@ function renderEvap(d) {
     }
   }
 
-  async function recalcCIGR() {
-    const btn = document.getElementById('prof-cigr-btn');
-    const st  = document.getElementById('prof-status');
-    if (btn) btn.disabled = true;
-    if (st)  st.textContent = t('status_saving');
-    try {
-      fullDayMaster = await fetchJSON('/settings/recalculate-ventilation', { method: 'POST' });
-      anchorPoints  = extractWeeklyFromMaster(profileCfg.cycle_days);
-      renderCharts();
-      renderTable();
-      setStatus(t('recalc_ok'), 4000);
-    } catch(e) {
-      if (btn) btn.disabled = false;
-      if (st)  st.textContent = t('status_err') + String(e);
-    }
-  }
-
   // ── Load ─────────────────────────────────────────────────────────────────
   async function loadProfile() {
     try {
-      profileCfg    = await fetchJSON('/settings/app-config');
-      fullDayMaster = await fetchJSON('/settings/day-master?mode=full');
+      profileCfg    = await fetchJSON('./settings/app-config');
+      fullDayMaster = await fetchJSON('./settings/day-master?mode=full');
       anchorPoints  = extractWeeklyFromMaster(profileCfg.cycle_days);
       renderCharts();
       renderTable();

@@ -6,6 +6,7 @@ from typing import Literal, Optional
 
 from .profile_loader import VentProfile, Mode, ProfilePoint
 from .day_master import load_day_master
+from .ventilation_calc import calc_q_min_per_bird
 from .app_config import load_app_config
 from .building_thermal import (
     load_thermal_config,
@@ -43,6 +44,10 @@ class CalcInput:
     outside_t: float    # °C
     heater_on: bool = False
     outside_rh: float = 60.0  # % относительная влажность снаружи
+    # Сечение корпуса для туннельного расхода: ширина и СРЕДНЯЯ высота (стена+конёк)/2.
+    # Не заданы → туннельный Qmax не считается (house_geometry_missing)
+    house_width_m: Optional[float] = None
+    house_height_m: Optional[float] = None
 
 
 @dataclass
@@ -62,6 +67,10 @@ class CalcResult:
     heater_duty_cycle: Optional[float] = None
     tunnel_active: bool = False
     qmin_basis: str = "co2"  # "co2" | "moisture" — какое ограничение определило Qmin
+    # Требуемый туннельный расход корпуса v × S × 3600, м³/ч (None — нет размеров)
+    tunnel_requirement_m3h: Optional[float] = None
+    # Qmax не посчитан: нужен туннельный расход, а размеров корпуса нет (Qmax = Qmin)
+    house_geometry_missing: bool = False
 
 
 def compute(profile: VentProfile, ci: CalcInput) -> CalcResult:
@@ -120,88 +129,78 @@ def compute(profile: VentProfile, ci: CalcInput) -> CalcResult:
     survival = (1.0 - daily_m) ** max(age - 1, 0)
     birds_eff = ci.birds * survival
 
-    # --- Get base ventilation norms ---
-    if day_info and day_info.q_min_per_bird is not None and day_info.q_max_per_bird is not None:
-        per_bird_min_base = float(day_info.q_min_per_bird)
-        per_bird_max_base = float(day_info.q_max_per_bird)
+    # --- Qmin: биологический минимум по CO₂ (CIGR 1984) из живой массы ---
+    # Норма считается из веса профиля роста, а не хранится в нём: профиль — это
+    # данные кросса (вес, температура, RH), а вентиляция — следствие физики.
+    safety = float(getattr(cfg, "safety_factor_qmin", 1.5))
+    per_bird_min = calc_q_min_per_bird(weight_kg, safety)
+    q_min = birds_eff * per_bird_min
 
-        # Tunnel mode restrictions (Aviagen 2019 / industry standard)
-        tunnel_min_day  = int(getattr(cfg, "tunnel_min_day", 14))
-        tunnel_min_temp = float(getattr(cfg, "tunnel_min_temp_c", 18.0))
-        tunnel_active   = (age >= tunnel_min_day) and (ci.outside_t >= tunnel_min_temp)
+    # --- Туннель: требуемый расход — свойство КОРПУСА, а не поголовья ---
+    # Q_tunnel = v × S_сечения × 3600. Раньше мощность туннеля хранилась на голову
+    # (поделённая на n_birds_initial) и умножалась на введённое поголовье:
+    # вдвое меньше птицы → вдвое меньше «вентиляторов».
+    tunnel_min_day  = int(getattr(cfg, "tunnel_min_day", 14))
+    tunnel_min_temp = float(getattr(cfg, "tunnel_min_temp_c", 18.0))
+    tunnel_active   = (age >= tunnel_min_day) and (ci.outside_t >= tunnel_min_temp)
 
-        # Qmin — биологический минимум по CO₂ (CIGR), не зависит от T наружного воздуха.
-        per_bird_min = per_bird_min_base
+    tunnel_requirement: Optional[float] = None
+    if ci.house_width_m and ci.house_height_m:
+        v_tunnel = float(getattr(cfg, "v_tunnel_ms", 2.5))
+        tunnel_requirement = v_tunnel * ci.house_width_m * ci.house_height_m * 3600.0
 
-        if tunnel_active:
-            # Туннель ON: физическая мощность установки (поголовная)
-            per_bird_max = per_bird_max_base
-        else:
-            # Туннель OFF: тепловой баланс всего птичника.
-            #
-            # Тепло, которое должна унести вентиляция:
-            #   Q_vent = H_birds - Q_walls
-            #   H_birds = 6.90 × W^0.75 × N  [Вт]  (CIGR, только ЯВНОЕ тепло)
-            #   Q_walls = UA × (T_in - T_out)  [Вт]  (> 0 = тепло уходит через стены)
-            #
-            # В мороз Q_walls > 0: стены помогают охлаждению, нагрузка на вентиляцию ниже.
-            # В жару T_out > T_in: Q_walls < 0, стены добавляют тепло → Qmax растёт.
-            # Без данных калибровки UA = 0 (консервативно: не занижаем Qmax).
-            #
-            # Почему 6.90, а не полное тепло 10.62: баланс ниже — по нагреву воздуха
-            # (ρ·Cp·ΔT). Скрытое тепло (3.72·W^0.75) уходит с паром дыхания и
-            # температуру воздуха не поднимает; с ним Qmax завышался на 54 %.
-            h_birds_sensible_w = 6.90 * (weight_kg ** 0.75) * birds_eff
-            q_wall_loss_w      = (_ua_coeff * (t_target_inside - ci.outside_t)
-                                  if _ua_coeff is not None else 0.0)
-            q_vent_needed_w    = max(0.0, h_birds_sensible_w - q_wall_loss_w)
-
-            rho_air = 353.05 / (ci.outside_t + 273.15)
-            delta_t = t_target_inside - ci.outside_t
-
-            if delta_t > 0.5:
-                # Q_total [м³/ч] = Q_vent_needed [Вт] × 3600 / (ρ × Cp × ΔT)
-                q_max_cooling_total = (q_vent_needed_w * 3600.0) / (rho_air * 1006.0 * delta_t)
-            else:
-                # ΔT ≈ 0: стены не отводят тепло — полная мощность установки
-                q_max_cooling_total = per_bird_max_base * birds_eff
-
-            per_bird_max = max(
-                per_bird_min,
-                min(q_max_cooling_total / max(birds_eff, 1), per_bird_max_base),
-            )
-
-        # Calculate per-kg equivalents for display
-        per_kg_min = per_bird_min / weight_kg if weight_kg > 0 else 0.0
-        per_kg_max = per_bird_max / weight_kg if weight_kg > 0 else 0.0
-
-        basis = "per_bird"  # We used per-bird norms from day_master
-
+    # --- Qmax ---
+    house_geometry_missing = False
+    if tunnel_active:
+        q_max_need = tunnel_requirement
     else:
-        tunnel_active = False
-        # FALLBACK: Old profile-based logic
-        p = profile.get_point(ci.mode, age, strategy="floor")
-        per_bird_min = float(p.min_per_bird or 0)
-        per_bird_max = float(p.max_per_bird or 0)
-        per_kg_min = float(p.min_per_kg or 0)
-        per_kg_max = float(p.max_per_kg or 0)
+        # Туннель OFF: тепловой баланс всего птичника.
+        #
+        # Тепло, которое должна унести вентиляция:
+        #   Q_vent = H_birds - Q_walls
+        #   H_birds = 6.90 × W^0.75 × N  [Вт]  (CIGR, только ЯВНОЕ тепло)
+        #   Q_walls = UA × (T_in - T_out)  [Вт]  (> 0 = тепло уходит через стены)
+        #
+        # В мороз Q_walls > 0: стены помогают охлаждению, нагрузка на вентиляцию ниже.
+        # Без данных калибровки UA = 0 (консервативно: не занижаем Qmax).
+        #
+        # Почему 6.90, а не полное тепло 10.62: баланс ниже — по нагреву воздуха
+        # (ρ·Cp·ΔT). Скрытое тепло (3.72·W^0.75) уходит с паром дыхания и
+        # температуру воздуха не поднимает; с ним Qmax завышался на 54 %.
+        h_birds_sensible_w = 6.90 * (weight_kg ** 0.75) * birds_eff
+        q_wall_loss_w      = (_ua_coeff * (t_target_inside - ci.outside_t)
+                              if _ua_coeff is not None else 0.0)
+        q_vent_needed_w    = max(0.0, h_birds_sensible_w - q_wall_loss_w)
 
-        # Apply metabolic correction for min
-        if per_kg_min > 0:
-            per_bird_from_kg = per_kg_min * (weight_kg ** 0.75)
-            per_bird_min = max(per_bird_min, per_bird_from_kg)
+        rho_air = 353.05 / (ci.outside_t + 273.15)
+        delta_t = t_target_inside - ci.outside_t
 
-        # Apply floor thresholds
-        if age <= 7:
-            per_bird_min = max(per_bird_min, getattr(cfg, "min_floor_0_7", 0.0))
-        elif age <= 14:
-            per_bird_min = max(per_bird_min, getattr(cfg, "min_floor_7_14", 0.0))
+        # ΔT ≈ 0: воздух почти не охлаждает, баланс вырождается (деление на ~0)
+        q_heat_balance = ((q_vent_needed_w * 3600.0) / (rho_air * 1006.0 * delta_t)
+                          if delta_t > 0.5 else None)
 
-        basis = ci.display_unit
+        # Потолок переходного режима:
+        #   моложе tunnel_min_day — 4 × Qmin (Aviagen: переходная вентиляция 3–5× минимума);
+        #   старше — туннельный расход корпуса (холоднее tunnel_min_temp туннель не включают,
+        #   но больше него установка всё равно не даст)
+        ceiling = 4.0 * q_min if age < tunnel_min_day else tunnel_requirement
 
-    # --- Calculate total flows ---
-    q_min = birds_eff * per_bird_min   # базовый Qmin по CO₂ (CIGR)
-    q_max = birds_eff * per_bird_max
+        candidates = [q for q in (q_heat_balance, ceiling) if q is not None]
+        q_max_need = min(candidates) if candidates else None
+
+    if q_max_need is None:
+        # Не из чего считать: нужен туннельный расход, а размеров корпуса нет.
+        # Честно сообщаем, а не подставляем «норму на голову» от чужого поголовья.
+        house_geometry_missing = True
+        q_max_need = q_min
+
+    # Максимум не ниже минимума: в мороз тепловой баланс даёт крошечный Qmax
+    q_max = max(q_min, q_max_need)
+
+    per_bird_max = q_max / max(birds_eff, 1.0)
+    per_kg_min = per_bird_min / weight_kg if weight_kg > 0 else 0.0
+    per_kg_max = per_bird_max / weight_kg if weight_kg > 0 else 0.0
+    basis = "per_bird"
 
     # --- Влагобаланс (ШАГ 1): птицы, без пара горелок ---
     # Вычисляем до секции горелок, чтобы duty_cycle учитывал полный Qmin.
@@ -280,6 +279,13 @@ def compute(profile: VentProfile, ci: CalcInput) -> CalcResult:
             q_min      = q_min_moisture_total
             qmin_basis = "moisture"
 
+    # Влагобаланс и воздух горелок могли поднять Qmin уже ПОСЛЕ расчёта Qmax:
+    # максимум по определению не ниже минимума
+    if q_max < q_min:
+        q_max = q_min
+        per_bird_max = q_max / max(birds_eff, 1.0)
+        per_kg_max = per_bird_max / weight_kg if weight_kg > 0 else 0.0
+
     return CalcResult(
         q_min_m3h=float(q_min),
         q_max_m3h=float(q_max),
@@ -296,4 +302,6 @@ def compute(profile: VentProfile, ci: CalcInput) -> CalcResult:
         heater_duty_cycle=duty_cycle,
         tunnel_active=tunnel_active,
         qmin_basis=qmin_basis,
+        tunnel_requirement_m3h=tunnel_requirement,
+        house_geometry_missing=house_geometry_missing,
     )

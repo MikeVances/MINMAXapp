@@ -39,9 +39,7 @@
     cigr_section_h:    'Obliczanie norm wentylacji (CIGR 1984)',
     v_tunnel_lbl:      'Docelowa prędkość powietrza w tunelu',
     safety_factor_lbl: 'Współczynnik bezpieczeństwa Qₘᴵⁿ',
-    btn_recalc_vent:   '🧮 Przelicz (CIGR)',
-    recalc_ok:         '✅ Profil przeliczony',
-    cigr_hint:         'Wentylacja minimalna na podstawie produkcji CO₂ (CIGR 1984). Maksymalna na podstawie prędkości powietrza w tunelu i przekroju poprzecznego kurnika. Wymiary kurnika pobierane są ze strony Kalibracji.',
+    cigr_hint:         'Wentylacja minimalna jest liczona z masy ciała metodą CO₂ (CIGR 1984). Maksymalna wynika z bilansu cieplnego i przekroju budynku (zakładka budynku).',
     tunnel_min_day_lbl:  'Minimalny wiek do trybu tunelowego',
     tunnel_min_temp_lbl: 'Min. temperatura zewnętrzna dla trybu tunelowego',
     unit_celsius:        '°C',
@@ -146,6 +144,7 @@
     phys_cobb_source:    'Cobb Broiler Management Guide 2021, §9 · Kontrola tunelowa wymaga podania maks. wydajności systemu',
     phys_dims_needed:    'Wprowadź wymiary budynku, aby włączyć kontrolę fizyczną',
     cap_insufficient_note: 'Wentylacja minimalna przekracza wydajność zainstalowanych wentylatorów — nie zapewniają nawet minimum',
+    geometry_missing_note: 'Podaj wymiary budynku (szerokość i wysokość), aby obliczyć Qmax tunelu — bez nich Qmax równa się Qmin',
     write_token_prompt: 'Zapis jest chroniony. Wprowadź token zapisu:',
 
     // ── STRONA USTAWIEŃ ────────────────────────────
@@ -157,7 +156,7 @@
     charts_h2:         'Profil cyklu',
     chart_weight:      'Masa ciała',
     chart_temp:        'Temperatura',
-    chart_vent:        'Wentylacja Qmin/Qmax',
+    chart_vent:        'Qmin (CO₂, CIGR)',
     btn_save_interp:   'Zapisz',
     anchors_h2:        'Punkty kotwiczące',
     anchors_num_lbl:   'Liczba punktów:',

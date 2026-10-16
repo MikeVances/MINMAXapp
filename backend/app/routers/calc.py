@@ -20,6 +20,9 @@ class CalcIn(BaseModel):
     outside_rh: float = Field(60.0, ge=0, le=100, description="Outside relative humidity, %")
     heater_on: bool = Field(False, description="Heater correction enabled")
     user_max_m3h: float | None = Field(None, ge=0, description="System maximum capacity (m3/hour). Optional")
+    # Сечение корпуса для туннельного расхода (ширина и средняя высота стена/конёк)
+    house_width_m: float | None = Field(None, gt=0, le=200)
+    house_height_m: float | None = Field(None, gt=0, le=30)
 
 
 class CalcOut(BaseModel):
@@ -37,6 +40,10 @@ class CalcOut(BaseModel):
     qmin_basis: str = "co2"  # "co2" | "moisture"
     # Qmin больше заданной мощности установки: вентиляторов не хватает даже на минимум
     capacity_insufficient: bool = False
+    # Требуемый туннельный расход корпуса v × S × 3600 (None — размеры не заданы)
+    tunnel_requirement_m3h: float | None = None
+    # Нужен туннельный расход, а размеров нет: Qmax не посчитан (равен Qmin)
+    house_geometry_missing: bool = False
     ref_version: str = "seed-demo-1.0"
 
 
@@ -52,6 +59,8 @@ def minmax(payload: CalcIn):
         outside_t=payload.outside_t,
         outside_rh=payload.outside_rh,
         heater_on=payload.heater_on,
+        house_width_m=payload.house_width_m,
+        house_height_m=payload.house_height_m,
     )
 
     try:
@@ -101,6 +110,8 @@ def minmax(payload: CalcIn):
         tunnel_active=cr.tunnel_active,
         qmin_basis=cr.qmin_basis,
         capacity_insufficient=capacity_insufficient,
+        tunnel_requirement_m3h=cr.tunnel_requirement_m3h,
+        house_geometry_missing=cr.house_geometry_missing,
     )
 
 
@@ -113,6 +124,9 @@ class SummaryIn(BaseModel):
     outside_rh: float = Field(60.0, ge=0, le=100, description="Outside relative humidity, %")
     user_max_m3h: float | None = Field(None, ge=0)
     heater_on: bool = Field(False)
+    # Сечение корпуса для туннельного расхода (ширина и средняя высота стена/конёк)
+    house_width_m: float | None = Field(None, gt=0, le=200)
+    house_height_m: float | None = Field(None, gt=0, le=30)
     display_unit: str = Field("per_bird", pattern=r"^(per_bird|per_kg)$")
 
 
@@ -130,6 +144,7 @@ class SummaryRow(BaseModel):
     basis_used: str | None = None
     # Qmin больше заданной мощности установки (см. CalcOut.capacity_insufficient)
     capacity_insufficient: bool = False
+    house_geometry_missing: bool = False
 
 
 class SummaryOut(BaseModel):
@@ -173,6 +188,8 @@ def summary7(payload: SummaryIn):
             outside_t=outside_t,
             outside_rh=payload.outside_rh,
             heater_on=payload.heater_on,
+            house_width_m=payload.house_width_m,
+            house_height_m=payload.house_height_m,
         )
         cr = compute(profile, ci)
         q_min = round(cr.q_min_m3h, 3)
@@ -206,6 +223,7 @@ def summary7(payload: SummaryIn):
                 min_floor_bird=min_floor,
                 basis_used=cr.basis_used,
                 capacity_insufficient=capacity_insufficient,
+                house_geometry_missing=cr.house_geometry_missing,
             )
         )
 

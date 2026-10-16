@@ -11,28 +11,6 @@ from __future__ import annotations
 
 import pytest
 
-from backend.app.core.calc_core import CalcInput, compute
-
-def _calc(profile, birds: int, age_days: int, outside_t: float, outside_rh: float = 60.0):
-    ci = CalcInput(
-        birds=birds, age_days=age_days, mode="summer", display_unit="per_bird",
-        outside_t=outside_t, outside_rh=outside_rh,
-    )
-    return compute(profile, ci)
-
-
-@pytest.mark.xfail(reason="TODO P0: мощность туннеля масштабируется от введённого поголовья")
-def test_tunnel_capacity_does_not_depend_on_entered_bird_count(profile):
-    """
-    В туннельном режиме Qmax — это установленные вентиляторы корпуса.
-    Если ввести вдвое меньше птицы, вентиляторов меньше не станет.
-    """
-    full = _calc(profile, birds=10_000, age_days=35, outside_t=30.0)
-    half = _calc(profile, birds=5_000, age_days=35, outside_t=30.0)
-
-    assert full.tunnel_active and half.tunnel_active
-    assert half.q_max_m3h == pytest.approx(full.q_max_m3h, rel=1e-9)
-
 
 @pytest.mark.xfail(reason="TODO P1: KeyError → 500 на недопустимой паре тип пэда / толщина")
 def test_evap_cooling_rejects_unknown_pad_thickness_with_422(client):
