@@ -3,6 +3,9 @@ API endpoints для калибровки теплотехнических па�
 """
 from __future__ import annotations
 
+import logging
+import re
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
@@ -46,8 +49,28 @@ class CalibrationTestModel(BaseModel):
     ua_coefficient: float | None = Field(None, description="Рассчитанный коэффициент теплопотерь, Вт/°C")
 
 
+logger = logging.getLogger(__name__)
+
+# Допустимое имя корпуса (общий шаблон для запроса и для проверки сохранённого файла)
+HOUSE_ID_PATTERN = r"^[\w .\-]{1,64}$"
+
+
+def _safe_stored_house_id(house_id: str | None) -> str | None:
+    """
+    Имя корпуса из файла, сохранённого ДО появления валидации, может содержать
+    разметку. Отдавать его нельзя, а падать с 500 на валидации ответа — тоже:
+    сломается вся страница калибровки. Отбрасываем и пишем в лог.
+    """
+    if house_id is None or re.fullmatch(HOUSE_ID_PATTERN, house_id):
+        return house_id
+    logger.warning("thermal_config: недопустимый house_id отброшен: %r", house_id)
+    return None
+
+
 class ThermalConfigModel(BaseModel):
-    house_id: str | None = None
+    # Имя корпуса показывается в UI: только буквы (в т.ч. кириллица), цифры,
+    # пробел, точка, дефис и подчёркивание — без HTML-разметки
+    house_id: str | None = Field(None, min_length=1, max_length=64, pattern=HOUSE_ID_PATTERN)
     building: BuildingDimensionsModel | None = None
     heater: HeaterConfigModel | None = None
     calibration: CalibrationTestModel | None = None
@@ -99,7 +122,7 @@ def get_thermal_config():
     config = load_thermal_config()
 
     result = ThermalConfigModel(
-        house_id=config.house_id,
+        house_id=_safe_stored_house_id(config.house_id),
         building=BuildingDimensionsModel(**config.building.__dict__) if config.building else None,
         heater=HeaterConfigModel(**config.heater.__dict__) if config.heater else None,
         calibration=CalibrationTestModel(

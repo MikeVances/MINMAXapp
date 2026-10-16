@@ -1,5 +1,17 @@
 // Calibration page logic
 
+// Экранирование для вставки в innerHTML: house_id приходит с сервера, а туда —
+// от любого клиента. Без экранирования имя корпуса вида <img onerror=…>
+// выполнялось бы у каждого, кто откроет страницу калибровки (stored XSS).
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 const elLength      = document.getElementById('length');
 const elWidth       = document.getElementById('width');
 const elHeightWall  = document.getElementById('height-wall');
@@ -710,7 +722,7 @@ async function loadAndDisplayConfig() {
 
   if (config.house_id) {
     html += `<div style="margin-bottom:10px; padding:6px 12px; background:var(--bg); border-radius:6px; font-size:13px;">
-      🏠 ${t('cfg_house_lbl')}: <strong>${t('house_tab', { id: config.house_id })}</strong>
+      🏠 ${t('cfg_house_lbl')}: <strong>${escapeHtml(t('house_tab', { id: config.house_id }))}</strong>
     </div>`;
   }
 
