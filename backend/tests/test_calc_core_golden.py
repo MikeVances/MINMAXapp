@@ -17,22 +17,21 @@ from backend.app.core.calc_core import CalcInput, compute
 N_BIRDS = 10_000
 
 
-def _calc(profile, age_days: int, outside_t: float, outside_rh: float, **kw):
+def _calc(age_days: int, outside_t: float, outside_rh: float, **kw):
     ci = CalcInput(
         birds=N_BIRDS,
         age_days=age_days,
-        mode="summer",
         display_unit="per_bird",
         outside_t=outside_t,
         outside_rh=outside_rh,
         **kw,
     )
-    return compute(profile, ci)
+    return compute(ci)
 
 
 # ─── Qmin ─────────────────────────────────────────────────────────────────────
 
-def test_qmin_co2_norm_when_air_has_no_drying_capacity(profile):
+def test_qmin_co2_norm_when_air_has_no_drying_capacity():
     """
     День 21, снаружи 25 °C / 60 % — ровно как уставка внутри (25 °C / 60 %).
     ΔW = 0 → влагобаланс не применим → Qmin = норма CO₂ из живой массы (CIGR 1984):
@@ -40,13 +39,13 @@ def test_qmin_co2_norm_when_air_has_no_drying_capacity(profile):
       q    = 1.6395 / 2.6 × 1.5 (запас) = 0.9458 → 0.946 м³/ч·гол
       Qmin = 10 000 гол × 0.946 м³/ч = 9 460 м³/ч
     """
-    r = _calc(profile, age_days=21, outside_t=25.0, outside_rh=60.0)
+    r = _calc(age_days=21, outside_t=25.0, outside_rh=60.0)
 
     assert r.q_min_m3h == pytest.approx(9_460.0, rel=1e-9)
     assert r.qmin_basis == "co2"
 
 
-def test_qmin_moisture_dominates_with_humid_outside_air(profile):
+def test_qmin_moisture_dominates_with_humid_outside_air():
     """
     День 21 (W = 1.012 кг), внутри 25 °C / 60 %, снаружи 20 °C / 75 %.
       W_вн  = 11.889 г/кг,  W_нар = 10.949 г/кг  → ΔW = 0.9406 г/кг   (Magnus, P = 101 325 Па)
@@ -54,7 +53,7 @@ def test_qmin_moisture_dominates_with_humid_outside_air(profile):
       ρ_вн  = 353.05 / 298.15 = 1.1841 кг/м³
       Qmin  = G / (ρ × ΔW) = 49 926 м³/ч   > 9 460 по CO₂ → основание «moisture»
     """
-    r = _calc(profile, age_days=21, outside_t=20.0, outside_rh=75.0)
+    r = _calc(age_days=21, outside_t=20.0, outside_rh=75.0)
 
     assert r.q_min_m3h == pytest.approx(49_926.2, rel=1e-4)
     assert r.qmin_basis == "moisture"
@@ -67,26 +66,26 @@ HOUSE = dict(house_width_m=12.0, house_height_m=3.0)
 TUNNEL_M3H = 324_000.0
 
 
-def test_tunnel_active_qmax_equals_house_tunnel_requirement(profile):
+def test_tunnel_active_qmax_equals_house_tunnel_requirement():
     """
     День 21 ≥ tunnel_min_day (14) и 25 °C ≥ tunnel_min_temp (18) → туннель включён,
     Qmax = v_tunnel × ширина × средняя высота × 3600 = 2.5 × 12 × 3 × 3600 = 324 000 м³/ч.
     """
-    r = _calc(profile, age_days=21, outside_t=25.0, outside_rh=60.0, **HOUSE)
+    r = _calc(age_days=21, outside_t=25.0, outside_rh=60.0, **HOUSE)
 
     assert r.tunnel_active is True
     assert r.q_max_m3h == pytest.approx(TUNNEL_M3H, rel=1e-9)
     assert r.house_geometry_missing is False
 
 
-def test_tunnel_requirement_does_not_depend_on_bird_count(profile):
+def test_tunnel_requirement_does_not_depend_on_bird_count():
     """
     Туннельный расход — свойство корпуса. До исправления (ревью 2026-10-16) мощность
     хранилась на голову и умножалась на введённое поголовье: 30k → 120 753, 15k → 60 376.
     """
-    full = _calc(profile, age_days=35, outside_t=30.0, outside_rh=60.0, **HOUSE)
-    half = compute(profile, CalcInput(
-        birds=N_BIRDS // 2, age_days=35, mode="summer", display_unit="per_bird",
+    full = _calc(age_days=35, outside_t=30.0, outside_rh=60.0, **HOUSE)
+    half = compute(CalcInput(
+        birds=N_BIRDS // 2, age_days=35, display_unit="per_bird",
         outside_t=30.0, outside_rh=60.0, **HOUSE,
     ))
 
@@ -94,16 +93,16 @@ def test_tunnel_requirement_does_not_depend_on_bird_count(profile):
     assert half.q_max_m3h == pytest.approx(full.q_max_m3h, rel=1e-9)
 
 
-def test_tunnel_without_house_geometry_is_flagged_not_guessed(profile):
+def test_tunnel_without_house_geometry_is_flagged_not_guessed():
     """Нет размеров — туннельный Qmax не из чего считать: флаг и Qmax = Qmin."""
-    r = _calc(profile, age_days=21, outside_t=25.0, outside_rh=60.0)
+    r = _calc(age_days=21, outside_t=25.0, outside_rh=60.0)
 
     assert r.tunnel_active is True
     assert r.house_geometry_missing is True
     assert r.q_max_m3h == pytest.approx(r.q_min_m3h, rel=1e-9)
 
 
-def test_young_birds_qmax_capped_by_transitional_ceiling(profile):
+def test_young_birds_qmax_capped_by_transitional_ceiling():
     """
     День 10 < tunnel_min_day: туннель запрещён, снаружи 30 °C > внутри — тепловой
     баланс вырождается. Потолок переходного режима = 4 × Qmin (Aviagen: 3–5×).
@@ -111,7 +110,7 @@ def test_young_birds_qmax_capped_by_transitional_ceiling(profile):
       q     = 10.62 × 0.4829^0.75 × 0.153 / 2.6 × 1.5 = 0.5430 → 0.543 м³/ч·гол
       Qmax  = 4 × 0.543 × 10 000 = 21 720 м³/ч
     """
-    r = _calc(profile, age_days=10, outside_t=30.0, outside_rh=60.0, **HOUSE)
+    r = _calc(age_days=10, outside_t=30.0, outside_rh=60.0, **HOUSE)
 
     assert r.tunnel_active is False
     assert r.q_max_m3h == pytest.approx(21_720.0, rel=1e-9)
@@ -124,13 +123,13 @@ def test_young_birds_qmax_capped_by_transitional_ceiling(profile):
         (21, 15.0, "холоднее tunnel_min_temp = 18 °C"),
     ],
 )
-def test_tunnel_stays_off_outside_its_limits(profile, age_days, outside_t, reason):
-    r = _calc(profile, age_days=age_days, outside_t=outside_t, outside_rh=60.0)
+def test_tunnel_stays_off_outside_its_limits(age_days, outside_t, reason):
+    r = _calc(age_days=age_days, outside_t=outside_t, outside_rh=60.0)
 
     assert r.tunnel_active is False, reason
 
 
-def test_qmax_heat_balance_uses_sensible_heat_only(profile):
+def test_qmax_heat_balance_uses_sensible_heat_only():
     """
     День 35 (W = 2.296 кг), внутри 20 °C, снаружи 10 °C (туннель выключен), UA = 0.
     Воздух уносит только ЯВНОЕ тепло (ρ·Cp·ΔT), скрытое уходит с паром:
@@ -139,24 +138,24 @@ def test_qmax_heat_balance_uses_sensible_heat_only(profile):
       Qmax  = 128 690 × 3600 / (1.2469 × 1006 × 10) = 36 937 м³/ч  (3.694 м³/ч·гол)
     До исправления (ревью 2026-10-16) код давал 56 851 м³/ч — с полным теплом 10.62.
     """
-    r = _calc(profile, age_days=35, outside_t=10.0, outside_rh=60.0)
+    r = _calc(age_days=35, outside_t=10.0, outside_rh=60.0)
 
     assert r.q_max_m3h == pytest.approx(36_937.1, rel=1e-3)
 
 
-def test_qmax_never_below_qmin_norm(profile):
+def test_qmax_never_below_qmin_norm():
     """
     Сильный мороз: тепла птицы на отвод почти не нужно, тепловой баланс даёт
     крошечный Qmax. Он обязан быть не ниже нормы Qmin на голову.
     """
-    r = _calc(profile, age_days=35, outside_t=-30.0, outside_rh=80.0)
+    r = _calc(age_days=35, outside_t=-30.0, outside_rh=80.0)
 
     assert r.rates_per_bird_max >= r.rates_per_bird_min
 
 
 # ─── Выживаемость ─────────────────────────────────────────────────────────────
 
-def test_survival_on_day_42_equals_configured_cycle_mortality(profile, monkeypatch):
+def test_survival_on_day_42_equals_configured_cycle_mortality(monkeypatch):
     """
     Падёж 4 % за цикл 42 дня → к 42-му дню живо ровно 96 % поголовья:
       daily = 1 − 0.96^(1/41),  survival(42) = (1 − daily)^41 = 0.96
@@ -168,9 +167,9 @@ def test_survival_on_day_42_equals_configured_cycle_mortality(profile, monkeypat
     from backend.app.core.app_config import AppConfig
 
     monkeypatch.setattr(
-        calc_core, "load_app_config", lambda: AppConfig(total_mortality_pct=4.0)
+        calc_core, "load_app_config", lambda: AppConfig(total_mortality_pct=4.0, default_growth_profile="test-breed")
     )
-    r = _calc(profile, age_days=42, outside_t=25.0, outside_rh=60.0)
+    r = _calc(age_days=42, outside_t=25.0, outside_rh=60.0)
 
     assert r.q_min_m3h == pytest.approx(20_505.6, rel=1e-9)
     assert r.qmin_basis == "co2"

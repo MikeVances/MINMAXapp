@@ -145,6 +145,16 @@
     phys_dims_needed:    'Gebäudeabmessungen eingeben, um die physikalische Prüfung zu aktivieren',
     cap_insufficient_note: 'Mindestlüftung übersteigt die installierte Lüfterleistung — die Lüfter schaffen nicht einmal das Minimum',
     geometry_missing_note: 'Stallabmessungen (Breite und Höhe) eingeben, um das Tunnel-Qmax zu berechnen — ohne sie ist Qmax gleich Qmin',
+    growth_profile_lbl: 'Wachstumsprofil:',
+    gp_builtin: 'Züchter',
+    gp_custom: 'eigenes',
+    gp_source: 'Quelle',
+    gp_readonly_hint: 'Züchterprofile sind schreibgeschützt. Erstellen Sie eine Kopie, um es an Ihren Betrieb anzupassen.',
+    btn_copy_profile: 'Als eigenes kopieren',
+    btn_delete_profile: 'Löschen',
+    profile_name_lbl: 'Profilname',
+    prompt_profile_name: 'Name des neuen Profils:',
+    confirm_delete_profile: 'Dieses Profil löschen? Dies kann nicht rückgängig gemacht werden.',
     write_token_prompt: 'Speichern ist geschützt. Schreib-Token eingeben:',
 
     // ── SETTINGS PAGE ──────────────────────────────

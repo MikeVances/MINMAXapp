@@ -4,8 +4,7 @@ import math
 from dataclasses import dataclass
 from typing import Literal, Optional
 
-from .profile_loader import VentProfile, Mode, ProfilePoint
-from .day_master import load_day_master
+from .growth_profiles import load_profile
 from .ventilation_calc import calc_q_min_per_bird
 from .app_config import load_app_config
 from .building_thermal import (
@@ -39,7 +38,6 @@ def humidity_ratio_g_per_kg(T_c: float, rh_pct: float) -> float:
 class CalcInput:
     birds: int
     age_days: int
-    mode: Mode
     display_unit: DisplayUnit
     outside_t: float    # °C
     heater_on: bool = False
@@ -48,6 +46,8 @@ class CalcInput:
     # Не заданы → туннельный Qmax не считается (house_geometry_missing)
     house_width_m: Optional[float] = None
     house_height_m: Optional[float] = None
+    # Профиль роста из библиотеки (кросс); None → default_growth_profile из настроек
+    growth_profile_id: Optional[str] = None
 
 
 @dataclass
@@ -71,11 +71,13 @@ class CalcResult:
     tunnel_requirement_m3h: Optional[float] = None
     # Qmax не посчитан: нужен туннельный расход, а размеров корпуса нет (Qmax = Qmin)
     house_geometry_missing: bool = False
+    # Профиль роста, по которому шёл расчёт (видно, какие данные кросса использованы)
+    growth_profile_id: Optional[str] = None
 
 
-def compute(profile: VentProfile, ci: CalcInput) -> CalcResult:
+def compute(ci: CalcInput) -> CalcResult:
     """
-    Compute min/max ventilation using day_master norms.
+    Compute min/max ventilation from the growth profile (weight, temperature, RH) and house data.
 
     Qmin = max(Qmin_CO₂, Qmin_moisture)  — CIGR + психрометрический баланс.
     Qmax = (H_birds − UA×ΔT) × 3600 / (ρ × Cp × ΔT)  — тепловой баланс с поправкой стен.
@@ -95,33 +97,19 @@ def compute(profile: VentProfile, ci: CalcInput) -> CalcResult:
     except Exception:
         _thermal_cfg = None
 
-    # --- Load Day Master data ---
-    dm = load_day_master()
-    day_info = dm.get(age) if dm else None
+    # --- Профиль роста: масса, целевые температура и RH на этот день ---
+    # Профиля нет → ProfileNotFound наружу: расчёт по «чьим-то» данным
+    # хуже, чем явная ошибка (раньше здесь был тихий fallback на демо-профиль)
+    profile_id = ci.growth_profile_id or getattr(cfg, "default_growth_profile", "ross308")
+    point = load_profile(profile_id).point_for_day(age)
 
-    # Get weight and setpoints
-    if day_info and day_info.body_weight_g is not None:
-        body_weight_g = day_info.body_weight_g
-    else:
-        # Fallback to profile
-        p = profile.get_point(ci.mode, age, strategy="floor")
-        body_weight_g = p.body_weight_g
+    if point.body_weight_g is None or point.min_temp_c is None:
+        raise ValueError(f"В профиле '{profile_id}' нет массы или температуры на день {age}")
 
-    weight_kg = max(body_weight_g / 1000.0, 0.0001)
-
-    # Get target temperature (for coefficient calculation)
-    if day_info and day_info.min_temp_c is not None:
-        t_target_inside = day_info.min_temp_c
-    else:
-        p = profile.get_point(ci.mode, age, strategy="floor")
-        t_target_inside = p.min_temp_c or 25.0
-
-    # Get RH setpoint
-    if day_info and day_info.rv_percent is not None:
-        rv_percent = day_info.rv_percent
-    else:
-        p = profile.get_point(ci.mode, age, strategy="floor")
-        rv_percent = p.rv_percent
+    body_weight_g   = point.body_weight_g
+    weight_kg       = max(body_weight_g / 1000.0, 0.0001)
+    t_target_inside = point.min_temp_c
+    rv_percent      = point.rv_percent   # None → влагобаланс пропускается
 
     # --- Effective birds with mortality ---
     total_m = max(getattr(cfg, "total_mortality_pct", 0.0), 0.0) / 100.0
@@ -304,4 +292,5 @@ def compute(profile: VentProfile, ci: CalcInput) -> CalcResult:
         qmin_basis=qmin_basis,
         tunnel_requirement_m3h=tunnel_requirement,
         house_geometry_missing=house_geometry_missing,
+        growth_profile_id=profile_id,
     )

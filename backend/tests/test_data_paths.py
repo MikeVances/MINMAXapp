@@ -18,7 +18,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 
 # Переменные, которые conftest выставляет для изоляции тестов, —
 # в «чистом» процессе их быть не должно
-_DATA_ENV_VARS = ("DAY_MASTER_JSON", "APP_CONFIG_JSON", "THERMAL_CONFIG_JSON", "FLOCKS_DATA_DIR")
+_DATA_ENV_VARS = ("GROWTH_PROFILES_DIR", "APP_CONFIG_JSON", "THERMAL_CONFIG_JSON", "FLOCKS_DATA_DIR")
 
 
 def _run_clean(code: str, cwd: Path, extra_env: dict | None = None) -> str:
@@ -35,7 +35,7 @@ def _run_clean(code: str, cwd: Path, extra_env: dict | None = None) -> str:
 @pytest.mark.parametrize(
     "module, attr, expected",
     [
-        ("backend.app.core.day_master", "DAY_MASTER_PATH", "data/day_master.json"),
+        ("backend.app.core.growth_profiles", "GROWTH_PROFILES_DIR", "data/growth_profiles"),
         ("backend.app.core.app_config", "APP_CONFIG_PATH", "data/app_config.json"),
         ("backend.app.core.building_thermal", "THERMAL_CONFIG_PATH", "data/thermal_config.json"),
         ("backend.app.core.flock_storage", "FLOCKS_DATA_DIR", "data/flocks"),
@@ -49,21 +49,18 @@ def test_default_path_points_to_project_data_from_any_cwd(module, attr, expected
 def test_relative_env_path_resolves_from_project_root(tmp_path):
     """Относительный путь в env тоже считается от корня проекта, а не от CWD."""
     out = _run_clean(
-        "import backend.app.core.day_master as m; print(m.DAY_MASTER_PATH)",
-        cwd=tmp_path, extra_env={"DAY_MASTER_JSON": "data/other.json"},
+        "import backend.app.core.app_config as m; print(m.APP_CONFIG_PATH)",
+        cwd=tmp_path, extra_env={"APP_CONFIG_JSON": "data/other.json"},
     )
     assert Path(out) == (REPO_ROOT / "data/other.json").resolve()
 
 
-def test_profile_loader_reads_day_master_from_env():
+def test_growth_profiles_are_read_from_env_dir():
     """
-    get_profile_from_day_master() раньше хардкодил "data/day_master.json" и
-    игнорировал DAY_MASTER_JSON. conftest подставляет синтетический профиль:
-    день 21 = 1012 г — значение, которого нет ни в одном реальном файле data/.
+    conftest подставляет каталог библиотеки с синтетическим профилем: день 21 = 1012 г
+    при соседних точках 50 г (д.1) и 2296 г (д.35) — значение, которого нет в
+    интерполяции встроенных профилей data/growth_profiles.
     """
-    from backend.app.core.profile_loader import get_profile_from_day_master
+    from backend.app.core.growth_profiles import load_profile
 
-    profile = get_profile_from_day_master()
-    assert profile is not None
-    day21 = next(p for p in profile.points["winter"] if p.day == 21)
-    assert day21.body_weight_g == 1012
+    assert load_profile("test-breed").point_for_day(21).body_weight_g == 1012

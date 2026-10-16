@@ -145,6 +145,16 @@
     phys_dims_needed:    'Enter building dimensions to enable physical check',
     cap_insufficient_note: 'Minimum ventilation exceeds installed fan capacity — fans cannot provide even the minimum',
     geometry_missing_note: 'Enter house dimensions (width and height) to compute tunnel Qmax — without them Qmax equals Qmin',
+    growth_profile_lbl: 'Growth profile:',
+    gp_builtin: 'breeder',
+    gp_custom: 'custom',
+    gp_source: 'Source',
+    gp_readonly_hint: 'Breeder profiles are read-only. Make a copy to adjust it to your farm.',
+    btn_copy_profile: 'Copy as custom',
+    btn_delete_profile: 'Delete',
+    profile_name_lbl: 'Profile name',
+    prompt_profile_name: 'Name of the new profile:',
+    confirm_delete_profile: 'Delete this profile? This cannot be undone.',
     write_token_prompt: 'Saving is protected. Enter the write token:',
 
     // ── SETTINGS PAGE ──────────────────────────────

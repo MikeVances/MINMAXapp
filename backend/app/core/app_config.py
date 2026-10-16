@@ -41,6 +41,9 @@ class AppConfig:
     # Длина производственного цикла (последний день выращивания)
     cycle_days: int = 42
 
+    # Профиль роста по умолчанию (id из библиотеки data/growth_profiles)
+    default_growth_profile: str = "ross308"
+
     # Параметры расчёта норм вентиляции из первых принципов (CIGR 1984)
     n_birds_initial: int = 30000         # посадочное поголовье, гол.
     v_tunnel_ms: float = 2.5            # целевая скорость туннеля, м/с

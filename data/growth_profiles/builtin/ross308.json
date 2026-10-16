@@ -1,0 +1,354 @@
+{
+  "id": "ross308",
+  "name": "Ross 308 — as-hatched",
+  "breed": "Ross 308",
+  "source": {
+    "weight": "Aviagen, Ross 308/308 FF Broiler Performance Objectives 2022, As-Hatched Performance (g), стр. 3. https://aviagen.com/assets/Tech_Center/Ross_Broiler/RossxRoss308-BroilerPerformanceObjectives2022-EN.pdf",
+    "climate": "Aviagen, Ross Broiler Management Handbook 2025, табл. 2.5 (стр. 30), колонка 60 % RH (формула Dr. M. Mitchell, SRUC): температура по живой массе, пересчитана на массу этого кросса по дням; RH 60 %. https://aviagen.com/assets/Tech_Center/Ross_Broiler/Aviagen-ROSS-Broiler-Handbook-EN.pdf",
+    "notes": "Масса — on-farm (с кормом в ЖКТ), смешанный пол. Встроенный профиль только для чтения: для своей площадки сделайте копию."
+  },
+  "points": [
+    {
+      "day": 0,
+      "body_weight_g": 44.0,
+      "min_temp_c": 30.8,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 1,
+      "body_weight_g": 62.0,
+      "min_temp_c": 30.2,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 2,
+      "body_weight_g": 81.0,
+      "min_temp_c": 29.5,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 3,
+      "body_weight_g": 102.0,
+      "min_temp_c": 28.9,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 4,
+      "body_weight_g": 125.0,
+      "min_temp_c": 28.5,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 5,
+      "body_weight_g": 151.0,
+      "min_temp_c": 28.1,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 6,
+      "body_weight_g": 181.0,
+      "min_temp_c": 27.7,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 7,
+      "body_weight_g": 213.0,
+      "min_temp_c": 27.4,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 8,
+      "body_weight_g": 249.0,
+      "min_temp_c": 27.1,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 9,
+      "body_weight_g": 288.0,
+      "min_temp_c": 26.7,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 10,
+      "body_weight_g": 330.0,
+      "min_temp_c": 26.4,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 11,
+      "body_weight_g": 376.0,
+      "min_temp_c": 26.1,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 12,
+      "body_weight_g": 425.0,
+      "min_temp_c": 25.7,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 13,
+      "body_weight_g": 477.0,
+      "min_temp_c": 25.4,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 14,
+      "body_weight_g": 533.0,
+      "min_temp_c": 25.1,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 15,
+      "body_weight_g": 592.0,
+      "min_temp_c": 24.8,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 16,
+      "body_weight_g": 655.0,
+      "min_temp_c": 24.4,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 17,
+      "body_weight_g": 720.0,
+      "min_temp_c": 24.0,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 18,
+      "body_weight_g": 789.0,
+      "min_temp_c": 23.6,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 19,
+      "body_weight_g": 860.0,
+      "min_temp_c": 23.3,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 20,
+      "body_weight_g": 935.0,
+      "min_temp_c": 23.0,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 21,
+      "body_weight_g": 1012.0,
+      "min_temp_c": 22.7,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 22,
+      "body_weight_g": 1092.0,
+      "min_temp_c": 22.4,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 23,
+      "body_weight_g": 1174.0,
+      "min_temp_c": 22.1,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 24,
+      "body_weight_g": 1258.0,
+      "min_temp_c": 21.7,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 25,
+      "body_weight_g": 1345.0,
+      "min_temp_c": 21.4,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 26,
+      "body_weight_g": 1434.0,
+      "min_temp_c": 21.1,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 27,
+      "body_weight_g": 1524.0,
+      "min_temp_c": 20.7,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 28,
+      "body_weight_g": 1616.0,
+      "min_temp_c": 20.7,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 29,
+      "body_weight_g": 1710.0,
+      "min_temp_c": 20.7,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 30,
+      "body_weight_g": 1805.0,
+      "min_temp_c": 20.7,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 31,
+      "body_weight_g": 1901.0,
+      "min_temp_c": 20.7,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 32,
+      "body_weight_g": 1999.0,
+      "min_temp_c": 20.7,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 33,
+      "body_weight_g": 2097.0,
+      "min_temp_c": 20.7,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 34,
+      "body_weight_g": 2196.0,
+      "min_temp_c": 20.7,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 35,
+      "body_weight_g": 2296.0,
+      "min_temp_c": 20.7,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 36,
+      "body_weight_g": 2396.0,
+      "min_temp_c": 20.7,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 37,
+      "body_weight_g": 2496.0,
+      "min_temp_c": 20.7,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 38,
+      "body_weight_g": 2597.0,
+      "min_temp_c": 20.7,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 39,
+      "body_weight_g": 2697.0,
+      "min_temp_c": 20.7,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 40,
+      "body_weight_g": 2798.0,
+      "min_temp_c": 20.7,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 41,
+      "body_weight_g": 2898.0,
+      "min_temp_c": 20.7,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 42,
+      "body_weight_g": 2998.0,
+      "min_temp_c": 20.7,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 43,
+      "body_weight_g": 3097.0,
+      "min_temp_c": 20.7,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 44,
+      "body_weight_g": 3197.0,
+      "min_temp_c": 20.7,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 45,
+      "body_weight_g": 3295.0,
+      "min_temp_c": 20.7,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 46,
+      "body_weight_g": 3393.0,
+      "min_temp_c": 20.7,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 47,
+      "body_weight_g": 3490.0,
+      "min_temp_c": 20.7,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 48,
+      "body_weight_g": 3586.0,
+      "min_temp_c": 20.7,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 49,
+      "body_weight_g": 3681.0,
+      "min_temp_c": 20.7,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 50,
+      "body_weight_g": 3776.0,
+      "min_temp_c": 20.7,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 51,
+      "body_weight_g": 3869.0,
+      "min_temp_c": 20.7,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 52,
+      "body_weight_g": 3961.0,
+      "min_temp_c": 20.7,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 53,
+      "body_weight_g": 4052.0,
+      "min_temp_c": 20.7,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 54,
+      "body_weight_g": 4142.0,
+      "min_temp_c": 20.7,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 55,
+      "body_weight_g": 4230.0,
+      "min_temp_c": 20.7,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 56,
+      "body_weight_g": 4318.0,
+      "min_temp_c": 20.7,
+      "rv_percent": 60.0
+    }
+  ]
+}

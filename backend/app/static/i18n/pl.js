@@ -145,6 +145,16 @@
     phys_dims_needed:    'Wprowadź wymiary budynku, aby włączyć kontrolę fizyczną',
     cap_insufficient_note: 'Wentylacja minimalna przekracza wydajność zainstalowanych wentylatorów — nie zapewniają nawet minimum',
     geometry_missing_note: 'Podaj wymiary budynku (szerokość i wysokość), aby obliczyć Qmax tunelu — bez nich Qmax równa się Qmin',
+    growth_profile_lbl: 'Profil wzrostu:',
+    gp_builtin: 'hodowca',
+    gp_custom: 'własny',
+    gp_source: 'Źródło',
+    gp_readonly_hint: 'Profile hodowców są tylko do odczytu. Utwórz kopię, aby dostosować ją do swojej fermy.',
+    btn_copy_profile: 'Kopiuj jako własny',
+    btn_delete_profile: 'Usuń',
+    profile_name_lbl: 'Nazwa profilu',
+    prompt_profile_name: 'Nazwa nowego profilu:',
+    confirm_delete_profile: 'Usunąć ten profil? Tej operacji nie można cofnąć.',
     write_token_prompt: 'Zapis jest chroniony. Wprowadź token zapisu:',
 
     // ── STRONA USTAWIEŃ ────────────────────────────

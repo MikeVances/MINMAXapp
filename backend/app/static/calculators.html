@@ -88,6 +88,11 @@
           <span class="muted" style="font-size:12px; white-space:nowrap;" data-i18n="prof_from_house">House:</span>
           <select id="prof-house-select" style="min-width:200px;"></select>
         </label>
+        <!-- Профиль роста (кросс) для выбранного корпуса — заполняет редактор профиля -->
+        <label style="display:flex; align-items:center; gap:8px; margin:0;">
+          <span class="muted" style="font-size:12px; white-space:nowrap;" data-i18n="growth_profile_lbl">Growth profile:</span>
+          <select id="prof-growth-select" style="min-width:200px;"></select>
+        </label>
       </div>
 
       <!-- Parameters row -->
@@ -678,7 +683,7 @@ document.querySelectorAll('.tool-tab:not([disabled])').forEach(btn => {
       birds:        tab.birds,
       house_width_m:  Number(tab.width_m) || null,
       house_height_m: hAvg || null,
-      mode_id:      'summer',
+      growth_profile_id: document.getElementById('prof-growth-select').value || null,
       user_max_m3h: (tab.cap == null || tab.cap === '') ? null : Number(tab.cap),
       heater_on:    !!tab.heater_on,
       display_unit: tab.unit || 'per_bird',
@@ -1542,70 +1547,67 @@ function renderEvap(d) {
   // ── State ────────────────────────────────────────────────────────────────
   // profileCfg объявлен глобально (var) в основном script-блоке — здесь только обновляем
   profileCfg = { cycle_days: 42 };
-  let fullDayMaster = [];
-  let anchorPoints  = [];
-  let chartUnit     = 'per_bird';
+  const STORE_KEY = 'vent_mvp_tabs_v1';
 
-  // ── Weekly anchor helpers (same logic as old settings.js) ────────────────
-  function generateWeeklyDays(cycleDays) {
-    const last = cycleDays || 42;
-    const days = [1];
+  let profilesList = [];     // [{id, name, breed, builtin, source, first_day, last_day}]
+  let current      = null;   // полный профиль: {…, points: [...], days: [...]}
+  let editedDays   = {};     // день → {body_weight_g, min_temp_c, rv_percent} — правки в таблице
+  let chartUnit    = 'per_bird';
+
+  const growthSel = document.getElementById('prof-growth-select');
+  const houseSel  = document.getElementById('prof-house-select');
+
+  // Имя и источник профиля пишет пользователь — в innerHTML только через экранирование
+  function esc(v) {
+    return String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  // ── Выбор профиля хранится во вкладке корпуса (localStorage главной страницы) ──
+  function readTabs() {
+    try { return JSON.parse(localStorage.getItem(STORE_KEY) || '[]') || []; } catch (e) { return []; }
+  }
+  function currentHouseIdx() {
+    const idx = parseInt(houseSel && houseSel.value, 10);
+    return isNaN(idx) ? -1 : idx;
+  }
+  function rememberForHouse(profileId) {
+    const tabs = readTabs();
+    const idx  = currentHouseIdx();
+    if (!tabs[idx]) return;
+    tabs[idx].growth_profile_id = profileId;
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(tabs)); } catch (e) { /* выбор не запомнится — не критично */ }
+  }
+  function profileForHouse() {
+    const tab = readTabs()[currentHouseIdx()];
+    const wanted = tab && tab.growth_profile_id;
+    if (wanted && profilesList.some(p => p.id === wanted)) return wanted;
+    return profileCfg.default_growth_profile || (profilesList[0] && profilesList[0].id);
+  }
+
+  // ── Недельная сетка таблицы ──────────────────────────────────────────────
+  function weeklyDays() {
+    if (!current) return [];
+    const last = Math.min(profileCfg.cycle_days || 42, current.last_day);
+    const days = [Math.max(1, current.first_day)];
     for (let d = 7; d < last; d += 7) days.push(d);
     if (days[days.length - 1] !== last) days.push(last);
     return days;
   }
-
-  function pointFromMaster(day) {
-    if (!fullDayMaster.length) return null;
-    const sorted = [...fullDayMaster].sort((a, b) => a.day - b.day);
-    const exact  = sorted.find(p => p.day === day);
-    if (exact && exact.body_weight_g != null) return { ...exact };
-    const lo = [...sorted].reverse().find(p => p.day < day && p.body_weight_g != null);
-    const hi = sorted.find(p => p.day > day && p.body_weight_g != null);
-    if (!lo && !hi) return null;
-    if (!lo) return { ...hi, day };
-    if (!hi) {
-      const prev = [...sorted].reverse().find(p => p.day < lo.day && p.body_weight_g != null);
-      if (!prev) return { ...lo, day };
-      const steps = day - lo.day, dstep = lo.day - prev.day;
-      const ext = (a, b) => (a == null || b == null) ? null : +(a + (a - b) / dstep * steps).toFixed(2);
-      return {
-        day,
-        body_weight_g:  Math.max(0, ext(lo.body_weight_g,  prev.body_weight_g)),
-        min_temp_c:     ext(lo.min_temp_c,    prev.min_temp_c),
-        rv_percent:     lo.rv_percent ?? prev.rv_percent ?? 60,
-        q_min_per_bird: ext(lo.q_min_per_bird, prev.q_min_per_bird),
-        q_max_per_bird: ext(lo.q_max_per_bird, prev.q_max_per_bird),
-      };
-    }
-    const t2   = (day - lo.day) / (hi.day - lo.day);
-    const lerp = (a, b) => (a == null || b == null) ? null : +(a + (b - a) * t2).toFixed(2);
-    return {
-      day,
-      body_weight_g:  lerp(lo.body_weight_g,  hi.body_weight_g),
-      min_temp_c:     lerp(lo.min_temp_c,    hi.min_temp_c),
-      rv_percent:     lo.rv_percent ?? hi.rv_percent ?? 60,
-      q_min_per_bird: lerp(lo.q_min_per_bird, hi.q_min_per_bird),
-      q_max_per_bird: lerp(lo.q_max_per_bird, hi.q_max_per_bird),
-    };
-  }
-
-  function extractWeeklyFromMaster(cycleDays) {
-    return generateWeeklyDays(cycleDays).map(d => pointFromMaster(d)).filter(Boolean);
+  function dayRow(day) {
+    const base = (current.days || []).find(d => d.day === day) || { day };
+    return Object.assign({}, base, editedDays[day] || {});
   }
 
   // ── Charts ───────────────────────────────────────────────────────────────
   function renderCharts() {
     const container = document.getElementById('profile-charts');
-    if (!container) return;
+    if (!container || !current) return;
 
     const cycleDays = profileCfg.cycle_days || 42;
-    const chartData = [];
-    for (let d = 1; d <= cycleDays; d++) {
-      const p = pointFromMaster(d);
-      if (p) chartData.push(p);
-    }
-    if (!chartData.length) return;
+    const chartData = (current.days || []).filter(d => d.day >= 1 && d.day <= cycleDays);
+    if (!chartData.length) { container.innerHTML = ''; return; }
+    const anchors = weeklyDays().map(dayRow);
 
     const birdLabel = t('unit_bird');
     const kgLabel   = t('unit_kg');
@@ -1622,7 +1624,7 @@ function renderEvap(d) {
       series: [{
         data:    chartData.map(p => ({ x: p.day, y: p.body_weight_g })),
         color:   '#6aa0ff',
-        anchors: anchorPoints.map(p => ({ x: p.day, y: p.body_weight_g })),
+        anchors: anchors.map(p => ({ x: p.day, y: p.body_weight_g })),
       }],
       title: t('chart_weight'), yUnit: t('unit_g'),
     });
@@ -1630,19 +1632,17 @@ function renderEvap(d) {
       series: [{
         data:    chartData.map(p => ({ x: p.day, y: p.min_temp_c })),
         color:   '#ffcf6b',
-        anchors: anchorPoints.map(p => ({ x: p.day, y: p.min_temp_c })),
+        anchors: anchors.map(p => ({ x: p.day, y: p.min_temp_c })),
       }],
       title: t('chart_temp'), yUnit: '°C',
     });
     // Только Qmin: норма CO₂ из веса (сервер). Qmax — величина корпуса, не профиля
     const vChart = makeSVGChart({
-      series: [
-        {
-          data:    chartData.map(p => ({ x: p.day, y: ventVal(p, 'q_min_per_bird') })),
-          color:   '#74d69b',
-          anchors: anchorPoints.map(p => ({ x: p.day, y: ventVal(p, 'q_min_per_bird') })),
-        },
-      ],
+      series: [{
+        data:    chartData.map(p => ({ x: p.day, y: ventVal(p, 'q_min_per_bird') })),
+        color:   '#74d69b',
+        anchors: anchors.map(p => ({ x: p.day, y: ventVal(p, 'q_min_per_bird') })),
+      }],
       title: t('chart_vent'), yUnit: unitLabel,
     });
 
@@ -1660,32 +1660,54 @@ function renderEvap(d) {
         </div>
       </div>`;
 
-    document.getElementById('pu-bird').addEventListener('click', () => { chartUnit = 'per_bird'; renderCharts(); renderTable(); });
-    document.getElementById('pu-kg').addEventListener('click',   () => { chartUnit = 'per_kg';   renderCharts(); renderTable(); });
+    document.getElementById('pu-bird').addEventListener('click', () => { chartUnit = 'per_bird'; renderCharts(); });
+    document.getElementById('pu-kg').addEventListener('click',   () => { chartUnit = 'per_kg';   renderCharts(); });
   }
 
-  // ── Anchor table ─────────────────────────────────────────────────────────
-  function rowHTML(d, idx) {
+  // ── Editor ───────────────────────────────────────────────────────────────
+  function rowHTML(d, readonly) {
+    const dis = readonly ? 'disabled' : '';
+    const cell = (key, val, step, extra) =>
+      `<td><input type="number" step="${step}" ${extra || ''} value="${val ?? ''}" data-key="${key}" data-day="${d.day}" ${dis}/></td>`;
+    const r = v => (v == null ? '' : +(+v).toFixed(1));
     return `<tr>
       <td><strong>${d.day}</strong></td>
-      <td><input type="number" step="1"    min="0"           value="${d.body_weight_g ?? ''}" data-key="bw"   data-idx="${idx}"/></td>
-      <td><input type="number" step="0.1"                    value="${d.min_temp_c    ?? ''}" data-key="t"    data-idx="${idx}"/></td>
-      <td><input type="number" step="0.1"  min="0" max="100" value="${d.rv_percent    ?? ''}" data-key="rv"   data-idx="${idx}"/></td>
+      ${cell('body_weight_g', r(d.body_weight_g), '1', 'min="0"')}
+      ${cell('min_temp_c', r(d.min_temp_c), '0.1')}
+      ${cell('rv_percent', r(d.rv_percent), '0.1', 'min="0" max="100"')}
     </tr>`;
+  }
+
+  function sourceHTML(src) {
+    const parts = Object.entries(src || {}).map(([k, v]) => `${esc(k)}: ${esc(v)}`);
+    return parts.length ? `<p class="muted" style="font-size:11px;margin:0 0 10px;">${t('gp_source')}: ${parts.join(' · ')}</p>` : '';
   }
 
   function renderTable() {
     const container = document.getElementById('profile-editor');
-    if (!container) return;
+    if (!container || !current) return;
+    const ro = current.builtin;
+
+    const buttons = ro
+      ? `<button id="gp-copy-btn" class="btn">${t('btn_copy_profile')}</button>`
+      : `<button id="gp-save-btn" class="btn">${t('btn_save')}</button>
+         <button id="gp-copy-btn" class="btn btn-secondary">${t('btn_copy_profile')}</button>
+         <button id="gp-delete-btn" class="btn btn-secondary">${t('btn_delete_profile')}</button>`;
+
     container.innerHTML = `
       <div class="card">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:4px;">
-          <h2 style="margin:0;">${t('profile_h2')}</h2>
+          <h2 style="margin:0;">${t('profile_h2')} — ${esc(current.name)}
+            <span class="muted" style="font-size:12px;font-weight:400;">(${ro ? t('gp_builtin') : t('gp_custom')})</span></h2>
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-            <button id="prof-save-btn" class="btn">${t('btn_save_interp')}</button>
-            <span   id="prof-status"   class="muted" style="font-size:12px;"></span>
+            ${buttons}
+            <span id="prof-status" class="muted" style="font-size:12px;"></span>
           </div>
         </div>
+        ${ro ? `<p class="muted" style="font-size:11px;margin:0 0 6px;">${t('gp_readonly_hint')}</p>` : ''}
+        ${!ro ? `<label style="margin:0 0 10px;display:block;"><span class="muted" style="font-size:12px;">${t('profile_name_lbl')}</span>
+          <input id="gp-name" type="text" maxlength="80" value="${esc(current.name)}"/></label>` : ''}
+        ${sourceHTML(current.source)}
         <p class="muted" style="font-size:11px;margin:0 0 12px;">${t('cigr_hint')}</p>
         <div style="overflow-x:auto;">
           <table>
@@ -1695,70 +1717,163 @@ function renderEvap(d) {
               <th>${t('col_min_temp')}</th>
               <th>${t('col_rh')}</th>
             </tr></thead>
-            <tbody>${anchorPoints.map((d, i) => rowHTML(d, i)).join('')}</tbody>
+            <tbody>${weeklyDays().map(d => rowHTML(dayRow(d), ro)).join('')}</tbody>
           </table>
         </div>
       </div>`;
 
     container.querySelectorAll('tbody input').forEach(inp => {
       inp.addEventListener('change', () => {
-        const idx = Number(inp.dataset.idx);
-        const key = inp.dataset.key;
+        const day = Number(inp.dataset.day);
         const val = inp.value === '' ? null : Number(inp.value);
-        const pt  = anchorPoints[idx];
-        if (!pt) return;
-        if (key === 'bw')  pt.body_weight_g  = val;
-        if (key === 't')   pt.min_temp_c     = val;
-        if (key === 'rv')  pt.rv_percent     = val;
+        editedDays[day] = Object.assign({}, editedDays[day] || {}, { [inp.dataset.key]: val });
+        renderCharts();
       });
     });
 
-    document.getElementById('prof-save-btn').addEventListener('click', saveProfile);
+    const on = (id, fn) => { const el = document.getElementById(id); if (el) el.addEventListener('click', fn); };
+    on('gp-copy-btn', copyProfile);
+    on('gp-save-btn', saveProfile);
+    on('gp-delete-btn', deleteProfile);
+  }
+
+  function setStatus(msg, delay) {
+    const el = document.getElementById('prof-status');
+    if (!el) return;
+    el.textContent = msg;
+    if (delay) setTimeout(() => { const s = document.getElementById('prof-status'); if (s) s.textContent = ''; }, delay);
+  }
+
+  // ── Точки для сохранения ─────────────────────────────────────────────────
+  // Правка недельной строки меняет только свой отрезок кривой: дневные точки между
+  // соседними строками таблицы удаляются, и сервер заполнит их интерполяцией.
+  // Неправленые отрезки (например, дневные данные производителя) остаются как есть.
+  function pointsForSave() {
+    const grid = weeklyDays();
+    let points = (current.points || []).map(p => Object.assign({}, p));
+    Object.keys(editedDays).map(Number).forEach(day => {
+      const i    = grid.indexOf(day);
+      const prev = i > 0 ? grid[i - 1] : -Infinity;
+      const next = i < grid.length - 1 ? grid[i + 1] : Infinity;
+      const base = points.find(p => p.day === day) || dayRow(day);
+      points = points.filter(p => p.day <= prev || p.day >= next || p.day === day);
+      const merged = {
+        day,
+        body_weight_g: base.body_weight_g ?? null,
+        min_temp_c:    base.min_temp_c ?? null,
+        rv_percent:    base.rv_percent ?? null,
+        ...editedDays[day],
+      };
+      points = points.filter(p => p.day !== day).concat([merged]);
+    });
+    return points.sort((a, b) => a.day - b.day);
   }
 
   // ── API actions ──────────────────────────────────────────────────────────
-  function setStatus(msg, delay) {
-    const el = document.getElementById('prof-status');
-    if (el) {
-      el.textContent = msg;
-      if (delay) setTimeout(() => { const s = document.getElementById('prof-status'); if (s) s.textContent = ''; }, delay);
+  async function putProfile(id, body) {
+    return fetchJSON(`./profiles/${encodeURIComponent(id)}`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    });
+  }
+
+  async function copyProfile() {
+    const name = window.prompt(t('prompt_profile_name'), `${current.name} (${t('gp_custom')})`);
+    if (!name) return;
+    // id — латиница для имени файла; имя для людей хранится отдельно и может быть любым
+    const id = 'custom-' + Date.now().toString(36);
+    setStatus(t('status_saving'));
+    try {
+      const copySource = Object.assign({}, current.source || {}, { copied_from: current.id });
+      await putProfile(id, { name, breed: current.breed, source: copySource, points: pointsForSave() });
+      await loadProfilesList();
+      await selectProfile(id);
+      setStatus(t('status_saved_ok'), 3000);
+    } catch (e) {
+      setStatus(t('status_err') + String(e));
     }
   }
 
   async function saveProfile() {
-    const btn = document.getElementById('prof-save-btn');
-    const st  = document.getElementById('prof-status');
-    if (btn) btn.disabled = true;
-    if (st)  st.textContent = t('status_saving');
+    const nameEl = document.getElementById('gp-name');
+    setStatus(t('status_saving'));
     try {
-      fullDayMaster = await fetchJSON('./settings/day-master?auto_interpolate=true', {
-        method:  'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify(anchorPoints),
+      current = await putProfile(current.id, {
+        name:   (nameEl && nameEl.value.trim()) || current.name,
+        breed:  current.breed,
+        source: current.source,
+        points: pointsForSave(),
       });
-      anchorPoints = extractWeeklyFromMaster(profileCfg.cycle_days);
-      renderCharts();
-      renderTable();
-      // После renderTable() старые btn/st уничтожены — перезапрашиваем
+      editedDays = {};
+      await loadProfilesList();
+      renderAll();
       setStatus(t('status_saved_ok'), 3000);
-    } catch(e) {
-      if (btn) btn.disabled = false;
-      if (st)  st.textContent = t('status_err') + String(e);
+    } catch (e) {
+      setStatus(t('status_err') + String(e));
+    }
+  }
+
+  async function deleteProfile() {
+    if (!window.confirm(t('confirm_delete_profile'))) return;
+    try {
+      await fetchJSON(`./profiles/${encodeURIComponent(current.id)}`, { method: 'DELETE' });
+      await loadProfilesList();
+      await selectProfile(profileCfg.default_growth_profile);
+    } catch (e) {
+      setStatus(t('status_err') + String(e));
     }
   }
 
   // ── Load ─────────────────────────────────────────────────────────────────
+  async function loadProfilesList() {
+    profilesList = await fetchJSON('./profiles');
+    growthSel.innerHTML = '';
+    // Сначала профили производителей, затем свои — двумя группами
+    [[true, t('gp_builtin')], [false, t('gp_custom')]].forEach(([builtin, label]) => {
+      const items = profilesList.filter(p => p.builtin === builtin);
+      if (!items.length) return;
+      const group = document.createElement('optgroup');
+      group.label = label;
+      items.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = p.name;   // textContent: имя пользователя не попадает в разметку
+        group.appendChild(opt);
+      });
+      growthSel.appendChild(group);
+    });
+    // Перестройка списка сбрасывает select на первый вариант — вернуть текущий профиль,
+    // иначе расчёт уйдёт по чужому кроссу
+    if (current && profilesList.some(p => p.id === current.id)) growthSel.value = current.id;
+  }
+
+  async function selectProfile(id) {
+    if (!id) return;
+    current    = await fetchJSON(`./profiles/${encodeURIComponent(id)}`);
+    editedDays = {};
+    growthSel.value = id;
+    rememberForHouse(id);
+    renderAll();
+  }
+
+  function renderAll() {
+    renderCharts();
+    renderTable();
+  }
+
   async function loadProfile() {
     try {
-      profileCfg    = await fetchJSON('./settings/app-config');
-      fullDayMaster = await fetchJSON('./settings/day-master?mode=full');
-      anchorPoints  = extractWeeklyFromMaster(profileCfg.cycle_days);
-      renderCharts();
-      renderTable();
-    } catch(e) {
-      console.warn('Profile load failed:', e);
+      profileCfg = await fetchJSON('./settings/app-config');
+      await loadProfilesList();
+      await selectProfile(profileForHouse());
+    } catch (e) {
+      const container = document.getElementById('profile-editor');
+      if (container) container.innerHTML = `<div class="card"><div class="danger">${esc(t('err_prefix') + String(e))}</div></div>`;
     }
   }
+
+  growthSel.addEventListener('change', () => selectProfile(growthSel.value).catch(e => setStatus(t('status_err') + String(e))));
+  // Другой корпус — свой профиль роста
+  if (houseSel) houseSel.addEventListener('change', () => selectProfile(profileForHouse()).catch(() => {}));
 
   document.addEventListener('DOMContentLoaded', loadProfile);
 })();

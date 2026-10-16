@@ -3,8 +3,8 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from ..core.profile_loader import get_profile
-from ..core.calc_core import compute, CalcInput
+from ..core.calc_core import compute, CalcInput, CalcResult
+from ..core.growth_profiles import ProfileNotFound
 
 
 router = APIRouter()
@@ -14,7 +14,10 @@ class CalcIn(BaseModel):
     house: str = Field(..., min_length=1, max_length=64)
     birds: int = Field(..., ge=1, le=60000)
     age_days: int = Field(..., ge=1, le=63)
-    mode_id: str = Field(..., pattern=r"^(winter|summer|spring_autumn|tropical)$")
+    # Устарело: сезонный режим удалён (расчёт по наружной температуре), поле игнорируется
+    mode_id: str | None = Field(None, pattern=r"^(winter|summer|spring_autumn|tropical)$")
+    # Профиль роста из библиотеки; не задан → профиль по умолчанию из настроек
+    growth_profile_id: str | None = Field(None, pattern=r"^[a-z0-9][a-z0-9_-]{0,63}$")
     display_unit: str = Field("per_bird", pattern=r"^(per_bird|per_kg)$")
     outside_t: float = Field(..., ge=-40, le=50, description="Outside air temperature, °C")
     outside_rh: float = Field(60.0, ge=0, le=100, description="Outside relative humidity, %")
@@ -38,6 +41,7 @@ class CalcOut(BaseModel):
     heater_duty_cycle: float | None = None  # Heater duty cycle (0..1)
     tunnel_active: bool = False  # Tunnel mode active under current conditions
     qmin_basis: str = "co2"  # "co2" | "moisture"
+    growth_profile_id: str | None = None  # профиль роста, по которому шёл расчёт
     # Qmin больше заданной мощности установки: вентиляторов не хватает даже на минимум
     capacity_insufficient: bool = False
     # Требуемый туннельный расход корпуса v × S × 3600 (None — размеры не заданы)
@@ -49,24 +53,18 @@ class CalcOut(BaseModel):
 
 @router.post("/minmax", response_model=CalcOut)
 def minmax(payload: CalcIn):
-    profile = get_profile()
-
     ci = CalcInput(
         birds=payload.birds,
         age_days=payload.age_days,
-        mode=payload.mode_id,  # type: ignore
         display_unit=payload.display_unit,  # type: ignore
         outside_t=payload.outside_t,
         outside_rh=payload.outside_rh,
         heater_on=payload.heater_on,
         house_width_m=payload.house_width_m,
         house_height_m=payload.house_height_m,
+        growth_profile_id=payload.growth_profile_id,
     )
-
-    try:
-        cr = compute(profile, ci)
-    except KeyError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    cr = _compute_or_http_error(ci)
 
     q_min = round(cr.q_min_m3h, 3)
     q_max_nominal = round(cr.q_max_m3h, 3)
@@ -112,14 +110,28 @@ def minmax(payload: CalcIn):
         capacity_insufficient=capacity_insufficient,
         tunnel_requirement_m3h=cr.tunnel_requirement_m3h,
         house_geometry_missing=cr.house_geometry_missing,
+        growth_profile_id=cr.growth_profile_id,
     )
+
+
+def _compute_or_http_error(ci: CalcInput) -> CalcResult:
+    """Ошибки данных профиля → понятный HTTP-ответ вместо 500."""
+    try:
+        return compute(ci)
+    except ProfileNotFound as e:
+        raise HTTPException(status_code=404, detail=f"Профиль роста не найден: {e}")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 # ---- Summary for 7 points by season ----
 class SummaryIn(BaseModel):
     house: str = Field(..., min_length=1, max_length=64)
     birds: int = Field(..., ge=1, le=60000)
-    mode_id: str = Field("summer", pattern=r"^(winter|summer|spring_autumn|tropical)$")  # Deprecated, kept for compatibility
+    # Устарело: сезонный режим удалён (расчёт по наружной температуре), поле игнорируется
+    mode_id: str | None = Field(None, pattern=r"^(winter|summer|spring_autumn|tropical)$")
+    # Профиль роста из библиотеки; не задан → профиль по умолчанию из настроек
+    growth_profile_id: str | None = Field(None, pattern=r"^[a-z0-9][a-z0-9_-]{0,63}$")
     outside_t: float = Field(15.0, ge=-40, le=50, description="Outside air temperature, °C")
     outside_rh: float = Field(60.0, ge=0, le=100, description="Outside relative humidity, %")
     user_max_m3h: float | None = Field(None, ge=0)
@@ -150,16 +162,15 @@ class SummaryRow(BaseModel):
 class SummaryOut(BaseModel):
     house: str
     birds: int
-    mode_id: str
+    mode_id: str | None = None  # устарело, см. SummaryIn
     user_max_m3h: float | None
+    growth_profile_id: str | None = None  # профиль роста, по которому шёл расчёт
     ref_version: str = "seed-demo-1.0"
     rows: list[SummaryRow]
 
 
 @router.post("/summary7", response_model=SummaryOut)
 def summary7(payload: SummaryIn):
-    profile = get_profile()
-
     # Use outside_t from payload (new way), fallback to mode_id mapping (old way)
     outside_t = payload.outside_t
     # рассчитываем эффективное количество птиц с учётом смертности и берём пороги min
@@ -183,15 +194,15 @@ def summary7(payload: SummaryIn):
         ci = CalcInput(
             birds=payload.birds,
             age_days=d,
-            mode=payload.mode_id,  # type: ignore
             display_unit=payload.display_unit,  # type: ignore
             outside_t=outside_t,
             outside_rh=payload.outside_rh,
             heater_on=payload.heater_on,
             house_width_m=payload.house_width_m,
             house_height_m=payload.house_height_m,
+            growth_profile_id=payload.growth_profile_id,
         )
-        cr = compute(profile, ci)
+        cr = _compute_or_http_error(ci)
         q_min = round(cr.q_min_m3h, 3)
         q_max_nominal = round(cr.q_max_m3h, 3)
         q_max_final = q_max_nominal
@@ -232,6 +243,7 @@ def summary7(payload: SummaryIn):
         birds=payload.birds,
         mode_id=payload.mode_id,
         user_max_m3h=payload.user_max_m3h,
+        growth_profile_id=cr.growth_profile_id,
         rows=rows,
     )
 

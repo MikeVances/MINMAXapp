@@ -1,92 +1,13 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Query, Depends
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
-from typing import List, Optional
 
 from ..write_access import require_write_token
-from ..core.day_master import DayInfo, load_day_master, save_day_master
 from ..core.app_config import AppConfig, load_app_config, save_app_config
-from ..core.interpolation import interpolate_to_42_days, extract_anchor_points, ANCHOR_DAYS
-from ..core.ventilation_calc import calc_q_min_per_bird
 
 
 router = APIRouter()
-
-
-class DayItem(BaseModel):
-    day: int = Field(..., ge=1, le=63)
-    body_weight_g: Optional[float] = Field(None, ge=0)
-    min_temp_c: Optional[float] = None
-    rv_percent: Optional[float] = None
-    # Только для чтения: норма CO₂ (CIGR) из веса, считается сервером.
-    # При сохранении игнорируются — профиль хранит данные кросса, не вентиляцию
-    q_min_per_bird: Optional[float] = Field(None, ge=0)  # м³/ч на голову
-    q_max_per_bird: Optional[float] = Field(None, ge=0)  # устарело: Qmax — величина корпуса
-
-
-@router.get("/day-master", response_model=List[DayItem])
-def get_day_master(mode: str = Query("full", regex="^(full|anchors)$")):
-    """
-    Получить профиль роста (day_master).
-
-    Args:
-        mode: "full" - все 42 дня (по умолчанию)
-              "anchors" - только 7 опорных точек (1, 7, 14, 21, 28, 35, 42)
-    """
-    data = load_day_master()
-    safety = float(getattr(load_app_config(), "safety_factor_qmin", 1.5))
-
-    # Определить дни для возврата
-    if mode == "anchors":
-        days_to_return = ANCHOR_DAYS
-    else:
-        days_to_return = sorted(data.keys())  # все доступные дни из файла
-
-    # Вернём данные за выбранные дни
-    out: List[DayItem] = []
-    for d in days_to_return:
-        info = data.get(d)
-        out.append(
-            DayItem(
-                day=d,
-                body_weight_g=(info.body_weight_g if info else None),
-                min_temp_c=(info.min_temp_c if info else None),
-                rv_percent=(info.rv_percent if info else None),
-                # Та же формула, что в calc_core: график показывает реальную норму
-                q_min_per_bird=(calc_q_min_per_bird(info.body_weight_g / 1000.0, safety)
-                                if info and info.body_weight_g else None),
-            )
-        )
-    return out
-
-
-@router.put("/day-master", response_model=List[DayItem], dependencies=[Depends(require_write_token)])
-def put_day_master(payload: List[DayItem], auto_interpolate: bool = Query(True)):
-    """
-    Сохранить профиль роста (day_master).
-
-    Если передано 7 опорных точек (дни 1,7,14,21,28,35,42) и auto_interpolate=True,
-    то автоматически интерполируются промежуточные дни до полного профиля на 42 дня.
-
-    Args:
-        payload: Список дней с данными
-        auto_interpolate: Автоматически интерполировать до 42 дней (по умолчанию True)
-    """
-    # Нормы вентиляции не сохраняем: они считаются из веса (Qmin) и размеров корпуса (Qmax)
-    items = {x.day: DayInfo(day=x.day, body_weight_g=x.body_weight_g, min_temp_c=x.min_temp_c, rv_percent=x.rv_percent) for x in payload}
-
-    # Интерполируем если передан разреженный набор опорных точек (меньше 42),
-    # независимо от того какие именно дни — поддерживает любой cycle_days.
-    is_sparse = auto_interpolate and 2 <= len(items) < 42 and 1 in items
-    if is_sparse:
-        try:
-            items = interpolate_to_42_days(items)
-        except ValueError as e:
-            raise HTTPException(status_code=400, detail=f"Interpolation failed: {str(e)}")
-
-    save_day_master(items)
-    return get_day_master(mode="full")
 
 
 # ---- App config (mortality etc.) ----
@@ -114,6 +35,9 @@ class AppCfg(BaseModel):
 
     # Длина производственного цикла
     cycle_days: int = Field(42, ge=21, le=56)
+
+    # Профиль роста по умолчанию (id из библиотеки /profiles)
+    default_growth_profile: str = Field("ross308", pattern=r"^[a-z0-9][a-z0-9_-]{0,63}$")
 
     # Параметры расчёта из первых принципов (CIGR 1984)
     n_birds_initial: int = Field(30000, ge=1, le=500000)
@@ -144,6 +68,7 @@ def get_app_cfg():
         temp_spring_c=cfg.temp_spring_c,
         temp_summer_c=cfg.temp_summer_c,
         cycle_days=cfg.cycle_days,
+        default_growth_profile=getattr(cfg, "default_growth_profile", "ross308"),
         n_birds_initial=getattr(cfg, "n_birds_initial", 30000),
         v_tunnel_ms=getattr(cfg, "v_tunnel_ms", 2.5),
         safety_factor_qmin=getattr(cfg, "safety_factor_qmin", 1.5),
@@ -170,6 +95,7 @@ def put_app_cfg(payload: AppCfg):
         temp_spring_c=payload.temp_spring_c,
         temp_summer_c=payload.temp_summer_c,
         cycle_days=payload.cycle_days,
+        default_growth_profile=payload.default_growth_profile,
         n_birds_initial=payload.n_birds_initial,
         v_tunnel_ms=payload.v_tunnel_ms,
         safety_factor_qmin=payload.safety_factor_qmin,

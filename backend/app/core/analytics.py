@@ -12,14 +12,33 @@ from typing import Optional
 
 from ..models.flock import PlanVsFactData, AnalyticsSummary
 from ..core import flock_storage
-from ..core.day_master import load_day_master
+from ..core.app_config import load_app_config
+from ..core.growth_profiles import GrowthPoint, ProfileNotFound, load_profile
+
+
+def _plan_days(house_id: str) -> dict[int, GrowthPoint]:
+    """
+    Плановая кривая для стада: профиль из поля breed, если это id профиля
+    из библиотеки, иначе профиль по умолчанию из настроек.
+    """
+    default_id = getattr(load_app_config(), "default_growth_profile", "ross308")
+    info = flock_storage.load_flock_info(house_id)
+    for profile_id in ((info.breed if info else None), default_id):
+        if not profile_id:
+            continue
+        try:
+            return load_profile(profile_id).daily()
+        except (ProfileNotFound, ValueError):
+            # breed — свободный текст («Ross 308»), не обязан быть id профиля
+            continue
+    return {}
 
 
 def get_plan_vs_fact_data(house_id: str, target_days: int = 42) -> PlanVsFactData:
     """
     Получить данные для графика план vs факт.
 
-    Объединяет плановый профиль (day_master) с фактическими данными
+    Объединяет плановый профиль роста с фактическими данными
     из дневника стада.
 
     Args:
@@ -33,9 +52,9 @@ def get_plan_vs_fact_data(house_id: str, target_days: int = 42) -> PlanVsFactDat
         ValueError: Если не удалось загрузить данные
     """
     # Загрузить плановый профиль
-    day_master = load_day_master()
-    if not day_master:
-        raise ValueError("Plan profile (day_master) is empty or not configured")
+    plan_days = _plan_days(house_id)
+    if not plan_days:
+        raise ValueError("Plan growth profile is not found or empty")
 
     # Загрузить фактические записи дневника
     diary_entries = flock_storage.load_diary_entries(house_id, from_day=1, to_day=target_days)
@@ -51,7 +70,7 @@ def get_plan_vs_fact_data(house_id: str, target_days: int = 42) -> PlanVsFactDat
 
     for day in days:
         # Плановый вес
-        plan_info = day_master.get(day)
+        plan_info = plan_days.get(day)
         plan_w = plan_info.body_weight_g if plan_info else None
         plan_weight.append(plan_w)
 
@@ -105,7 +124,7 @@ def get_analytics_summary(house_id: str) -> AnalyticsSummary:
     diary_entries = flock_storage.load_diary_entries(house_id, from_day=1, to_day=current_day)
 
     # Загрузить плановый профиль
-    day_master = load_day_master()
+    plan_days = _plan_days(house_id)
 
     # Инициализация метрик
     avg_daily_gain_g: Optional[float] = None
@@ -142,7 +161,7 @@ def get_analytics_summary(house_id: str) -> AnalyticsSummary:
     # === Отклонение веса от плана ===
     if weights_with_days:
         last_day, last_weight = weights_with_days[-1]
-        plan_info = day_master.get(last_day)
+        plan_info = plan_days.get(last_day)
 
         if plan_info and plan_info.body_weight_g is not None:
             plan_weight = plan_info.body_weight_g

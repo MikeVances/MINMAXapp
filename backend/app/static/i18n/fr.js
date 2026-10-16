@@ -145,6 +145,16 @@
     phys_dims_needed:    'Saisir les dimensions du bâtiment pour activer la vérification physique',
     cap_insufficient_note: "La ventilation minimale dépasse la capacité installée — les ventilateurs n'assurent même pas le minimum",
     geometry_missing_note: 'Saisissez les dimensions du bâtiment (largeur et hauteur) pour calculer le Qmax tunnel — sans elles, Qmax est égal à Qmin',
+    growth_profile_lbl: 'Profil de croissance :',
+    gp_builtin: 'sélectionneur',
+    gp_custom: 'personnalisé',
+    gp_source: 'Source',
+    gp_readonly_hint: 'Les profils des sélectionneurs sont en lecture seule. Faites une copie pour l’adapter à votre élevage.',
+    btn_copy_profile: 'Copier en personnalisé',
+    btn_delete_profile: 'Supprimer',
+    profile_name_lbl: 'Nom du profil',
+    prompt_profile_name: 'Nom du nouveau profil :',
+    confirm_delete_profile: 'Supprimer ce profil ? Action irréversible.',
     write_token_prompt: "L'enregistrement est protégé. Saisissez le jeton d'écriture :",
 
     // ── SETTINGS PAGE ────────────────────────────────
