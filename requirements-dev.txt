@@ -1,0 +1,6 @@
+# Зависимости для разработки и тестов — в прод-сборку Render не входят
+# (render.yaml ставит только requirements.txt).
+-r requirements.txt
+pytest>=8,<9
+# httpx нужен fastapi.testclient.TestClient — без него импорт TestClient падает
+httpx>=0.27,<1
