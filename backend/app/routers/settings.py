@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 from pydantic import BaseModel, Field
 from typing import List, Optional
 
+from ..write_access import require_write_token
 from ..core.day_master import DayInfo, load_day_master, save_day_master
 from ..core.app_config import AppConfig, load_app_config, save_app_config
 from ..core.interpolation import interpolate_to_42_days, extract_anchor_points, ANCHOR_DAYS
@@ -56,7 +57,7 @@ def get_day_master(mode: str = Query("full", regex="^(full|anchors)$")):
     return out
 
 
-@router.put("/day-master", response_model=List[DayItem])
+@router.put("/day-master", response_model=List[DayItem], dependencies=[Depends(require_write_token)])
 def put_day_master(payload: List[DayItem], auto_interpolate: bool = Query(True)):
     """
     Сохранить профиль роста (day_master).
@@ -135,7 +136,7 @@ class AppCfg(BaseModel):
     tunnel_min_temp_c: float = Field(18.0, ge=0.0, le=35.0)
 
 
-@router.post("/recalculate-ventilation", response_model=List[DayItem])
+@router.post("/recalculate-ventilation", response_model=List[DayItem], dependencies=[Depends(require_write_token)])
 def recalculate_ventilation():
     """
     Пересчитать q_min и q_max для всех дней профиля из первых принципов.
@@ -226,7 +227,7 @@ def get_app_cfg():
     )
 
 
-@router.put("/app-config", response_model=AppCfg)
+@router.put("/app-config", response_model=AppCfg, dependencies=[Depends(require_write_token)])
 def put_app_cfg(payload: AppCfg):
     """Сохранить конфигурацию приложения."""
     cfg = AppConfig(

@@ -18,10 +18,11 @@ Endpoints:
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 from pydantic import BaseModel, Field
 from typing import Optional, List
 
+from ..write_access import require_write_token
 from ..models.flock import FlockInfo, FlockDiaryEntry, PlanVsFactData, AnalyticsSummary
 from ..core import flock_storage
 from ..core import analytics
@@ -88,7 +89,7 @@ class DiaryEntryResponse(BaseModel):
 # Endpoints для FlockInfo
 # ============================================================================
 
-@router.post("/flock/{house_id}/info", response_model=FlockInfoResponse)
+@router.post("/flock/{house_id}/info", response_model=FlockInfoResponse, dependencies=[Depends(require_write_token)])
 def create_or_update_flock_info(house_id: str, payload: FlockInfoRequest):
     """
     Создать или обновить информацию о стаде в птичнике.
@@ -154,7 +155,7 @@ def get_flock_info(house_id: str):
         raise HTTPException(status_code=500, detail=f"Failed to load flock info: {str(e)}")
 
 
-@router.delete("/flock/{house_id}/info")
+@router.delete("/flock/{house_id}/info", dependencies=[Depends(require_write_token)])
 def delete_flock_info(house_id: str):
     """
     Удалить информацию о стаде (и весь дневник).
@@ -172,7 +173,7 @@ def delete_flock_info(house_id: str):
 # Endpoints для Diary
 # ============================================================================
 
-@router.post("/flock/{house_id}/diary", response_model=DiaryEntryResponse)
+@router.post("/flock/{house_id}/diary", response_model=DiaryEntryResponse, dependencies=[Depends(require_write_token)])
 def add_diary_entry(house_id: str, payload: DiaryEntryRequest):
     """
     Добавить запись в дневник стада.
@@ -282,7 +283,7 @@ def get_diary_entry_by_day(house_id: str, day: int):
         raise HTTPException(status_code=500, detail=f"Failed to load diary entry: {str(e)}")
 
 
-@router.put("/flock/{house_id}/diary/{day}", response_model=DiaryEntryResponse)
+@router.put("/flock/{house_id}/diary/{day}", response_model=DiaryEntryResponse, dependencies=[Depends(require_write_token)])
 def update_diary_entry(house_id: str, day: int, payload: DiaryEntryRequest):
     """Обновить запись дневника за конкретный день."""
     try:
@@ -329,7 +330,7 @@ def update_diary_entry(house_id: str, day: int, payload: DiaryEntryRequest):
         raise HTTPException(status_code=500, detail=f"Failed to update diary entry: {str(e)}")
 
 
-@router.delete("/flock/{house_id}/diary/{day}")
+@router.delete("/flock/{house_id}/diary/{day}", dependencies=[Depends(require_write_token)])
 def delete_diary_entry(house_id: str, day: int):
     """Удалить запись дневника за конкретный день."""
     try:

@@ -146,6 +146,7 @@
     phys_cobb_source:    'Cobb Broiler Management Guide 2021, §9 · Tunnel checks need system max entered',
     phys_dims_needed:    'Enter building dimensions to enable physical check',
     cap_insufficient_note: 'Minimum ventilation exceeds installed fan capacity — fans cannot provide even the minimum',
+    write_token_prompt: 'Saving is protected. Enter the write token:',
 
     // ── SETTINGS PAGE ──────────────────────────────
     settings_title:    'Profile Settings',

@@ -6,9 +6,10 @@ from __future__ import annotations
 import logging
 import re
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
 
+from ..write_access import require_write_token
 from ..core.building_thermal import (
     BuildingDimensions,
     HeaterConfig,
@@ -137,7 +138,7 @@ def get_thermal_config():
     return result
 
 
-@router.put("/config")
+@router.put("/config", dependencies=[Depends(require_write_token)])
 def update_thermal_config(payload: ThermalConfigModel):
     """Обновить конфигурацию теплотехнических параметров"""
     config = ThermalConfig(house_id=payload.house_id)
