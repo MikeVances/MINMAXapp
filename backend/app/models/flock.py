@@ -45,16 +45,21 @@ class FlockInfo:
         """Создать объект из словаря."""
         return cls(**{k: v for k, v in data.items() if k in cls.__annotations__})
 
-    def get_current_day(self) -> int:
+    def get_current_day(self, today: Optional[date] = None) -> int:
         """
         Вычислить текущий день цикла на основе даты посадки.
+
+        today — «сегодня» по часам клиента (ферма), если он её прислал.
+        Без неё берётся дата сервера, а Render живёт в UTC: вечером по
+        местному времени сервер ещё во «вчера», и день цикла отстаёт на единицу.
 
         Returns:
             Номер дня (1-42+), или 0 если дата посадки в будущем
         """
         try:
             placement = datetime.fromisoformat(self.placement_date).date()
-            today = date.today()
+            if today is None:
+                today = date.today()
             delta = (today - placement).days + 1  # День 1 = день посадки
             return max(0, delta)
         except (ValueError, TypeError):

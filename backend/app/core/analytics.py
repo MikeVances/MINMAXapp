@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from datetime import date
+
 from typing import Optional
 
 from ..models.flock import PlanVsFactData, AnalyticsSummary
@@ -93,7 +95,7 @@ def get_plan_vs_fact_data(house_id: str, target_days: int = 42) -> PlanVsFactDat
     )
 
 
-def get_analytics_summary(house_id: str) -> AnalyticsSummary:
+def get_analytics_summary(house_id: str, today: Optional[date] = None) -> AnalyticsSummary:
     """
     Получить сводную аналитику по стаду.
 
@@ -106,6 +108,7 @@ def get_analytics_summary(house_id: str) -> AnalyticsSummary:
 
     Args:
         house_id: ID птичника
+        today: «сегодня» по часам клиента (см. FlockInfo.get_current_day)
 
     Returns:
         AnalyticsSummary с рассчитанными метриками
@@ -118,7 +121,7 @@ def get_analytics_summary(house_id: str) -> AnalyticsSummary:
     if flock_info is None:
         raise ValueError(f"Flock info not found for house '{house_id}'")
 
-    current_day = flock_info.get_current_day()
+    current_day = flock_info.get_current_day(today)
 
     # Загрузить дневник
     diary_entries = flock_storage.load_diary_entries(house_id, from_day=1, to_day=current_day)

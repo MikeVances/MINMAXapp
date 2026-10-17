@@ -18,17 +18,49 @@ Endpoints:
 
 from __future__ import annotations
 
+import logging
+from datetime import date
+
 from fastapi import APIRouter, HTTPException, Query, Depends
-from pydantic import BaseModel, Field
+from fastapi import Path as PathParam
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List
 
 from ..write_access import require_write_token
+from ..core.house_id import HOUSE_ID_PATTERN
 from ..models.flock import FlockInfo, FlockDiaryEntry, PlanVsFactData, AnalyticsSummary
 from ..core import flock_storage
 from ..core import analytics
 
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
+
+# Имя корпуса в URL: те же правила, что у теплотехники (без разметки, ≤ 64 символов).
+# Alias нужен, чтобы в теле запроса функции параметр по-прежнему назывался house_id.
+HouseId = PathParam(..., min_length=1, max_length=64, pattern=HOUSE_ID_PATTERN,
+                    description="Имя корпуса: буквы, цифры, пробел, точка, дефис, подчёркивание")
+
+# «Сегодня» по часам клиента — см. FlockInfo.get_current_day
+TodayParam = Query(None, description="Дата клиента YYYY-MM-DD для расчёта текущего дня цикла")
+
+
+def _internal_error(what: str, exc: Exception) -> HTTPException:
+    """
+    500 без подробностей наружу: текст исключения содержит пути на диске и
+    внутренности разбора JSON, клиенту это не нужно, а злоумышленнику полезно.
+    Подробности — в лог сервера.
+    """
+    logger.exception("%s", what)
+    return HTTPException(status_code=500, detail=f"{what}. See server log for details.")
+
+
+def _parse_iso_date(value: str, field_name: str) -> str:
+    """Дата строго YYYY-MM-DD: иначе get_current_day молча вернёт 0 и дневник «зависнет» на дне 0."""
+    try:
+        return date.fromisoformat(value).isoformat()
+    except (TypeError, ValueError):
+        raise ValueError(f"{field_name} must be an ISO date YYYY-MM-DD, got {value!r}")
 
 
 # ============================================================================
@@ -44,6 +76,11 @@ class FlockInfoRequest(BaseModel):
     target_days: int = Field(42, ge=1, le=100)
     breed: Optional[str] = Field(None, max_length=64)
     notes: Optional[str] = Field(None, max_length=500)
+
+    @field_validator("placement_date")
+    @classmethod
+    def _placement_date_iso(cls, v: str) -> str:
+        return _parse_iso_date(v, "placement_date")
 
 
 class FlockInfoResponse(BaseModel):
@@ -70,6 +107,11 @@ class DiaryEntryRequest(BaseModel):
     temp_inside_c: Optional[float] = Field(None, ge=-20, le=60)
     notes: Optional[str] = Field(None, max_length=500)
 
+    @field_validator("date")
+    @classmethod
+    def _date_iso(cls, v: str) -> str:
+        return _parse_iso_date(v, "date")
+
 
 class DiaryEntryResponse(BaseModel):
     """Ответ с записью дневника."""
@@ -90,7 +132,8 @@ class DiaryEntryResponse(BaseModel):
 # ============================================================================
 
 @router.post("/flock/{house_id}/info", response_model=FlockInfoResponse, dependencies=[Depends(require_write_token)])
-def create_or_update_flock_info(house_id: str, payload: FlockInfoRequest):
+def create_or_update_flock_info(payload: FlockInfoRequest, house_id: str = HouseId,
+                                today: Optional[date] = TodayParam):
     """
     Создать или обновить информацию о стаде в птичнике.
 
@@ -118,16 +161,16 @@ def create_or_update_flock_info(house_id: str, payload: FlockInfoRequest):
             target_days=flock_info.target_days,
             breed=flock_info.breed,
             notes=flock_info.notes,
-            current_day=flock_info.get_current_day(),
+            current_day=flock_info.get_current_day(today),
             created_at=flock_info.created_at,
             updated_at=flock_info.updated_at,
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to save flock info: {str(e)}")
+        raise _internal_error("Failed to save flock info", e)
 
 
 @router.get("/flock/{house_id}/info", response_model=FlockInfoResponse)
-def get_flock_info(house_id: str):
+def get_flock_info(house_id: str = HouseId, today: Optional[date] = TodayParam):
     """Получить информацию о стаде в птичнике."""
     try:
         flock_info = flock_storage.load_flock_info(house_id)
@@ -145,18 +188,18 @@ def get_flock_info(house_id: str):
             target_days=flock_info.target_days,
             breed=flock_info.breed,
             notes=flock_info.notes,
-            current_day=flock_info.get_current_day(),
+            current_day=flock_info.get_current_day(today),
             created_at=flock_info.created_at,
             updated_at=flock_info.updated_at,
         )
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to load flock info: {str(e)}")
+        raise _internal_error("Failed to load flock info", e)
 
 
 @router.delete("/flock/{house_id}/info", dependencies=[Depends(require_write_token)])
-def delete_flock_info(house_id: str):
+def delete_flock_info(house_id: str = HouseId):
     """
     Удалить информацию о стаде (и весь дневник).
 
@@ -166,7 +209,7 @@ def delete_flock_info(house_id: str):
         flock_storage.delete_all_flock_data(house_id)
         return {"ok": True, "message": f"Flock data for '{house_id}' has been deleted"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to delete flock data: {str(e)}")
+        raise _internal_error("Failed to delete flock data", e)
 
 
 # ============================================================================
@@ -174,7 +217,7 @@ def delete_flock_info(house_id: str):
 # ============================================================================
 
 @router.post("/flock/{house_id}/diary", response_model=DiaryEntryResponse, dependencies=[Depends(require_write_token)])
-def add_diary_entry(house_id: str, payload: DiaryEntryRequest):
+def add_diary_entry(payload: DiaryEntryRequest, house_id: str = HouseId):
     """
     Добавить запись в дневник стада.
 
@@ -222,7 +265,7 @@ def add_diary_entry(house_id: str, payload: DiaryEntryRequest):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to save diary entry: {str(e)}")
+        raise _internal_error("Failed to save diary entry", e)
 
 
 @router.get("/flock/{house_id}/diary", response_model=List[DiaryEntryResponse])
@@ -251,11 +294,11 @@ def get_diary_entries(
             for e in entries
         ]
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to load diary entries: {str(e)}")
+        raise _internal_error("Failed to load diary entries", e)
 
 
 @router.get("/flock/{house_id}/diary/{day}", response_model=DiaryEntryResponse)
-def get_diary_entry_by_day(house_id: str, day: int):
+def get_diary_entry_by_day(day: int, house_id: str = HouseId):
     """Получить запись дневника за конкретный день."""
     try:
         entry = flock_storage.get_diary_entry_by_day(house_id, day)
@@ -280,11 +323,11 @@ def get_diary_entry_by_day(house_id: str, day: int):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to load diary entry: {str(e)}")
+        raise _internal_error("Failed to load diary entry", e)
 
 
 @router.put("/flock/{house_id}/diary/{day}", response_model=DiaryEntryResponse, dependencies=[Depends(require_write_token)])
-def update_diary_entry(house_id: str, day: int, payload: DiaryEntryRequest):
+def update_diary_entry(day: int, payload: DiaryEntryRequest, house_id: str = HouseId):
     """Обновить запись дневника за конкретный день."""
     try:
         # Убедиться, что day_of_cycle совпадает
@@ -327,11 +370,11 @@ def update_diary_entry(house_id: str, day: int, payload: DiaryEntryRequest):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to update diary entry: {str(e)}")
+        raise _internal_error("Failed to update diary entry", e)
 
 
 @router.delete("/flock/{house_id}/diary/{day}", dependencies=[Depends(require_write_token)])
-def delete_diary_entry(house_id: str, day: int):
+def delete_diary_entry(day: int, house_id: str = HouseId):
     """Удалить запись дневника за конкретный день."""
     try:
         success = flock_storage.delete_diary_entry(house_id, day)
@@ -345,7 +388,7 @@ def delete_diary_entry(house_id: str, day: int):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to delete diary entry: {str(e)}")
+        raise _internal_error("Failed to delete diary entry", e)
 
 
 # ============================================================================
@@ -353,7 +396,7 @@ def delete_diary_entry(house_id: str, day: int):
 # ============================================================================
 
 @router.get("/flock/{house_id}/analytics/plan-vs-fact")
-def get_plan_vs_fact(house_id: str, target_days: int = Query(42, ge=1, le=100)):
+def get_plan_vs_fact(house_id: str = HouseId, target_days: int = Query(42, ge=1, le=100)):
     """
     Получить данные для графика план vs факт.
 
@@ -369,11 +412,11 @@ def get_plan_vs_fact(house_id: str, target_days: int = Query(42, ge=1, le=100)):
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to get plan vs fact data: {str(e)}")
+        raise _internal_error("Failed to get plan vs fact data", e)
 
 
 @router.get("/flock/{house_id}/analytics/summary")
-def get_analytics_summary(house_id: str):
+def get_analytics_summary(house_id: str = HouseId, today: Optional[date] = TodayParam):
     """
     Получить сводную аналитику по стаду.
 
@@ -387,9 +430,9 @@ def get_analytics_summary(house_id: str):
     - Средний расход корма на голову (кг)
     """
     try:
-        summary = analytics.get_analytics_summary(house_id)
+        summary = analytics.get_analytics_summary(house_id, today)
         return summary.to_dict()
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to get analytics summary: {str(e)}")
+        raise _internal_error("Failed to get analytics summary", e)

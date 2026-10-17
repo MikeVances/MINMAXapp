@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import Optional, List
 
 from ..models.flock import FlockInfo, FlockDiaryEntry
+from .house_id import filename_to_house_id, house_id_to_filename
 from .json_store import atomic_write_json, path_lock
 from .paths import data_path
 
@@ -36,25 +37,14 @@ def _ensure_flocks_dir():
     FLOCKS_DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 
-def _sanitize_house_id(house_id: str) -> str:
-    """
-    Преобразовать house_id в безопасное имя файла.
-
-    Заменяет небезопасные символы на подчёркивание.
-    """
-    return "".join(c if c.isalnum() or c in ('-', '_') else '_' for c in house_id)
-
-
 def _get_info_path(house_id: str) -> Path:
     """Путь к файлу с информацией о стаде."""
-    safe_id = _sanitize_house_id(house_id)
-    return FLOCKS_DATA_DIR / f"house_{safe_id}_info.json"
+    return FLOCKS_DATA_DIR / f"house_{house_id_to_filename(house_id)}_info.json"
 
 
 def _get_diary_path(house_id: str) -> Path:
     """Путь к файлу с дневником стада."""
-    safe_id = _sanitize_house_id(house_id)
-    return FLOCKS_DATA_DIR / f"house_{safe_id}_diary.json"
+    return FLOCKS_DATA_DIR / f"house_{house_id_to_filename(house_id)}_diary.json"
 
 
 # ============================================================================
@@ -74,15 +64,21 @@ def save_flock_info(house_id: str, info: FlockInfo) -> None:
     """
     _ensure_flocks_dir()
 
-    # Установить метаданные
     now = datetime.utcnow().isoformat() + "Z"
-    if info.created_at is None:
-        info.created_at = now
-    info.updated_at = now
-
     path = _get_info_path(house_id)
     try:
+        # Чтение старой записи и запись новой — под одной блокировкой, иначе
+        # два одновременных POST могут оба решить, что записи ещё нет
         with path_lock(path):
+            # POST «создать или обновить» всегда присылает запись без created_at;
+            # дата создания берётся из уже сохранённого файла, а не ставится заново
+            if info.created_at is None:
+                existing = load_flock_info(house_id)
+                if existing is not None and existing.created_at:
+                    info.created_at = existing.created_at
+            if info.created_at is None:
+                info.created_at = now
+            info.updated_at = now
             atomic_write_json(path, info.to_dict())
     except Exception as e:
         raise IOError(f"Failed to save flock info for {house_id}: {e}")
@@ -325,7 +321,7 @@ def list_all_flocks() -> List[str]:
         # Формат: house_{safe_id}_info.json
         filename = file_path.stem  # house_{safe_id}_info
         if filename.startswith("house_") and filename.endswith("_info"):
-            safe_id = filename[6:-5]  # Убрать "house_" и "_info"
-            house_ids.add(safe_id)
+            fragment = filename[6:-5]  # Убрать "house_" и "_info"
+            house_ids.add(filename_to_house_id(fragment))
 
     return sorted(list(house_ids))

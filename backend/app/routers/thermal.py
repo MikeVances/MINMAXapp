@@ -10,6 +10,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
 
 from ..write_access import require_write_token
+from ..core.house_id import HOUSE_ID_PATTERN
 from ..core.cooling_fit import fit_cooling_curve
 from ..core.building_thermal import (
     BuildingDimensions,
@@ -79,8 +80,6 @@ class CurveCalibrationResult(BaseModel):
 
 logger = logging.getLogger(__name__)
 
-# Допустимое имя корпуса (общий шаблон для запроса и для проверки сохранённого файла)
-HOUSE_ID_PATTERN = r"^[\w .\-]{1,64}$"
 
 
 def _safe_stored_house_id(house_id: str | None) -> str | None:

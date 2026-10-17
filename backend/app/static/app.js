@@ -131,7 +131,11 @@ async function loadFlockInfo() {
   if (!tab || !elFlockInfo) return;
 
   try {
-    const r = await fetch(`./flock/${tab.id}/info`);
+    // Имя корпуса — в сегмент пути только через кодирование: пробел или «#» в имени
+    // иначе ломают URL. Дата клиента нужна серверу для текущего дня цикла:
+    // сервер в UTC, а вечером по местному времени он ещё во «вчера».
+    const today = new Date().toLocaleDateString('sv-SE'); // sv-SE даёт ровно YYYY-MM-DD
+    const r = await fetch(`./flock/${encodeURIComponent(tab.id)}/info?today=${today}`);
     if (r.ok) {
       const data = await r.json();
       elFlockInfo.style.display = 'block';
