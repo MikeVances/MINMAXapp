@@ -19,7 +19,6 @@ from ..core.building_thermal import (
     load_thermal_config,
     save_thermal_config,
     calculate_ua_coefficient,
-    calculate_heater_duty_cycle,
     calculate_heat_balance,
     heater_air_demand,
 )
@@ -81,6 +80,8 @@ class CalibrationResultModel(BaseModel):
     ua_coefficient: float = Field(..., description="Коэффициент теплопотерь, Вт/°C")
     volume_m3: float = Field(..., description="Объем помещения, м³")
     cooling_rate_per_minute: float = Field(..., description="Скорость охлаждения, °C/мин")
+    # Метод и его ограничение: UA по теплоёмкости только воздуха — условный
+    method: str = "air_only_cooling"
 
 
 class HeaterAnalysisRequest(BaseModel):

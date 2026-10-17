@@ -43,14 +43,15 @@ def test_humid_target_lowers_setpoint_and_raises_qmax():
     """
     День 35 (W = 2.296 кг), профиль 20 °C при 60 %. Цель RH 70 % → уставка 20 − 1.4 = 18.6 °C.
     Меньше ΔT с улицей 10 °C → тем же явным теплом нужно больше воздуха:
-      Qmax = 6.90 × 2.296^0.75 × 10 000 × 3600 / (1.2469 × 1006 × 8.6) = 42 950 м³/ч
-      (при 60 % было 36 937 — см. test_calc_core_golden)
+      ρ    = 353.05 / 291.75 = 1.2101 кг/м³ (при T_in = 18.6 °C)
+      Qmax = 6.90 × 2.296^0.75 × 10 000 × 3600 / (1.2101 × 1006 × 8.6) = 44 255 м³/ч
+      (при 60 % было 38 242 — см. test_calc_core_golden)
     """
     r = _day35(target_rh=70.0)
 
     assert r.min_temp_c == pytest.approx(18.6)
     assert r.rv_percent == 70.0
-    assert r.q_max_m3h == pytest.approx(42_950.1, rel=1e-4)
+    assert r.q_max_m3h == pytest.approx(44_254.6, rel=1e-4)
 
 
 def test_without_target_rh_profile_reference_is_used():

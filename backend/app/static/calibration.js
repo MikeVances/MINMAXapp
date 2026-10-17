@@ -53,6 +53,17 @@ const elTimerStatus  = document.getElementById('timerStatus');
 // Фиксированные температуры — отдельно от DOM, чтобы логика была явной
 const T_TEST_START = 30.0;  // °C — нагреть до этой температуры
 const T_TEST_END   = 25.0;  // °C — остановить таймер при этой температуре
+// Короче — время реакции оператора сравнимо с самим тестом (и 0 с дал бы деление на ноль)
+const MIN_TEST_SEC = 30;
+
+// UA по закону остывания Ньютона — ТА ЖЕ формула, что на сервере
+// (building_thermal.calculate_ua_coefficient): C/t · ln(ΔT₀/ΔT₁), ρ при средней T теста.
+// Иначе показанный здесь UA не совпадал бы с сохранённым сервером
+function uaFromCooling(volumeM3, tStart, tEnd, tOut, seconds) {
+  const rho = 353.05 / ((tStart + tEnd) / 2 + 273.15);
+  const C   = volumeM3 * rho * 1006;
+  return C / seconds * Math.log((tStart - tOut) / (tEnd - tOut));
+}
 
 let timerRunning   = false;
 let timerInterval  = null;
@@ -185,25 +196,33 @@ function mzRenderProfile() {
   const zoneVol  = zoneL * w * hEff;
   const zoneArea = zoneL * w;
 
-  const dtAvg = ((T_TEST_START - tOut) + (T_TEST_END - tOut)) / 2;
-  const C_zone = zoneVol * 1.2 * 1005; // тепловая ёмкость воздуха одной зоны, Дж/°C
   const uaUnit = t('cfg_ua_unit');
 
-  const results = mzStopTimes.map((sec, i) => {
-    const coolRate = (T_TEST_START - T_TEST_END) / sec; // °C/с
-    const ua       = (C_zone * coolRate) / dtAvg;       // Вт/°C
-    const uaM2     = zoneArea > 0 ? ua / zoneArea : 0;
-    return { zone: i + 1, sec, ua, uaM2, coolRate };
-  });
+  // Зоны, остановленные быстрее MIN_TEST_SEC, в расчёт не берём: это ошибка нажатия
+  const results = mzStopTimes
+    .map((sec, i) => ({ zone: i + 1, sec }))
+    .filter(r => r.sec >= MIN_TEST_SEC)
+    .map(r => {
+      const ua       = uaFromCooling(zoneVol, T_TEST_START, T_TEST_END, tOut, r.sec);   // Вт/°C
+      const uaM2     = zoneArea > 0 ? ua / zoneArea : 0;
+      const coolRate = (T_TEST_START - T_TEST_END) / r.sec;                             // °C/с
+      return { ...r, ua, uaM2, coolRate };
+    });
+
+  if (!results.length) {
+    document.getElementById('calibrationResult').innerHTML =
+      `<div class="danger">${t('err_test_too_short')}</div>`;
+    elSaveCalibrationBtn.disabled = true;
+    return;
+  }
 
   const maxUaM2 = Math.max(...results.map(r => r.uaM2));
-  const avgUaM2 = results.reduce((s, r) => s + r.uaM2, 0) / n;
-  const sumUA   = results.reduce((s, r) => s + r.ua,   0); // суммарный UA здания
+  const avgUaM2 = results.reduce((s, r) => s + r.uaM2, 0) / results.length;
 
   // Эквивалентное время для сохранения в калибровку:
   //   - прямое измерение (контроллер показал 25°C) — предпочтительно, точнее
   //   - гармоническое среднее зональных времён     — фолбэк
-  const harmonicMean   = n / mzStopTimes.reduce((s, sec) => s + 1 / sec, 0);
+  const harmonicMean   = results.length / results.reduce((s, r) => s + 1 / r.sec, 0);
   const buildingEquivSec = mzAvgTime ?? harmonicMean;
   const buildingEquivSrc = mzAvgTime != null ? t('mz_ua_src_direct') : t('mz_ua_src_harmonic');
 
@@ -211,8 +230,9 @@ function mzRenderProfile() {
   elTFinal.value      = T_TEST_END;
   elTimeMinutes.value = (buildingEquivSec / 60).toFixed(3);
 
-  // Позволяем кнопке «Сохранить калибровку» работать через стандартный обработчик
-  calculatedUA   = sumUA;
+  // UA здания — по тому же эквивалентному времени и объёму, что уйдут на сервер:
+  // показанное значение совпадёт с сохранённым
+  calculatedUA   = uaFromCooling(zoneVol * n, T_TEST_START, T_TEST_END, tOut, buildingEquivSec);
   calculatedArea = l * w;
 
   function quality(uaM2) {
@@ -256,10 +276,13 @@ function mzRenderProfile() {
         <strong>${avgUaM2.toFixed(2)} ${uaUnit}/м²</strong>
         <span style="padding:2px 10px;border-radius:10px;font-size:12px;background:${avgQ.bg};color:${avgQ.color};">${avgQ.label}</span>
       </div>
+      <div class="kv" style="margin-top:8px;"><span>${t('ua_coeff_lbl')}</span>
+        <span><strong>${calculatedUA.toFixed(0)} ${uaUnit}</strong></span></div>
       <div style="margin-top:8px;font-size:12px;color:var(--muted);">
         ${t('mz_ua_source')}: <strong>${buildingEquivSrc}</strong>
         (${timerFormat(buildingEquivSec)})
       </div>
+      <p class="warn" style="margin:8px 0 0;font-size:12px;">⚠️ ${t('ua_conditional_note')}</p>
       <p class="muted" style="margin:10px 0 0;font-size:12px;">⚠️ ${t('zone_note')}</p>
       <p class="muted" style="margin:6px 0 0;font-size:12px;">${t('cal_save_hint')}</p>
     </div>`;
@@ -348,7 +371,7 @@ elTimerBtn.addEventListener('click', () => {
       elTimerBtn.style.color      = '';
       elTimerDisplay.style.color  = 'var(--accent)';
 
-      if (elapsedSeconds < 30) {
+      if (elapsedSeconds < MIN_TEST_SEC) {
         elTimerStatus.textContent = t('err_test_too_short');
         elTimerStatus.style.color = 'var(--warn, #ffcf6b)';
         return;
@@ -430,7 +453,17 @@ elSaveBuildingBtn.addEventListener('click', async () => {
 
   try {
     const config = await loadConfig();
-    config.house_id  = getSelectedHouseId();
+    const houseId = getSelectedHouseId();
+    if (config.house_id != null && houseId != null && config.house_id !== houseId) {
+      // Другой корпус: калибровка и горелки прежнего корпуса к нему не относятся
+      config.calibration = null;
+      config.heater      = null;
+    } else if (config.calibration) {
+      // Тот же корпус, но размеры могли измениться: UA пересчитает сервер
+      // по сохранённому тесту и новому объёму
+      delete config.calibration.ua_coefficient;
+    }
+    config.house_id  = houseId;
     // Backend принимает height_m — передаём эффективную высоту (среднее стены и конька)
     config.building = { length_m: l, width_m: w, height_m: hEff };
 
@@ -501,6 +534,10 @@ elCalculateBtn.addEventListener('click', async () => {
     elCalibrationResult.innerHTML = `<div class="danger">${t('err_temps_outside')}</div>`;
     return;
   }
+  if (tFinal >= tInitial) {
+    elCalibrationResult.innerHTML = `<div class="danger">${t('err_no_cooling')}</div>`;
+    return;
+  }
 
   try {
     const r = await fetch('./thermal/calibrate', {
@@ -557,6 +594,7 @@ elCalculateBtn.addEventListener('click', async () => {
           <div class="kv"><span>${t('cool_rate_lbl')}</span><span>${coolingRate.toFixed(3)} ${rateUnit}</span></div>
         </div>
         ${qualityHtml}
+        <p class="warn" style="margin:8px 0 0 0; font-size:12px;">⚠️ ${t('ua_conditional_note')}</p>
         <p class="muted" style="margin:8px 0 0 0; font-size:13px;">
           ${t('cal_save_hint')}
         </p>

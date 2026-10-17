@@ -87,6 +87,14 @@ class ThermalConfig:
     calibration: Optional[CalibrationTest] = None
 
 
+AIR_CP_J_PER_KG_K = 1006.0   # удельная теплоёмкость сухого воздуха
+
+
+def air_density_kg_m3(t_c: float) -> float:
+    """Плотность воздуха при 101.325 кПа: ρ = 353.05 / T[K]."""
+    return 353.05 / (t_c + 273.15)
+
+
 def calculate_ua_coefficient(
     volume_m3: float,
     t_initial: float,
@@ -95,82 +103,38 @@ def calculate_ua_coefficient(
     time_minutes: float
 ) -> float:
     """
-    Рассчитывает коэффициент теплопотерь по методу охлаждения.
+    УСЛОВНЫЙ коэффициент теплопотерь по тесту остывания пустого корпуса, Вт/°C.
 
-    Физика: Q_loss = UA × ΔT = C × dT/dt
-    где UA - коэффициент теплопередачи помещения (Вт/°C)
+    Остывание по Ньютону: C · dT/dt = −UA · (T − T_нар) → экспонента, откуда
+        UA = C / t · ln(ΔT₀ / ΔT₁)
+    (раньше бралась средняя арифметическая ΔT — систематическая ошибка тем больше,
+    чем сильнее остыл корпус).
 
-    Args:
-        volume_m3: Объем помещения, м³
-        t_initial: Начальная температура внутри, °C
-        t_final: Температура через time_minutes, °C
-        t_outside: Температура снаружи, °C
-        time_minutes: Время теста, минуты (обычно 5-10 мин)
+    Оговорка, из-за которой UA «условный»: C — теплоёмкость только ВОЗДУХА.
+    В реальном корпусе тепло отдают и пол, и стены, и результат зависит от длины
+    теста: в первые минуты воздух выдувается инфильтрацией (UA завышается в разы),
+    в долгом тесте пол и стены подогревают воздух (UA занижается).
+    Надёжнее калибровка по установившемуся режиму горелок.
 
-    Returns:
-        Коэффициент теплопотерь UA, Вт/°C
+    Raises:
+        ValueError: температура не выше наружной или не снижалась за время теста
     """
-    # Тепловая емкость воздуха в помещении
-    air_density = 1.2  # кг/м³ при 20°C
-    air_cp = 1005  # Дж/(кг·°C)
-    thermal_capacity = volume_m3 * air_density * air_cp  # Дж/°C
-
-    # Разница температур в начале и конце теста
     delta_t_initial = t_initial - t_outside
     delta_t_final = t_final - t_outside
 
     if delta_t_initial <= 0 or delta_t_final <= 0:
         raise ValueError("Начальная и конечная температуры должны быть выше наружной")
+    if t_final >= t_initial:
+        # Раньше здесь был abs(): рост температуры давал «нормальный» положительный UA
+        raise ValueError("Температура за время теста не снизилась — тест остывания некорректен")
+    if time_minutes <= 0:
+        raise ValueError("Длительность теста должна быть больше нуля")
 
-    # Средняя скорость охлаждения
-    time_seconds = time_minutes * 60
-    cooling_rate = (t_initial - t_final) / time_seconds  # °C/с
+    # Теплоёмкость воздуха корпуса при средней температуре теста
+    t_mean = (t_initial + t_final) / 2.0
+    thermal_capacity = volume_m3 * air_density_kg_m3(t_mean) * AIR_CP_J_PER_KG_K   # Дж/°C
 
-    # Средняя разница температур (логарифмическое среднее более точно, но для простоты берем арифметическое)
-    delta_t_avg = (delta_t_initial + delta_t_final) / 2
-
-    # Коэффициент теплопотерь (Вт/°C)
-    # Q_loss = UA × ΔT, где Q_loss = C × dT/dt
-    ua_coefficient = (thermal_capacity * cooling_rate) / delta_t_avg
-
-    return abs(ua_coefficient)
-
-
-def calculate_heater_duty_cycle(
-    ua_coefficient: float,
-    t_inside_target: float,
-    t_outside: float,
-    heater_power_kw: float
-) -> float:
-    """
-    Рассчитывает коэффициент загрузки обогревателей (долю времени работы).
-
-    Args:
-        ua_coefficient: Коэффициент теплопотерь, Вт/°C
-        t_inside_target: Целевая температура внутри, °C
-        t_outside: Температура снаружи, °C
-        heater_power_kw: Мощность обогревателей, кВт
-
-    Returns:
-        Коэффициент загрузки (0..1), где 1 = 100% времени работы
-    """
-    if t_inside_target <= t_outside:
-        # Обогрев не нужен
-        return 0.0
-
-    # Теплопотери при целевой температуре
-    heat_loss_w = ua_coefficient * (t_inside_target - t_outside)
-
-    # Коэффициент загрузки
-    heater_power_w = heater_power_kw * 1000
-
-    if heater_power_w <= 0:
-        return 0.0
-
-    duty_cycle = heat_loss_w / heater_power_w
-
-    # Ограничить 0..1
-    return min(max(duty_cycle, 0.0), 1.0)
+    return thermal_capacity / (time_minutes * 60.0) * math.log(delta_t_initial / delta_t_final)
 
 
 def heater_air_demand(heater_power_kw: float, duty_cycle: float, heater_type: str) -> float:
@@ -222,7 +186,19 @@ def heater_co2_dilution_m3h(
 # ─────────────────────────────────────────────────────────────────────────────
 
 # Параметры воздуха (стандарт +15°C)
-_RHO_CP = 1.2 * 1005 / 3600   # Вт·ч/(м³·°C) → Вт/(м³/ч·°C) = 0.335 Вт/(м³/ч·°C)
+def ventilation_heat_w(q_m3h: float, t_inside_c: float, t_outside_c: float) -> float:
+    """
+    Тепло, уносимое вентиляцией при нагреве приточного воздуха до T_in, Вт.
+
+    Расход q — объём ВНУТРЕННЕГО воздуха: вытяжные вентиляторы перекачивают воздух
+    корпуса, их паспорт и уставки — в м³/ч при его температуре. Поэтому ρ берётся
+    при T_in. Одна функция для Qmax, duty cycle горелок и анализа теплового баланса
+    (раньше было три варианта: ρ при T_нар в двух местах и фиксированные 1.2·1005).
+    """
+    dt = t_inside_c - t_outside_c
+    return q_m3h / 3600.0 * air_density_kg_m3(t_inside_c) * AIR_CP_J_PER_KG_K * dt
+
+
 
 
 @dataclass
@@ -289,9 +265,8 @@ def calculate_heat_balance(
     q_walls_w = ua_coefficient * dt
     q_walls_kw = q_walls_w / 1000.0
 
-    # Потери с вентиляционным воздухом (Q_min × ρcp × ΔT)
-    # _RHO_CP = 0.335 Вт/(м³/ч·°C)
-    q_vent_w = q_min_m3h * _RHO_CP * dt
+    # Потери с вентиляционным воздухом (Q_min × ρcp × ΔT), dt ≥ 0
+    q_vent_w = ventilation_heat_w(q_min_m3h, t_inside_target, t_outside) if dt > 0 else 0.0
     q_vent_kw = q_vent_w / 1000.0
 
     q_total_loss_kw = q_walls_kw + q_vent_kw

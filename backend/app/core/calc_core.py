@@ -10,6 +10,9 @@ from .survival import survival_fraction
 from .ventilation_calc import calc_q_min_per_bird
 from .app_config import load_app_config
 from .building_thermal import (
+    AIR_CP_J_PER_KG_K,
+    air_density_kg_m3,
+    ventilation_heat_w,
     load_thermal_config,
     heater_air_demand,
     heater_co2_dilution_m3h,
@@ -189,11 +192,12 @@ def compute(ci: CalcInput) -> CalcResult:
                               if _ua_coeff is not None else 0.0)
         q_vent_needed_w    = max(0.0, h_birds_sensible_w - q_wall_loss_w)
 
-        rho_air = 353.05 / (ci.outside_t + 273.15)
+        # Объём через вытяжку — внутренний воздух, ρ при T_in (см. ventilation_heat_w)
+        rho_air = air_density_kg_m3(t_target_inside)
         delta_t = t_target_inside - ci.outside_t
 
         # ΔT ≈ 0: воздух почти не охлаждает, баланс вырождается (деление на ~0)
-        q_heat_balance = ((q_vent_needed_w * 3600.0) / (rho_air * 1006.0 * delta_t)
+        q_heat_balance = ((q_vent_needed_w * 3600.0) / (rho_air * AIR_CP_J_PER_KG_K * delta_t)
                           if delta_t > 0.5 else None)
 
         # Потолок переходного режима:
@@ -263,8 +267,7 @@ def compute(ci: CalcInput) -> CalcResult:
         delta_t_h  = max(0.0, t_target_inside - ci.outside_t)
 
         # Нагрев входящего воздуха: холодный воздух Qmin м³/ч нужно догреть до T_in
-        rho_inlet      = 353.05 / (ci.outside_t + 273.15)
-        q_vent_heat_w  = (q_min / 3600.0) * rho_inlet * 1006.0 * delta_t_h
+        q_vent_heat_w  = ventilation_heat_w(q_min, t_target_inside, ci.outside_t) if delta_t_h > 0 else 0.0
 
         heat_need_w = max(0.0,
             _thermal_cfg.calibration.ua_coefficient * delta_t_h

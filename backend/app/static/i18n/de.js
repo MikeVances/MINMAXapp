@@ -246,6 +246,8 @@
     vol_label:         'Gebäudevolumen',
     cool_rate_lbl:     'Abkühlrate',
     cal_save_hint:     '„Kalibrierung speichern" klicken, um diese Werte in den Lüftungsberechnungen zu verwenden.',
+    ua_conditional_note: 'Bedingter UA-Wert: Der Abkühltest berücksichtigt nur die Wärmekapazität der Luft. Ein kurzer Test (Minuten) überschätzt UA durch Luftaustausch, ein langer unterschätzt ihn durch Wärme aus Boden und Wänden. Nur als Richtwert verwenden.',
+    err_no_cooling: 'Die Temperatur ist während des Tests nicht gesunken — Werte prüfen',
     cal_saved_alert:   '✅ Kalibrierung gespeichert! Die Lüftungsberechnungen berücksichtigen ab sofort die Verbrennungsluft.',
     err_save_cal:      '❌ Speicherfehler: ',
     err_enter_all_fields:       '❌ Alle Felder ausfüllen',

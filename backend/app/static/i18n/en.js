@@ -246,6 +246,8 @@
     vol_label:         'Building volume',
     cool_rate_lbl:     'Cooling rate',
     cal_save_hint:     'Click "Save calibration" to use these values in ventilation calculations.',
+    ua_conditional_note: 'Conditional UA: the cooling test accounts for air heat capacity only. A short test (minutes) overstates UA because air is flushed out; a long one understates it because floor and walls release heat. Use as an estimate.',
+    err_no_cooling: 'Temperature did not drop during the test — check the values',
     cal_saved_alert:   '✅ Calibration saved! Ventilation calculations will now automatically account for combustion air.',
     err_save_cal:      '❌ Save error: ',
     err_enter_all_fields:       '❌ Fill in all fields',

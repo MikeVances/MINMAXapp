@@ -246,6 +246,8 @@
     vol_label:         'Kubatura budynku',
     cool_rate_lbl:     'Prędkość stygnięcia',
     cal_save_hint:     'Kliknij „Zapisz kalibrację", aby użyć tych wartości w obliczeniach wentylacji.',
+    ua_conditional_note: 'Warunkowe UA: test stygnięcia uwzględnia tylko pojemność cieplną powietrza. Krótki test (minuty) zawyża UA przez wymianę powietrza, długi zaniża przez ciepło podłogi i ścian. Traktuj jako orientacyjne.',
+    err_no_cooling: 'Temperatura nie spadła podczas testu — sprawdź wartości',
     cal_saved_alert:   '✅ Kalibracja zapisana! Obliczenia wentylacji będą teraz automatycznie uwzględniać powietrze do spalania.',
     err_save_cal:      '❌ Błąd zapisu: ',
     err_enter_all_fields:       '❌ Wypełnij wszystkie pola',

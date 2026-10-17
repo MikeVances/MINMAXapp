@@ -246,6 +246,8 @@
     vol_label:         'Volume du bâtiment',
     cool_rate_lbl:     'Vitesse de refroidissement',
     cal_save_hint:     'Cliquer sur « Enregistrer la calibration » pour utiliser ces valeurs dans les calculs de ventilation.',
+    ua_conditional_note: "UA conditionnel : le test de refroidissement ne tient compte que de la capacité thermique de l'air. Un test court (minutes) surestime UA à cause du renouvellement d'air, un test long le sous-estime à cause de la chaleur du sol et des murs. À utiliser comme estimation.",
+    err_no_cooling: "La température n'a pas baissé pendant le test — vérifiez les valeurs",
     cal_saved_alert:   '✅ Calibration enregistrée ! Les calculs de ventilation prendront désormais automatiquement en compte l\'air de combustion.',
     err_save_cal:      '❌ Erreur d\'enregistrement : ',
     err_enter_all_fields:       '❌ Remplir tous les champs',
