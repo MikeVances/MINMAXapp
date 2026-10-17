@@ -584,25 +584,6 @@
 </main>
 
 <script>
-// ─────── Audit store (localStorage, Render-compatible) ───────
-const auditStore = (() => {
-  const KEY = 'minmax_audit_v1';
-  const load = () => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; } };
-  return {
-    record(houseId, tool, payload) {
-      const d = load();
-      const hid = String(houseId || '_unknown');
-      if (!d[hid]) d[hid] = { house_id: hid, results: {}, _updated: null };
-      d[hid].results[tool] = { ...payload, _ts: new Date().toISOString() };
-      d[hid]._updated = new Date().toISOString();
-      localStorage.setItem(KEY, JSON.stringify(d));
-    },
-    getAll()      { return load(); },
-    getHouse(hid) { return load()[String(hid)] || null; },
-    clear()       { localStorage.removeItem(KEY); },
-  };
-})();
-
 // ─────── Shared house selector utility ───────
 // Заполняет <select> птичниками из localStorage главной страницы.
 // При смене выбора вызывает onSelect(tab) — tab-объект с полями профиля.
@@ -684,8 +665,15 @@ document.querySelectorAll('.tool-tab:not([disabled])').forEach(btn => {
     const tab = profileTabs[selIdx];
     if (!tab) return;
 
-    const outsideT  = Number(document.getElementById('prof-outside-t').value) || 15;
-    const outsideRH = Number(document.getElementById('prof-outside-rh').value) || 60;
+    // Пустое поле → значение по умолчанию, но 0 остаётся нулём:
+    // раньше Number(x) || 15 превращал 0 °C снаружи в 15 °C
+    const numOr = (id, fallback) => {
+      const raw = document.getElementById(id).value.trim();
+      const val = Number(raw);
+      return raw !== '' && Number.isFinite(val) ? val : fallback;
+    };
+    const outsideT  = numOr('prof-outside-t', 15);
+    const outsideRH = numOr('prof-outside-rh', 60);
 
     // Целевая RH: вне 40–70 % таблица ощущаемой температуры не определена —
     // пустое или неверное значение не отправляем (сервер возьмёт RH профиля)
@@ -998,12 +986,6 @@ function renderLeakage(d) {
   document.getElementById('l-fan-corr').textContent = `${d.fan_corrected_m3h.toFixed(0)} ${t('unit_m3h')}`;
   document.getElementById('l-class-tip').textContent = t(tc.tipKey);
 
-  auditStore.record(
-    document.getElementById('l-house-sel').selectedOptions[0]?.textContent,
-    'leakage',
-    { ela_m2: d.ela_m2, relative_leakage: d.relative_leakage, tightness_class: d.tightness_class,
-      house_area_m2: d.house_area_m2, static_pressure_pa: d.static_pressure_pa }
-  );
   document.getElementById('l-results').style.display = 'block';
 }
 
@@ -1044,6 +1026,9 @@ document.getElementById('tunnel-form').addEventListener('submit', async e => {
     }
 
     renderTunnel(await resp.json(), payload.t_outdoor_db_c);
+  } catch (err) {
+    // Сеть недоступна или ошибка отрисовки — без catch пользователь не видел ничего
+    alert(t('err_prefix') + String(err));
   } finally {
     btn.disabled = false; btn.textContent = t('btn_tunnel_active');
   }
@@ -1147,12 +1132,6 @@ function renderTunnel(d, t_real) {
     evapBtn.style.display = 'block';
   }
 
-  auditStore.record(
-    document.getElementById('tn-house-sel').selectedOptions[0]?.textContent,
-    'tunnel',
-    { air_speed_ms: d.air_speed_ms, total_flow_m3h: d.total_flow_m3h,
-      cross_section_m2: d.cross_section_m2, status_label: d.status_label }
-  );
   document.getElementById('tn-results').style.display = 'block';
 }
 
@@ -1228,6 +1207,8 @@ document.getElementById('evap-form').addEventListener('submit', async e => {
     }
 
     renderEvap(await resp.json());
+  } catch (err) {
+    alert(t('err_prefix') + String(err));
   } finally {
     btn.disabled = false; btn.textContent = t('btn_evap_active');
   }
@@ -1306,14 +1287,6 @@ function renderEvap(d) {
     waterCard.style.display = 'none';
   }
 
-  auditStore.record(
-    document.getElementById('ev-house-sel').selectedOptions[0]?.textContent,
-    'evap',
-    { t_pad_out_c: d.t_pad_out_c, cooling_achieved_c: d.cooling_achieved_c,
-      pad_efficiency: d.pad_efficiency, air_velocity_ms: d.air_velocity_ms,
-      temp_margin_c: d.temp_margin_c, delta_t_water_c: d.delta_t_water_c,
-      t_pad_corrected_c: d.t_pad_corrected_c }
-  );
   document.getElementById('ev-results').style.display = 'block';
 }
 </script>

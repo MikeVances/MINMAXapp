@@ -43,7 +43,8 @@ function loadTabs() {
 }
 
 function saveTabs(tabs) {
-  localStorage.setItem(storeKey, JSON.stringify(tabs));
+  // Хранилище может быть недоступно или переполнено — вкладки останутся в памяти страницы
+  try { localStorage.setItem(storeKey, JSON.stringify(tabs)); } catch (e) { console.warn('saveTabs:', e); }
 }
 
 let tabs = loadTabs();

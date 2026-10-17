@@ -34,18 +34,21 @@ function renderConfig() {
       </div>
     </div>`;
 
-  document.getElementById('cycle_days').addEventListener('change',
-    e => { cfg.cycle_days = Number(e.target.value || 42); });
-  document.getElementById('mort_total').addEventListener('change',
-    e => { cfg.total_mortality_pct = 100 - Number(e.target.value || 0); });
-  document.getElementById('v_tunnel').addEventListener('change',
-    e => { cfg.v_tunnel_ms = Number(e.target.value || 2.5); });
-  document.getElementById('safety_factor').addEventListener('change',
-    e => { cfg.safety_factor_qmin = Number(e.target.value || 1.5); });
-  document.getElementById('tunnel_min_day').addEventListener('change',
-    e => { cfg.tunnel_min_day = Number(e.target.value || 14); });
-  document.getElementById('tunnel_min_temp').addEventListener('change',
-    e => { cfg.tunnel_min_temp_c = Number(e.target.value || 18.0); });
+  // Пустое или нечисловое поле НЕ меняет настройку. Раньше Number(v || 0) превращал
+  // стёртую «сохранность» в 0 % живых — то есть 100 % падежа
+  const bindNumber = (id, apply) => {
+    document.getElementById(id).addEventListener('change', e => {
+      const raw = e.target.value.trim();
+      const val = Number(raw);
+      if (raw !== '' && Number.isFinite(val)) apply(val);
+    });
+  };
+  bindNumber('cycle_days',      v => { cfg.cycle_days = v; });
+  bindNumber('mort_total',      v => { cfg.total_mortality_pct = 100 - v; });
+  bindNumber('v_tunnel',        v => { cfg.v_tunnel_ms = v; });
+  bindNumber('safety_factor',   v => { cfg.safety_factor_qmin = v; });
+  bindNumber('tunnel_min_day',  v => { cfg.tunnel_min_day = v; });
+  bindNumber('tunnel_min_temp', v => { cfg.tunnel_min_temp_c = v; });
 
   document.getElementById('saveBtn').addEventListener('click', async () => {
     const btn = document.getElementById('saveBtn');

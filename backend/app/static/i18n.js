@@ -8,8 +8,11 @@
   // Languages loaded by <script> tags; each sets window.LOCALES.<lang>
   window.LOCALES = window.LOCALES || {};
 
-  // Restore last choice, default to EN
-  let currentLang = localStorage.getItem('lang') || 'en';
+  // Restore last choice, default to EN.
+  // localStorage бросает исключение при запрете хранилища (приватный режим, политика
+  // браузера) — без try/catch падал этот скрипт, а с ним переводы на ВСЕХ страницах
+  let currentLang = 'en';
+  try { currentLang = localStorage.getItem('lang') || 'en'; } catch (e) { /* остаётся EN */ }
   if (!window.LOCALES[currentLang]) currentLang = 'en';
 
   // ── t(): synchronous lookup with EN fallback ──────────────────────────────
@@ -60,7 +63,7 @@
   function setLang(lang) {
     if (!window.LOCALES[lang]) return; // file not loaded
     currentLang = lang;
-    localStorage.setItem('lang', lang);
+    try { localStorage.setItem('lang', lang); } catch (e) { /* выбор не запомнится */ }
     applyDOM();
     updateSwitcherUI();
   }

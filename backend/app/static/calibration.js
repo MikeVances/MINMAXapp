@@ -823,7 +823,13 @@ async function loadAndDisplayConfig() {
 // После сохранений форму не трогаем: пользователь только что сам ввёл значения.
 async function fillFormFromConfig() {
   const config = await loadConfig();
-  if (config.building) {
+  // Ответ сервера приходит ПОСЛЕ того, как селектор корпусов уже заполнил форму
+  // размерами выбранного корпуса (стена + конёк). Серверный конфиг хранит один корпус
+  // и только эффективную высоту — перезапись затирала бы размеры другого корпуса
+  // и терялся конёк. Поэтому: корпус выбран → размеры из его вкладки, не с сервера.
+  const selectedHouse = getSelectedHouseId();
+  const sameHouse = selectedHouse == null || config.house_id == null || config.house_id === selectedHouse;
+  if (config.building && selectedHouse == null) {
     elLength.value     = config.building.length_m;
     elWidth.value      = config.building.width_m;
     // height_m — эффективная высота (среднее стены и конька), ставим в поле стены как
@@ -832,7 +838,8 @@ async function fillFormFromConfig() {
     elHeightRidge.value = '';
     updateDimensionsDisplay();
   }
-  if (config.heater) {
+  // Горелки — свойство корпуса: подставляем только для того же корпуса
+  if (config.heater && sameHouse) {
     elHeaterType.value  = config.heater.heater_type;
     elHeaterPower.value = config.heater.total_power_kw;
     updateGasInfoVisibility();
