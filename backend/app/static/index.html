@@ -29,31 +29,6 @@
         <button id="addTab" class="btn btn-secondary">+ <span data-i18n="label_house_id">House ID</span></button>
         <button id="delTab" class="btn btn-secondary" data-i18n="btn_remove">Remove house</button>
       </div>
-
-      <!-- Flock info card -->
-      <div id="flockInfo" class="card" style="margin-bottom:12px; display:none;">
-        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:12px;">
-          <div>
-            <div class="muted" style="font-size:12px;" data-i18n="flock_placement">Placement date</div>
-            <div id="flockPlacementDate">—</div>
-          </div>
-          <div>
-            <div class="muted" style="font-size:12px;" data-i18n="flock_cur_day">Current day</div>
-            <div id="flockCurrentDay">—</div>
-          </div>
-          <div>
-            <div class="muted" style="font-size:12px;" data-i18n="flock_cur_birds">Current flock</div>
-            <div id="flockCurrentBirds">—</div>
-          </div>
-          <div>
-            <div class="muted" style="font-size:12px;" data-i18n="flock_breed">Breed</div>
-            <div id="flockBreed">—</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- House tabs -->
-      <div id="houseTabs" class="tabs" style="margin-bottom:12px;"></div>
     </section>
 
     <!-- Content container -->
@@ -140,22 +115,6 @@
           <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:4px;">
             <button id="sumBtn" class="btn" data-i18n="btn_save_house">Save house data</button>
           </div>
-        </div>
-      </section>
-
-      <!-- Diary tab -->
-      <section id="diaryContent" class="grid" style="display:none;">
-        <div class="card" style="grid-column: 1/-1;">
-          <h2 data-i18n="diary_h2">📔 Flock Diary</h2>
-          <p class="muted" data-i18n="diary_text">Flock diary will be available in a future update. Daily weight and mortality entry form coming soon.</p>
-        </div>
-      </section>
-
-      <!-- Analytics tab -->
-      <section id="analyticsContent" class="grid" style="display:none;">
-        <div class="card" style="grid-column: 1/-1;">
-          <h2 data-i18n="analytics_h2">📊 Plan vs Actual Analytics</h2>
-          <p class="muted" data-i18n="analytics_text">Analytics charts comparing planned and actual performance coming in a future update.</p>
         </div>
       </section>
     </div>

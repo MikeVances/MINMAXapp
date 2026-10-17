@@ -7,7 +7,6 @@ load_dotenv(Path(__file__).parent.parent / ".env")  # backend/.env — рабо�
 from fastapi.staticfiles import StaticFiles
 from .routers import calc
 from .routers import settings as settings_router
-from .routers import flock
 from .routers import thermal
 from .routers import tools
 from .routers import feedback as feedback_router
@@ -30,7 +29,6 @@ def version():
 
 app.include_router(calc.router, prefix="/calc", tags=["calc"])
 app.include_router(settings_router.router, prefix="/settings", tags=["settings"])
-app.include_router(flock.router, tags=["flock"])
 app.include_router(thermal.router, prefix="/thermal", tags=["thermal"])
 app.include_router(tools.router, prefix="/calc/tools", tags=["tools"])
 app.include_router(feedback_router.router, tags=["feedback"])

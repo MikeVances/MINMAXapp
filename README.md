@@ -95,7 +95,7 @@ location = /prefix { return 301 /prefix/; }
 location /prefix/ { proxy_pass http://127.0.0.1:8000/; }
 ```
 
-**Shared deployments.** Saved settings, growth profile and flock diary are one shared state for
+**Shared deployments.** Saved settings and growth profiles are one shared state for
 all visitors. On a public instance set `WRITE_TOKEN` in the environment: endpoints that change
 saved data then require the `X-Write-Token` header (the UI asks for the token once and remembers
 it). Calculations stay open. Without `WRITE_TOKEN` writes are open — fine for local use.

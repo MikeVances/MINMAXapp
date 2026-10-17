@@ -49,7 +49,6 @@ function saveTabs(tabs) {
 
 let tabs = loadTabs();
 let active = 0;
-let activeHouseTab = 'calc'; // calc, diary, analytics
 
 const elTabs       = document.getElementById('tabs');
 const elAddTab     = document.getElementById('addTab');
@@ -75,81 +74,15 @@ const elModalOk     = document.getElementById('modalOk');
 const elModalCancel = document.getElementById('modalCancel');
 let pendingDeleteIndex = null;
 
-// house tabs and flock info
-const elHouseTabs        = document.getElementById('houseTabs');
-const elFlockInfo        = document.getElementById('flockInfo');
-const elFlockPlacementDate = document.getElementById('flockPlacementDate');
-const elFlockCurrentDay  = document.getElementById('flockCurrentDay');
-const elFlockCurrentBirds = document.getElementById('flockCurrentBirds');
-const elFlockBreed       = document.getElementById('flockBreed');
-
 function renderTabs() {
   elTabs.innerHTML = '';
   tabs.forEach((tab, i) => {
     const b = document.createElement('button');
     b.className = 'tab' + (i === active ? ' active' : '');
     b.textContent = houseLabel(tab.id);
-    b.onclick = () => { active = i; fillForm(); renderTabs(); renderHouseTabs(); loadFlockInfo(); };
+    b.onclick = () => { active = i; fillForm(); renderTabs(); };
     elTabs.appendChild(b);
   });
-}
-
-function renderHouseTabs() {
-  if (!elHouseTabs) return;
-  const houseTabsData = [
-    { id: 'calc',      label: t('tab_calc') },
-    { id: 'diary',     label: t('tab_diary') },
-    { id: 'analytics', label: t('tab_analytics') }
-  ];
-  elHouseTabs.innerHTML = '';
-  houseTabsData.forEach(ht => {
-    const b = document.createElement('button');
-    b.className = 'tab' + (ht.id === activeHouseTab ? ' active' : '');
-    b.textContent = ht.label;
-    b.onclick = () => { activeHouseTab = ht.id; renderHouseTabs(); showActiveContent(); };
-    elHouseTabs.appendChild(b);
-  });
-  showActiveContent();
-}
-
-function showActiveContent() {
-  const calcContent     = document.getElementById('calcContent');
-  const diaryContent    = document.getElementById('diaryContent');
-  const analyticsContent = document.getElementById('analyticsContent');
-
-  if (calcContent)      calcContent.style.display = 'none';
-  if (diaryContent)     diaryContent.style.display = 'none';
-  if (analyticsContent) analyticsContent.style.display = 'none';
-
-  if (activeHouseTab === 'calc' && calcContent)           calcContent.style.display = 'grid';
-  else if (activeHouseTab === 'diary' && diaryContent)    diaryContent.style.display = 'grid';
-  else if (activeHouseTab === 'analytics' && analyticsContent) analyticsContent.style.display = 'grid';
-}
-
-async function loadFlockInfo() {
-  const tab = tabs[active];
-  if (!tab || !elFlockInfo) return;
-
-  try {
-    // Имя корпуса — в сегмент пути только через кодирование: пробел или «#» в имени
-    // иначе ломают URL. Дата клиента нужна серверу для текущего дня цикла:
-    // сервер в UTC, а вечером по местному времени он ещё во «вчера».
-    const today = new Date().toLocaleDateString('sv-SE'); // sv-SE даёт ровно YYYY-MM-DD
-    const r = await fetch(`./flock/${encodeURIComponent(tab.id)}/info?today=${today}`);
-    if (r.ok) {
-      const data = await r.json();
-      elFlockInfo.style.display = 'block';
-      elFlockPlacementDate.textContent  = data.placement_date || '—';
-      elFlockCurrentDay.textContent     = data.current_day || '—';
-      elFlockCurrentBirds.textContent   = data.initial_bird_count || tab.birds || '—';
-      elFlockBreed.textContent          = data.breed || '—';
-    } else {
-      elFlockInfo.style.display = 'none';
-    }
-  } catch (e) {
-    console.warn('Failed to load flock info:', e);
-    elFlockInfo.style.display = 'none';
-  }
 }
 
 // Синхронизирует поле "cap" из num_fans × fan_cap_m3h и показывает подсказку
@@ -297,14 +230,11 @@ elSum.onclick = () => {
 };
 
 renderTabs();
-renderHouseTabs();
 fillForm();
-loadFlockInfo();
 
 // Смена языка: data-i18n переводит i18n.js, а собранное здесь в JS — перерисовываем сами
 document.addEventListener('i18n:change', () => {
   renderTabs();
-  renderHouseTabs();
   syncCap();
   updateUaBadge(tabs[active].id);
 });

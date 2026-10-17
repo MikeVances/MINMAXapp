@@ -18,7 +18,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 
 # Переменные, которые conftest выставляет для изоляции тестов, —
 # в «чистом» процессе их быть не должно
-_DATA_ENV_VARS = ("GROWTH_PROFILES_DIR", "APP_CONFIG_JSON", "THERMAL_CONFIG_JSON", "FLOCKS_DATA_DIR")
+_DATA_ENV_VARS = ("GROWTH_PROFILES_DIR", "APP_CONFIG_JSON", "THERMAL_CONFIG_JSON")
 
 
 def _run_clean(code: str, cwd: Path, extra_env: dict | None = None) -> str:
@@ -38,7 +38,6 @@ def _run_clean(code: str, cwd: Path, extra_env: dict | None = None) -> str:
         ("backend.app.core.growth_profiles", "GROWTH_PROFILES_DIR", "data/growth_profiles"),
         ("backend.app.core.app_config", "APP_CONFIG_PATH", "data/app_config.json"),
         ("backend.app.core.building_thermal", "THERMAL_CONFIG_PATH", "data/thermal_config.json"),
-        ("backend.app.core.flock_storage", "FLOCKS_DATA_DIR", "data/flocks"),
     ],
 )
 def test_default_path_points_to_project_data_from_any_cwd(module, attr, expected, tmp_path):

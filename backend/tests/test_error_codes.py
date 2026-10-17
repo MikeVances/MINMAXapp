@@ -103,42 +103,7 @@ def test_no_cyrillic_in_raised_errors_source():
     assert not offenders, "\n".join(offenders)
 
 
-# ─── Стадо, дневник, аналитика, обратная связь ───────────────────────────────
-
-def test_flock_and_diary_errors_are_codes(client):
-    assert client.get("/flock/no-such-house/info").json()["detail"] == {
-        "code": "flock_not_found", "params": {"house_id": "no-such-house"}}
-    assert client.get("/flock/no-such-house/diary/3").json()["detail"] == {
-        "code": "diary_entry_not_found", "params": {"house_id": "no-such-house", "day": 3}}
-    assert client.get("/flock/no-such-house/analytics/summary").json()["detail"] == {
-        "code": "flock_not_found", "params": {"house_id": "no-such-house"}}
-
-
-def test_diary_validation_returns_list_of_codes():
-    """
-    Границы полей через API держит pydantic (422), а validate() дата-класса —
-    вторая линия для записей, созданных не через API. Её ошибки — тоже коды:
-    роутер отдаёт этот список как detail, клиент переводит каждую строку.
-    """
-    from backend.app.models.flock import FlockDiaryEntry
-
-    entry = FlockDiaryEntry(house_id="h", date="2026-10-05", day_of_cycle=5,
-                            mortality_count=-1, feed_consumption_kg=-2.0)
-
-    assert entry.validate() == [
-        {"code": "diary_mortality_negative", "params": {"count": -1}},
-        {"code": "diary_feed_negative", "params": {"kg": -2.0}},
-    ]
-
-
-def test_bad_iso_date_exposes_code_in_ctx(client):
-    r = client.post("/flock/codes-house/info", json={
-        "house_id": "codes-house", "flock_name": "f", "placement_date": "10/01/2026", "initial_bird_count": 100})
-
-    assert r.status_code == 422
-    (item,) = r.json()["detail"]
-    assert item["ctx"]["error"] == {"code": "date_not_iso", "params": {"field": "placement_date", "value": "10/01/2026"}}
-
+# ─── Обратная связь ─────────────────────────────────────────────────────────
 
 def test_feedback_rate_limit_is_a_code(client, monkeypatch):
     from backend.app.routers import feedback

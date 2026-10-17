@@ -139,8 +139,6 @@ $RECYCLE.BIN/
 data/*.csv
 data/*.json
 
-# Runtime user data (создаётся приложением, не хранится в репо)
-data/flocks/
 # Пользовательские профили роста — данные площадки, не код; встроенные (builtin/) в git
 data/growth_profiles/custom/
 

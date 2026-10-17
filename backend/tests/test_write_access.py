@@ -20,11 +20,6 @@ WRITE_ROUTES = [
     ("PUT", "/profiles/my-profile"),
     ("DELETE", "/profiles/my-profile"),
     ("PUT", "/settings/app-config"),
-    ("POST", "/flock/1/info"),
-    ("DELETE", "/flock/1/info"),
-    ("POST", "/flock/1/diary"),
-    ("PUT", "/flock/1/diary/5"),
-    ("DELETE", "/flock/1/diary/5"),
     ("PUT", "/thermal/config"),
 ]
 

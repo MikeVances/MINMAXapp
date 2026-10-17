@@ -61,7 +61,6 @@ _DATA_DIR = Path(tempfile.mkdtemp(prefix="minmax_tests_"))
 os.environ["GROWTH_PROFILES_DIR"] = str(_DATA_DIR / "growth_profiles")
 os.environ["APP_CONFIG_JSON"] = str(_DATA_DIR / "app_config.json")
 os.environ["THERMAL_CONFIG_JSON"] = str(_DATA_DIR / "thermal_config.json")
-os.environ["FLOCKS_DATA_DIR"] = str(_DATA_DIR / "flocks")
 
 
 @pytest.fixture(scope="session")
