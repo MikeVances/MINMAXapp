@@ -546,4 +546,20 @@
     ev_water_cold:     '⚠️ Das Wasser ({t_water} °C) ist kälter als der Taupunkt ({t_dew} °C). Auf der Pad-Oberfläche kondensiert Feuchte aus der Luft und gibt 2430 kJ/kg latente Wärme ab — das senkt den Sättigungswirkungsgrad des Pads. Erwärmen Sie das Wasser auf mindestens {t_dew} °C oder nutzen Sie Umwälzung.',
     house_placeholder: 'z. B. Stall A-1',
     house_new_name:    'Neuer Stall {n}',
+
+    // ── Server error codes: flock diary, analytics, feedback ──
+    srv_flock_not_found:           'Keine Herdendaten für Stall \'{house_id}\' — zuerst anlegen',
+    srv_diary_entry_not_found:     'Kein Tagebucheintrag für Stall \'{house_id}\' an Tag {day}',
+    srv_diary_day_mismatch:        'Der Tag im Eintrag ({payload_day}) muss dem angeforderten Tag ({day}) entsprechen',
+    srv_diary_day_out_of_range:    'Der Zyklustag muss zwischen 1 und 100 liegen, erhalten {day}',
+    srv_diary_weight_out_of_range: 'Die Masse muss zwischen 0 und 10000 g liegen, erhalten {weight}',
+    srv_diary_mortality_negative:  'Verluste dürfen nicht negativ sein: {count}',
+    srv_diary_feed_negative:       'Der Futterverbrauch darf nicht negativ sein: {kg}',
+    srv_diary_temp_out_of_range:   'Die Temperatur muss zwischen −20 und 60 °C liegen, erhalten {temp}',
+    srv_date_not_iso:              '{field}: Datum muss JJJJ-MM-TT sein, erhalten {value}',
+    srv_plan_profile_missing:      'Das Plan-Wachstumsprofil fehlt oder ist leer',
+    srv_feedback_not_configured:   'Feedback ist auf dem Server nicht eingerichtet',
+    srv_feedback_empty:            'Die Nachricht ist leer',
+    srv_feedback_rate_limited:     'Zu viele Nachrichten — in 10 Minuten erneut versuchen',
+    srv_feedback_delivery_failed:  'Senden fehlgeschlagen. Bitte erneut versuchen.',
 };

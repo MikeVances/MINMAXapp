@@ -92,5 +92,5 @@ def test_internal_error_hides_details(client):
 
     assert r.status_code == 500
     detail = r.json()["detail"]
-    assert "Expecting" not in detail and str(path) not in detail
-    assert detail.startswith("Failed to load flock info")
+    assert detail == {"code": "internal_error", "params": {"operation": "load_flock_info"}}
+    assert "Expecting" not in r.text and str(path) not in r.text

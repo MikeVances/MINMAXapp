@@ -546,4 +546,20 @@
     ev_water_cold:     '⚠️ L\'eau ({t_water} °C) est plus froide que le point de rosée ({t_dew} °C). L\'humidité de l\'air se condensera à la surface du pad en libérant 2430 kJ/kg de chaleur latente — cela réduit l\'efficacité de saturation du pad. Chauffez l\'eau à au moins {t_dew} °C ou utilisez la recirculation.',
     house_placeholder: 'p. ex. Bâtiment A-1',
     house_new_name:    'Nouveau bâtiment {n}',
+
+    // ── Server error codes: flock diary, analytics, feedback ──
+    srv_flock_not_found:           'Aucune donnée de lot pour le bâtiment \'{house_id}\' — créez-les d\'abord',
+    srv_diary_entry_not_found:     'Aucune entrée de journal pour le bâtiment \'{house_id}\' au jour {day}',
+    srv_diary_day_mismatch:        'Le jour de l\'entrée ({payload_day}) doit correspondre au jour demandé ({day})',
+    srv_diary_day_out_of_range:    'Le jour du cycle doit être compris entre 1 et 100, reçu {day}',
+    srv_diary_weight_out_of_range: 'Le poids doit être compris entre 0 et 10000 g, reçu {weight}',
+    srv_diary_mortality_negative:  'La mortalité ne peut pas être négative : {count}',
+    srv_diary_feed_negative:       'La consommation d\'aliment ne peut pas être négative : {kg}',
+    srv_diary_temp_out_of_range:   'La température doit être comprise entre −20 et 60 °C, reçu {temp}',
+    srv_date_not_iso:              '{field} : la date doit être au format AAAA-MM-JJ, reçu {value}',
+    srv_plan_profile_missing:      'Le profil de croissance prévu est introuvable ou vide',
+    srv_feedback_not_configured:   'Les retours ne sont pas configurés sur le serveur',
+    srv_feedback_empty:            'Le message est vide',
+    srv_feedback_rate_limited:     'Trop de messages — réessayez dans 10 minutes',
+    srv_feedback_delivery_failed:  'Échec de l\'envoi. Veuillez réessayer.',
 };

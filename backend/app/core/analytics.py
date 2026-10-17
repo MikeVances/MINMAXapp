@@ -14,6 +14,7 @@ from typing import Optional
 
 from ..models.flock import PlanVsFactData, AnalyticsSummary
 from ..core import flock_storage
+from ..core.errors import CalcError
 from ..core.app_config import load_app_config
 from ..core.growth_profiles import GrowthPoint, ProfileNotFound, load_profile
 
@@ -56,7 +57,7 @@ def get_plan_vs_fact_data(house_id: str, target_days: int = 42) -> PlanVsFactDat
     # Загрузить плановый профиль
     plan_days = _plan_days(house_id)
     if not plan_days:
-        raise ValueError("Plan growth profile is not found or empty")
+        raise CalcError("plan_profile_missing")
 
     # Загрузить фактические записи дневника
     diary_entries = flock_storage.load_diary_entries(house_id, from_day=1, to_day=target_days)
@@ -119,7 +120,7 @@ def get_analytics_summary(house_id: str, today: Optional[date] = None) -> Analyt
     # Загрузить информацию о стаде
     flock_info = flock_storage.load_flock_info(house_id)
     if flock_info is None:
-        raise ValueError(f"Flock info not found for house '{house_id}'")
+        raise CalcError("flock_not_found", house_id=house_id)
 
     current_day = flock_info.get_current_day(today)
 

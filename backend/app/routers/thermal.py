@@ -233,7 +233,7 @@ def update_thermal_config(payload: ThermalConfigModel):
 
     save_thermal_config(config)
 
-    return {"status": "ok", "message": "Thermal configuration updated"}
+    return {"status": "ok"}
 
 
 @router.post("/calibrate-curve", response_model=CurveCalibrationResult)

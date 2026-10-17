@@ -84,9 +84,10 @@
           statusEl.style.color = '#4caf50';
           setTimeout(closeModal, 1500);
         } else {
-          // 429 — сервер ограничивает частоту: сказать прямо, а не «ошибка, повторите»
-          const key = resp.status === 429 ? 'feedback_rate_limited' : 'feedback_error';
-          statusEl.textContent = window.t ? window.t(key) : 'Error. Try again.';
+          // Сервер отвечает кодом (feedback_rate_limited, feedback_not_configured …) —
+          // текст на языке интерфейса подбирает общий переводчик ошибок API
+          const err = window.apiError ? await window.apiError(resp) : null;
+          statusEl.textContent = (err && err.message) || (window.t ? window.t('feedback_error') : 'Error. Try again.');
           statusEl.style.color = '#ff7a7a';
         }
       } catch (_) {

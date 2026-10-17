@@ -38,6 +38,10 @@
   // pydantic для 422 ([{loc, msg, type, ctx}]). Фразы — только из словаря:
   // srv_<code> для наших ошибок, val_<type> для стандартных проверок pydantic.
   function validationItemText(item) {
+    // Список наших ошибок (валидация записи дневника): каждая — {code, params}
+    if (item && typeof item.code === 'string') {
+      return hasKey('srv_' + item.code) ? t('srv_' + item.code, item.params || {}) : item.code;
+    }
     // loc = ['body', 'points', 3, 'day'] → 'points.3.day'; служебные сегменты не показываем
     const field = (item.loc || []).filter(p => p !== 'body' && p !== 'query' && p !== 'path').join('.');
     let text;

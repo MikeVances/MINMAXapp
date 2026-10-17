@@ -6,7 +6,9 @@ import time
 import urllib.request
 from collections import defaultdict, deque
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Request
+
+from ..api_errors import api_error
 from pydantic import BaseModel, Field
 
 router = APIRouter()
@@ -68,13 +70,13 @@ async def send_feedback(payload: FeedbackPayload, request: Request):
     chat_id = os.getenv("TELEGRAM_CHAT_ID")
 
     if not token or not chat_id:
-        raise HTTPException(status_code=503, detail="Feedback not configured")
+        raise api_error(503, "feedback_not_configured")
 
     if not payload.message.strip():
-        raise HTTPException(status_code=400, detail="Empty message")
+        raise api_error(400, "feedback_empty")
 
     if not _allow(_client_key(request), time.monotonic()):
-        raise HTTPException(status_code=429, detail="Too many messages, try later")
+        raise api_error(429, "feedback_rate_limited")
 
     text = "📬 MINMAXapp Feedback\n"
     if payload.page:
@@ -84,9 +86,9 @@ async def send_feedback(payload: FeedbackPayload, request: Request):
     try:
         status = await asyncio.to_thread(_post_telegram, token, chat_id, text)
     except Exception:
-        raise HTTPException(status_code=502, detail="Telegram delivery failed")
+        raise api_error(502, "feedback_delivery_failed")
 
     if status != 200:
-        raise HTTPException(status_code=502, detail="Telegram delivery failed")
+        raise api_error(502, "feedback_delivery_failed")
 
     return {"ok": True}

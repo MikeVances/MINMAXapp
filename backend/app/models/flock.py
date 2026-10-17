@@ -98,33 +98,35 @@ class FlockDiaryEntry:
         """Создать объект из словаря."""
         return cls(**{k: v for k, v in data.items() if k in cls.__annotations__})
 
-    def validate(self) -> list[str]:
+    def validate(self) -> list[dict]:
         """
         Валидация данных записи.
 
         Returns:
-            Список ошибок валидации (пустой если всё ОК)
+            Список ошибок вида {"code", "params"} (пустой если всё ОК) — текст
+            подставляет клиент из словаря (srv_<code>)
         """
-        errors = []
+        errors: list[dict] = []
+        err = lambda code, **params: errors.append({"code": code, "params": params})
 
         if self.day_of_cycle < 1 or self.day_of_cycle > 100:
-            errors.append(f"День цикла должен быть в диапазоне 1-100, получено: {self.day_of_cycle}")
+            err("diary_day_out_of_range", day=self.day_of_cycle)
 
         if self.actual_weight_g is not None:
             if self.actual_weight_g < 0 or self.actual_weight_g > 10000:
-                errors.append(f"Вес должен быть в диапазоне 0-10000г, получено: {self.actual_weight_g}")
+                err("diary_weight_out_of_range", weight=self.actual_weight_g)
 
         if self.mortality_count is not None:
             if self.mortality_count < 0:
-                errors.append(f"Падёж не может быть отрицательным: {self.mortality_count}")
+                err("diary_mortality_negative", count=self.mortality_count)
 
         if self.feed_consumption_kg is not None:
             if self.feed_consumption_kg < 0:
-                errors.append(f"Расход корма не может быть отрицательным: {self.feed_consumption_kg}")
+                err("diary_feed_negative", kg=self.feed_consumption_kg)
 
         if self.temp_inside_c is not None:
             if self.temp_inside_c < -20 or self.temp_inside_c > 60:
-                errors.append(f"Температура должна быть в диапазоне -20..60°C, получено: {self.temp_inside_c}")
+                err("diary_temp_out_of_range", temp=self.temp_inside_c)
 
         return errors
 

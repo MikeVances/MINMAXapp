@@ -547,4 +547,20 @@
     ev_water_cold:     '⚠️ Вода ({t_water} °C) холоднее точки росы ({t_dew} °C). На поверхности панели будет конденсироваться влага из воздуха, выделяя скрытую теплоту 2430 кДж/кг — это снижает эффективность насыщения панели. Подогрейте воду минимум до {t_dew} °C или используйте рециркуляцию.',
     house_placeholder: 'напр. Корпус A-1',
     house_new_name:    'Новое помещение {n}',
+
+    // ── Server error codes: flock diary, analytics, feedback ──
+    srv_flock_not_found:           'Нет данных о стаде для корпуса \'{house_id}\' — сначала создайте их',
+    srv_diary_entry_not_found:     'Нет записи дневника для корпуса \'{house_id}\' на день {day}',
+    srv_diary_day_mismatch:        'День в записи ({payload_day}) должен совпадать с запрошенным днём ({day})',
+    srv_diary_day_out_of_range:    'День цикла должен быть в диапазоне 1–100, получено {day}',
+    srv_diary_weight_out_of_range: 'Вес должен быть в диапазоне 0–10000 г, получено {weight}',
+    srv_diary_mortality_negative:  'Падёж не может быть отрицательным: {count}',
+    srv_diary_feed_negative:       'Расход корма не может быть отрицательным: {kg}',
+    srv_diary_temp_out_of_range:   'Температура должна быть в диапазоне −20…60 °C, получено {temp}',
+    srv_date_not_iso:              '{field}: дата должна быть в формате ГГГГ-ММ-ДД, получено {value}',
+    srv_plan_profile_missing:      'Плановый профиль роста не найден или пуст',
+    srv_feedback_not_configured:   'Обратная связь не настроена на сервере',
+    srv_feedback_empty:            'Сообщение пустое',
+    srv_feedback_rate_limited:     'Слишком много сообщений — попробуйте через 10 минут',
+    srv_feedback_delivery_failed:  'Ошибка отправки. Попробуйте снова.',
 };

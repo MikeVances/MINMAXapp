@@ -546,4 +546,20 @@
     ev_water_cold:     '⚠️ Woda ({t_water} °C) jest zimniejsza od punktu rosy ({t_dew} °C). Na powierzchni panelu będzie skraplać się wilgoć z powietrza, oddając 2430 kJ/kg ciepła utajonego — to obniża skuteczność nasycenia panelu. Podgrzej wodę co najmniej do {t_dew} °C lub zastosuj recyrkulację.',
     house_placeholder: 'np. Kurnik A-1',
     house_new_name:    'Nowy kurnik {n}',
+
+    // ── Server error codes: flock diary, analytics, feedback ──
+    srv_flock_not_found:           'Brak danych stada dla kurnika \'{house_id}\' — najpierw je utwórz',
+    srv_diary_entry_not_found:     'Brak wpisu dziennika dla kurnika \'{house_id}\' na dzień {day}',
+    srv_diary_day_mismatch:        'Dzień we wpisie ({payload_day}) musi być zgodny z żądanym dniem ({day})',
+    srv_diary_day_out_of_range:    'Dzień cyklu musi mieścić się w zakresie 1–100, otrzymano {day}',
+    srv_diary_weight_out_of_range: 'Masa musi mieścić się w zakresie 0–10000 g, otrzymano {weight}',
+    srv_diary_mortality_negative:  'Upadki nie mogą być ujemne: {count}',
+    srv_diary_feed_negative:       'Zużycie paszy nie może być ujemne: {kg}',
+    srv_diary_temp_out_of_range:   'Temperatura musi mieścić się w zakresie −20…60 °C, otrzymano {temp}',
+    srv_date_not_iso:              '{field}: data musi mieć format RRRR-MM-DD, otrzymano {value}',
+    srv_plan_profile_missing:      'Planowy profil wzrostu nie istnieje lub jest pusty',
+    srv_feedback_not_configured:   'Opinie nie są skonfigurowane na serwerze',
+    srv_feedback_empty:            'Wiadomość jest pusta',
+    srv_feedback_rate_limited:     'Zbyt wiele wiadomości — spróbuj ponownie za 10 minut',
+    srv_feedback_delivery_failed:  'Nie udało się wysłać. Spróbuj ponownie.',
 };
