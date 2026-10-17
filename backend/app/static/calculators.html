@@ -474,7 +474,7 @@
             <span data-i18n="label_num_inlets">Number of openings, qty</span>
             <input id="tn-num-inlets" type="number" min="1" max="500" value="1" />
           </label>
-          <div class="field-row" style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:4px;">
+          <div class="field-row" style="margin-top:4px;">
             <label>
               <span data-i18n="label_inlet_width">Opening width, m</span>
               <input id="tn-inlet-w" type="number" step="0.1" min="0.5" max="30" placeholder="18" />
@@ -592,6 +592,14 @@ function badgeClass(level) {
   const cls = { ok: 'badge-tight', warn: 'badge-moderate', danger: 'badge-very_leaky' }[level] || 'badge-very_leaky';
   return 'result-badge ' + cls;
 }
+
+// Результаты инструментов собираются в JS из словаря текущего языка. Каждый
+// инструмент после успешного расчёта кладёт сюда замыкание «перерисовать
+// последний результат», а смена языка вызывает их все.
+const rerenderOnLang = {};
+document.addEventListener('i18n:change', () => {
+  Object.values(rerenderOnLang).forEach(fn => { try { fn(); } catch (e) { console.warn('rerender:', e); } });
+});
 
 // ─────── Shared house selector utility ───────
 // Заполняет <select> птичниками из localStorage главной страницы.
@@ -724,14 +732,16 @@ document.querySelectorAll('.tool-tab:not([disabled])').forEach(btn => {
         const txt = await r.text();
         throw new Error(`${r.status} ${r.statusText}: ${txt}`);
       }
-      renderProfileHtml(await r.json(), tab, mode, outsideT, outsideRH);
+      const profData = await r.json();
+      renderProfileHtml(profData, tab, mode, outsideT, outsideRH);
+      rerenderOnLang.profile = () => renderProfileHtml(profData, tab, mode, outsideT, outsideRH);
       // Значение вне таблицы не применено — сказать об этом, а не молча считать по профилю
       if (rhRaw !== '' && targetRH === null) {
         profSummary.insertAdjacentHTML('afterbegin',
           `<p class="warn" style="font-size:12px;margin:0 0 8px;">⚠ ${t('target_rh_ignored')}</p>`);
       }
     } catch (e) {
-      profSummary.innerHTML = `<div class="card"><div class="danger">${t('err_prefix')}${String(e)}</div></div>`;
+      profSummary.innerHTML = `<div class="card"><div class="danger">${escapeHtml(t('err_prefix') + String(e))}</div></div>`;
       profSummary.style.display = 'block';
     } finally {
       profBtn.disabled = false; profBtn.textContent = t('btn_calc_profile');
@@ -968,7 +978,9 @@ document.getElementById('l-calc-btn').addEventListener('click', async () => {
       return;
     }
 
-    renderLeakage(await resp.json());
+    const leakData = await resp.json();
+    renderLeakage(leakData);
+    rerenderOnLang.leakage = () => renderLeakage(leakData);
 
   } catch(e) {
     alert(t('err_conn') + e.message);
@@ -1034,7 +1046,9 @@ document.getElementById('tunnel-form').addEventListener('submit', async e => {
       return;
     }
 
-    renderTunnel(await resp.json(), payload.t_outdoor_db_c);
+    const tunnelData = await resp.json();
+    renderTunnel(tunnelData, payload.t_outdoor_db_c);
+    rerenderOnLang.tunnel = () => renderTunnel(tunnelData, payload.t_outdoor_db_c);
   } catch (err) {
     // Сеть недоступна или ошибка отрисовки — без catch пользователь не видел ничего
     alert(t('err_prefix') + String(err));
@@ -1217,7 +1231,9 @@ document.getElementById('evap-form').addEventListener('submit', async e => {
       return;
     }
 
-    renderEvap(await resp.json());
+    const evapData = await resp.json();
+    renderEvap(evapData);
+    rerenderOnLang.evap = () => renderEvap(evapData);
   } catch (err) {
     alert(t('err_prefix') + String(err));
   } finally {
@@ -1266,7 +1282,7 @@ function renderEvap(d) {
   });
   document.getElementById('ev-r-rec-area').textContent  = d.recommended_pad_area_m2.toFixed(2) + ' ' + uM2;
   if (d.pad_pressure_drop_pa != null)
-    document.getElementById('ev-r-dp').textContent      = d.pad_pressure_drop_pa.toFixed(0) + ' Па';
+    document.getElementById('ev-r-dp').textContent      = d.pad_pressure_drop_pa.toFixed(0) + ' ' + t('unit_pa');
 
   // Water consumption
   document.getElementById('ev-r-water-lpm').textContent = d.water_flow_lpm.toFixed(1) + ' ' + uLpm;

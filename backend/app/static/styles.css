@@ -50,8 +50,14 @@ input[type="number"], input[type="text"], select, textarea { font-size: 16px; }
 /* Убираем 300мс задержку двойного тапа на iOS на интерактивных элементах */
 .btn, .tab, button { touch-action: manipulation; }
 
+/* Переключатель языка (создаёт i18n.js) */
+.lang-switcher { position: fixed; top: 8px; right: 8px; z-index: 9999; display: flex; gap: 3px; }
+
 @media (max-width: 860px) {
   .grid { grid-template-columns: 1fr; }
+  /* На узком экране фиксированный угол закрывал заголовок страницы —
+     переключатель становится обычной строкой над шапкой */
+  .lang-switcher { position: static; justify-content: flex-end; padding: 8px 16px 0; }
 }
 
 /* Modal */

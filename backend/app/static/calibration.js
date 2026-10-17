@@ -230,7 +230,7 @@ function renderCurveResult(res) {
   const zoneRows = res.n > 1 ? res.zones.map((z, i) => {
     const zq = uaQuality(z.ua_coefficient / zoneArea);
     return `<div class="kv"><span>${t('zone_lbl', { n: i + 1 })}</span>
-      <span style="color:${zq.color};font-weight:700;">${(z.ua_coefficient / zoneArea).toFixed(2)} ${uaUnit}/м²</span></div>`;
+      <span style="color:${zq.color};font-weight:700;">${(z.ua_coefficient / zoneArea).toFixed(2)} ${uaUnit}/${t('unit_m2')}</span></div>`;
   }).join('') : '';
 
   const warnHtml = warnings.map(w =>
@@ -241,7 +241,7 @@ function renderCurveResult(res) {
       <strong>${t('cal_curve_complete')}</strong>
       <div style="margin-top:8px; display:grid; gap:6px;">
         <div class="kv"><span>${t('ua_coeff_lbl')}</span><span><strong>${res.uaTotal.toFixed(0)} ${uaUnit}</strong></span></div>
-        <div class="kv"><span>${t('ua_per_m2_lbl')}</span><span>${uaM2.toFixed(2)} ${uaUnit}/м²
+        <div class="kv"><span>${t('ua_per_m2_lbl')}</span><span>${uaM2.toFixed(2)} ${uaUnit}/${t('unit_m2')}
           <span style="padding:2px 10px;border-radius:10px;font-size:12px;background:${q.bg};color:${q.color};">${q.label}</span></span></div>
         <div class="kv"><span>${t('c_struct_lbl')}</span><span>${t('c_struct_ratio', { x: (cStruct / cAir).toFixed(1) })}</span></div>
         <div class="kv"><span>${t('duration_lbl')}</span><span>${res.durationMin.toFixed(0)} ${t('unit_min')}</span></div>
@@ -513,7 +513,7 @@ elAnalyzeBtn.addEventListener('click', async () => {
     `;
 
   } catch (e) {
-    elAnalysisResult.innerHTML = `<div class="danger">${t('err_prefix')}${String(e)}</div>`;
+    elAnalysisResult.innerHTML = `<div class="danger">${escapeHtml(t('err_prefix') + String(e))}</div>`;
   }
 });
 

@@ -15,7 +15,7 @@ async function updateUaBadge(tabId) {
       el.style.display = 'none'; return;
     }
     // Корпус совпадает — показываем UA
-    el.innerHTML = `🌡️ UA = <strong>${ua.toFixed(0)} Вт/°C</strong> &nbsp;—&nbsp;
+    el.innerHTML = `🌡️ UA = <strong>${ua.toFixed(0)} ${t('cfg_ua_unit')}</strong> &nbsp;—&nbsp;
       <span class="muted">${t('ua_calibrated_lbl')}</span>
       &nbsp;<a href="./calculators.html" style="font-size:11px; opacity:.7;">${t('ua_recal_link')}</a>`;
     el.style.display = 'block';
@@ -159,7 +159,7 @@ function syncCap() {
   const note = document.getElementById('capAutoNote');
   if (n > 0 && c > 0) {
     elCap.value = n * c;
-    if (note) note.textContent = `= ${n} × ${c.toLocaleString()} м³/ч`;
+    if (note) note.textContent = `= ${n} × ${c.toLocaleString(I18N.lang)} ${t('unit_m3h')}`;
   } else {
     if (note) note.textContent = '';
   }
@@ -298,3 +298,11 @@ renderTabs();
 renderHouseTabs();
 fillForm();
 loadFlockInfo();
+
+// Смена языка: data-i18n переводит i18n.js, а собранное здесь в JS — перерисовываем сами
+document.addEventListener('i18n:change', () => {
+  renderTabs();
+  renderHouseTabs();
+  syncCap();
+  updateUaBadge(tabs[active].id);
+});

@@ -66,6 +66,9 @@
     try { localStorage.setItem('lang', lang); } catch (e) { /* выбор не запомнится */ }
     applyDOM();
     updateSwitcherUI();
+    // applyDOM переводит только разметку с data-i18n. Всё, что страницы собирают
+    // в JS (вкладки корпусов, результаты расчётов), они перерисовывают сами по этому событию.
+    document.dispatchEvent(new CustomEvent('i18n:change', { detail: { lang } }));
   }
 
   // ── Language switcher UI ──────────────────────────────────────────────────
@@ -92,9 +95,10 @@
   }
 
   function injectLangSwitcher() {
+    // Позиционирование — в styles.css (.lang-switcher): на десктопе fixed в углу,
+    // на узком экране обычная строка над шапкой, чтобы не налезать на заголовок
     switcherBar = document.createElement('div');
-    switcherBar.style.cssText =
-      'position:fixed;top:8px;right:8px;z-index:9999;display:flex;gap:3px;';
+    switcherBar.className = 'lang-switcher';
 
     LANG_META.forEach(({ code, flag, label }) => {
       const btn = document.createElement('button');
@@ -116,7 +120,9 @@
       switcherBar.appendChild(btn);
     });
 
-    document.body.appendChild(switcherBar);
+    // В начало body: на мобильном переключатель становится статичной строкой и
+    // должен стоять над содержимым, а не под футером
+    document.body.prepend(switcherBar);
     updateSwitcherUI();
   }
 

@@ -85,6 +85,16 @@ a local install all read it. Or `make run-api` to create a venv and start the AP
 
 Requires Python 3.10+. No database, no external services needed for core functionality.
 
+**Behind a reverse proxy under a path prefix.** The UI uses relative URLs (`./calc/...`), so it
+works at `https://host/prefix/` without any configuration — but only with the trailing slash.
+At `https://host/prefix` (no slash) the browser resolves `./calc` to `/calc` and every request
+misses. Redirect the bare prefix at the proxy, for nginx:
+
+```nginx
+location = /prefix { return 301 /prefix/; }
+location /prefix/ { proxy_pass http://127.0.0.1:8000/; }
+```
+
 **Shared deployments.** Saved settings, growth profile and flock diary are one shared state for
 all visitors. On a public instance set `WRITE_TOKEN` in the environment: endpoints that change
 saved data then require the `X-Write-Token` header (the UI asks for the token once and remembers
