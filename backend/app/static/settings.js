@@ -1,6 +1,6 @@
 async function fetchJSON(url, opts) {
   const r = await fetch(url, opts);
-  if (!r.ok) throw new Error(await r.text());
+  if (!r.ok) throw await apiError(r);   // код ошибки сервера → текст на языке интерфейса
   return r.json();
 }
 
@@ -64,7 +64,7 @@ function renderConfig() {
       st.textContent = t('status_saved');
       setTimeout(() => { st.textContent = ''; }, 3000);
     } catch(e) {
-      st.textContent = t('err_prefix') + String(e);
+      st.textContent = t('err_prefix') + (e.message || e);
     } finally {
       btn.disabled = false;
     }

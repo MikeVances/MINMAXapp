@@ -200,7 +200,7 @@ async function computeCurveResult(done) {
         ...(n > 1 ? { volume_m3: volume / n } : {}),
       }),
     });
-    if (!r.ok) throw new Error(await r.text());
+    if (!r.ok) throw await apiError(r);
     zones.push(await r.json());
   }
   return {
@@ -344,7 +344,7 @@ elSaveBuildingBtn.addEventListener('click', async () => {
       body: JSON.stringify(config)
     });
 
-    if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
+    if (!r.ok) throw await apiError(r);
 
     elBuildingStatus.textContent = t('status_saved');
     elBuildingStatus.style.color = 'var(--ok, #7bc96f)';
@@ -377,7 +377,7 @@ elSaveHeaterBtn.addEventListener('click', async () => {
       body: JSON.stringify(config)
     });
 
-    if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
+    if (!r.ok) throw await apiError(r);
 
     elHeaterStatus.textContent = t('status_saved');
     elHeaterStatus.style.color = 'var(--ok, #7bc96f)';
@@ -411,7 +411,7 @@ elSaveCalibrationBtn.addEventListener('click', async () => {
     const resp = await fetch('./thermal/config', {
       method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(config),
     });
-    if (!resp.ok) throw new Error(`${resp.status} ${await resp.text()}`);
+    if (!resp.ok) throw await apiError(resp);
     alert(t('cal_saved_alert'));
     await loadAndDisplayConfig();
   } catch (e) {
@@ -445,10 +445,7 @@ elAnalyzeBtn.addEventListener('click', async () => {
       })
     });
 
-    if (!r.ok) {
-      const errText = await r.text();
-      throw new Error(errText);
-    }
+    if (!r.ok) throw await apiError(r);
 
     const data = await r.json();
 
@@ -513,7 +510,7 @@ elAnalyzeBtn.addEventListener('click', async () => {
     `;
 
   } catch (e) {
-    elAnalysisResult.innerHTML = `<div class="danger">${escapeHtml(t('err_prefix') + String(e))}</div>`;
+    elAnalysisResult.innerHTML = `<div class="danger">${escapeHtml(t('err_prefix') + (e.message || e))}</div>`;
   }
 });
 

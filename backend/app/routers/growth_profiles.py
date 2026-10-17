@@ -17,6 +17,7 @@ from typing import Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
+from ..api_errors import api_error
 from ..write_access import require_write_token
 from ..core.app_config import load_app_config
 from ..core.ventilation_calc import calc_q_min_per_bird
@@ -102,7 +103,7 @@ def _full(p: GrowthProfile) -> ProfileOut:
 
 def _check_path_id(profile_id: str) -> None:
     if not re.fullmatch(PROFILE_ID_PATTERN, profile_id):
-        raise HTTPException(status_code=422, detail="profile_id: только a-z, 0-9, '-', '_' (до 64)")
+        raise api_error(422, "profile_id_invalid", id=profile_id)
 
 
 # ─── Эндпоинты ───────────────────────────────────────────────────────────────
@@ -127,10 +128,10 @@ def put_profile(profile_id: str, payload: ProfileIn):
 
     days = [pt.day for pt in payload.points]
     if len(days) != len(set(days)):
-        raise HTTPException(status_code=422, detail="points: дни не должны повторяться")
+        raise api_error(422, "profile_days_duplicate")
     # Без массы расчёт невозможен: хотя бы две точки с весом нужны для интерполяции
     if sum(1 for pt in payload.points if pt.body_weight_g is not None) < 2:
-        raise HTTPException(status_code=422, detail="points: нужно минимум две точки с массой")
+        raise api_error(422, "profile_needs_two_weights")
 
     profile = GrowthProfile(
         id=profile_id,

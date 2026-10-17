@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 from pydantic import BaseModel, Field
 
+from ..api_errors import api_error, from_calc_error
 from ..core.calc_core import compute, CalcInput, CalcResult
 from ..core.growth_profiles import ProfileNotFound
 from ..core.survival import survival_fraction
@@ -119,9 +120,9 @@ def _compute_or_http_error(ci: CalcInput) -> CalcResult:
     try:
         return compute(ci)
     except ProfileNotFound as e:
-        raise HTTPException(status_code=404, detail=f"Профиль роста не найден: {e}")
+        raise api_error(404, "profile_not_found", id=str(e))
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise from_calc_error(e)
 
 
 # ---- Summary for 7 points by season ----

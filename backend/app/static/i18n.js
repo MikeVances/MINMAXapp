@@ -27,6 +27,55 @@
     return str;
   };
 
+  function hasKey(key) {
+    return (window.LOCALES[currentLang] || {})[key] !== undefined
+        || (window.LOCALES['en']       || {})[key] !== undefined;
+  }
+
+  // ── Ошибки API → текст на языке интерфейса ────────────────────────────────
+  // Сервер текста не формирует (см. backend/app/api_errors.py): detail приходит
+  // строкой-кодом ('profile_not_found'), объектом {code, params} или списком
+  // pydantic для 422 ([{loc, msg, type, ctx}]). Фразы — только из словаря:
+  // srv_<code> для наших ошибок, val_<type> для стандартных проверок pydantic.
+  function validationItemText(item) {
+    // loc = ['body', 'points', 3, 'day'] → 'points.3.day'; служебные сегменты не показываем
+    const field = (item.loc || []).filter(p => p !== 'body' && p !== 'query' && p !== 'path').join('.');
+    let text;
+    // Наши проверки внутри моделей pydantic бросают CalcError: его код лежит в ctx.error
+    const own = item.ctx && item.ctx.error && typeof item.ctx.error === 'object' ? item.ctx.error : null;
+    if (own && own.code && hasKey('srv_' + own.code)) {
+      text = t('srv_' + own.code, own.params || {});
+    } else if (hasKey('val_' + item.type)) {
+      text = t('val_' + item.type, item.ctx || {});
+    } else {
+      text = item.msg || item.type || '';
+    }
+    return field ? field + ': ' + text : text;
+  }
+
+  window.apiErrorText = function (body, status) {
+    const detail = body && typeof body === 'object' && 'detail' in body ? body.detail : body;
+    if (typeof detail === 'string' && hasKey('srv_' + detail)) return t('srv_' + detail);
+    if (Array.isArray(detail)) return detail.map(validationItemText).join('; ');
+    if (detail && typeof detail === 'object' && typeof detail.code === 'string') {
+      return hasKey('srv_' + detail.code) ? t('srv_' + detail.code, detail.params || {}) : detail.code;
+    }
+    // 5xx: подробности только в журнале сервера, клиенту — общая фраза
+    if (status >= 500) return t('srv_internal_error');
+    if (typeof detail === 'string' && detail) return detail;
+    return status ? 'HTTP ' + status : '';
+  };
+
+  // Неуспешный Response → Error с переведённым сообщением (e.status, e.body — для разбора)
+  window.apiError = async function (resp) {
+    let body = null;
+    try { body = await resp.json(); } catch (e) { /* тело не JSON — покажем статус */ }
+    const err = new Error(window.apiErrorText(body, resp.status));
+    err.status = resp.status;
+    err.body   = body;
+    return err;
+  };
+
   // ── applyDOM(): translate all data-i18n* attributes in the document ───────
   function applyDOM() {
     const locale   = window.LOCALES[currentLang] || {};

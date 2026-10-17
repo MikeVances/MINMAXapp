@@ -32,6 +32,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional
 
+from .errors import CalcError
 from .json_store import atomic_write_json
 from .paths import data_path
 
@@ -85,7 +86,7 @@ class GrowthProfile:
         """
         days = self.daily()
         if not days:
-            raise ValueError(f"Профиль '{self.id}' не содержит точек")
+            raise CalcError("profile_no_points", id=self.id)
         clamped = min(max(day, min(days)), max(days))
         return days[clamped]
 
@@ -138,7 +139,7 @@ def _custom_dir() -> Path:
 
 def _check_id(profile_id: str) -> None:
     if not re.fullmatch(PROFILE_ID_PATTERN, profile_id or ""):
-        raise ValueError(f"Недопустимый id профиля: {profile_id!r}")
+        raise CalcError("profile_id_invalid", id=str(profile_id))
 
 
 def _from_file(path: Path, builtin: bool) -> GrowthProfile:
@@ -216,7 +217,7 @@ def save_custom_profile(profile: GrowthProfile) -> GrowthProfile:
     if (_builtin_dir() / f"{profile.id}.json").is_file():
         raise BuiltinProfileReadOnly(profile.id)
     if not profile.points:
-        raise ValueError("Профиль должен содержать хотя бы одну точку")
+        raise CalcError("profile_needs_point")
     atomic_write_json(_custom_dir() / f"{profile.id}.json", _to_json(profile))
     return load_profile(profile.id)
 

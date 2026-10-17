@@ -4,6 +4,7 @@ import math
 from dataclasses import dataclass
 from typing import Optional
 
+from .errors import CalcError
 from .growth_profiles import load_profile
 from .apparent_temp import rh_temperature_shift
 from .survival import survival_fraction
@@ -131,7 +132,7 @@ def compute(ci: CalcInput) -> CalcResult:
     point = load_profile(profile_id).point_for_day(age)
 
     if point.body_weight_g is None or point.min_temp_c is None:
-        raise ValueError(f"В профиле '{profile_id}' нет массы или температуры на день {age}")
+        raise CalcError("profile_day_missing", id=profile_id, day=age)
 
     body_weight_g   = point.body_weight_g
     weight_kg       = max(body_weight_g / 1000.0, 0.0001)

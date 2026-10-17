@@ -34,6 +34,7 @@ import os
 from dataclasses import dataclass, asdict, field, fields
 from typing import Optional
 
+from .errors import CalcError
 from .json_store import atomic_write_json
 from .paths import data_path
 
@@ -129,12 +130,12 @@ def calculate_ua_coefficient(
     delta_t_final = t_final - t_outside
 
     if delta_t_initial <= 0 or delta_t_final <= 0:
-        raise ValueError("Начальная и конечная температуры должны быть выше наружной")
+        raise CalcError("temps_not_above_outside")
     if t_final >= t_initial:
         # Раньше здесь был abs(): рост температуры давал «нормальный» положительный UA
-        raise ValueError("Температура за время теста не снизилась — тест остывания некорректен")
+        raise CalcError("no_cooling_observed")
     if time_minutes <= 0:
-        raise ValueError("Длительность теста должна быть больше нуля")
+        raise CalcError("test_duration_zero")
 
     # Теплоёмкость воздуха корпуса при средней температуре теста
     t_mean = (t_initial + t_final) / 2.0

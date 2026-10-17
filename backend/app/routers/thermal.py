@@ -6,9 +6,10 @@ from __future__ import annotations
 import logging
 import re
 
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
+from ..api_errors import api_error, from_calc_error
 from ..write_access import require_write_token
 from ..core.house_id import HOUSE_ID_PATTERN
 from ..core.cooling_fit import fit_cooling_curve
@@ -198,11 +199,11 @@ def update_thermal_config(payload: ThermalConfigModel):
         elif points:
             # Кривая остывания: UA подгонкой модели «воздух + конструкции» по объёму корпуса
             if not config.building:
-                raise HTTPException(status_code=400, detail="Building dimensions required for calibration")
+                raise api_error(400, "dimensions_missing")
             try:
                 fit = fit_cooling_curve(config.building.volume_m3, cal.t_outside_c, points)
             except ValueError as e:
-                raise HTTPException(status_code=400, detail=str(e))
+                raise from_calc_error(e)
             config.calibration = CalibrationTest(
                 t_initial_c=points[0][1], t_final_c=points[-1][1], t_outside_c=cal.t_outside_c,
                 time_minutes=points[-1][0] / 60.0, ua_coefficient=fit.ua_w_per_k,
@@ -211,7 +212,7 @@ def update_thermal_config(payload: ThermalConfigModel):
         else:
             # UA не задан — рассчитать из данных теста охлаждения
             if not config.building:
-                raise HTTPException(status_code=400, detail="Building dimensions required for calibration")
+                raise api_error(400, "dimensions_missing")
             try:
                 ua = calculate_ua_coefficient(
                     volume_m3=config.building.volume_m3,
@@ -228,7 +229,7 @@ def update_thermal_config(payload: ThermalConfigModel):
                     ua_coefficient=ua,
                 )
             except ValueError as e:
-                raise HTTPException(status_code=400, detail=str(e))
+                raise from_calc_error(e)
 
     save_thermal_config(config)
 
@@ -245,13 +246,13 @@ def run_curve_calibration(req: CurveCalibrationRequest):
     if volume is None:
         config = load_thermal_config()
         if not config.building:
-            raise HTTPException(status_code=400, detail="Building dimensions not configured")
+            raise api_error(400, "dimensions_missing")
         volume = config.building.volume_m3
 
     try:
         fit = fit_cooling_curve(volume, req.t_outside_c, [(p.t_s, p.temp_c) for p in req.points])
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise from_calc_error(e)
 
     return CurveCalibrationResult(
         ua_coefficient=fit.ua_w_per_k,
@@ -287,12 +288,10 @@ def analyze_heaters(req: HeaterAnalysisRequest):
     config = load_thermal_config()
 
     if not config.calibration:
-        raise HTTPException(status_code=400, detail="Калибровка UA не выполнена. "
-                            "Используйте POST /thermal/calibrate и сохраните через PUT /thermal/config")
+        raise api_error(400, "calibration_missing")
 
     if not config.heater:
-        raise HTTPException(status_code=400, detail="Конфигурация обогревателей не задана. "
-                            "Заполните секцию heater в PUT /thermal/config")
+        raise api_error(400, "heater_config_missing")
 
     result: HeatBalance = calculate_heat_balance(
         ua_coefficient   = config.calibration.ua_coefficient,

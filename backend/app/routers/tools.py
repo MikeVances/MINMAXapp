@@ -9,6 +9,7 @@ from fastapi import APIRouter
 from pydantic import BaseModel, Field, model_validator
 from typing import Literal, Optional
 
+from ..core.errors import CalcError
 from ..core.leakage_calc import LeakageInput, LeakageResult, calculate_leakage
 from ..core.evap_cooling_calc import (
     SANHE_PADS, EvapCoolingInput, EvapCoolingResult, calculate_evap_cooling,
@@ -263,7 +264,7 @@ class TunnelSpeedRequest(BaseModel):
     def _rating_point_below_free_air(self):
         # При 25 Па вентилятор не может дать больше, чем при 0 Па
         if self.fan_capacity_25pa_m3h and self.fan_capacity_25pa_m3h >= self.fan_capacity_m3h:
-            raise ValueError("fan_capacity_25pa_m3h должна быть меньше fan_capacity_m3h")
+            raise CalcError("fan_25pa_above_free_air")
         return self
 
 

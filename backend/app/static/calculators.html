@@ -728,10 +728,7 @@ document.querySelectorAll('.tool-tab:not([disabled])').forEach(btn => {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-      if (!r.ok) {
-        const txt = await r.text();
-        throw new Error(`${r.status} ${r.statusText}: ${txt}`);
-      }
+      if (!r.ok) throw await apiError(r);
       const profData = await r.json();
       renderProfileHtml(profData, tab, mode, outsideT, outsideRH);
       rerenderOnLang.profile = () => renderProfileHtml(profData, tab, mode, outsideT, outsideRH);
@@ -741,7 +738,7 @@ document.querySelectorAll('.tool-tab:not([disabled])').forEach(btn => {
           `<p class="warn" style="font-size:12px;margin:0 0 8px;">⚠ ${t('target_rh_ignored')}</p>`);
       }
     } catch (e) {
-      profSummary.innerHTML = `<div class="card"><div class="danger">${escapeHtml(t('err_prefix') + String(e))}</div></div>`;
+      profSummary.innerHTML = `<div class="card"><div class="danger">${escapeHtml(t('err_prefix') + (e.message || e))}</div></div>`;
       profSummary.style.display = 'block';
     } finally {
       profBtn.disabled = false; profBtn.textContent = t('btn_calc_profile');
@@ -973,8 +970,7 @@ document.getElementById('l-calc-btn').addEventListener('click', async () => {
     });
 
     if (!resp.ok) {
-      const err = await resp.json();
-      alert(t('err_api') + JSON.stringify(err.detail));
+      alert(t('err_api') + (await apiError(resp)).message);
       return;
     }
 
@@ -1041,8 +1037,7 @@ document.getElementById('tunnel-form').addEventListener('submit', async e => {
     });
 
     if (!resp.ok) {
-      const err = await resp.json().catch(() => ({ detail: resp.statusText }));
-      alert(t('err_prefix') + JSON.stringify(err.detail || err));
+      alert(t('err_prefix') + (await apiError(resp)).message);
       return;
     }
 
@@ -1226,8 +1221,7 @@ document.getElementById('evap-form').addEventListener('submit', async e => {
     });
 
     if (!resp.ok) {
-      const err = await resp.json().catch(() => ({ detail: resp.statusText }));
-      alert(t('err_prefix') + JSON.stringify(err.detail || err));
+      alert(t('err_prefix') + (await apiError(resp)).message);
       return;
     }
 
@@ -1576,7 +1570,7 @@ function renderEvap(d) {
   // ── API helper ───────────────────────────────────────────────────────────
   async function fetchJSON(url, opts) {
     const r = await fetch(url, opts);
-    if (!r.ok) throw new Error(await r.text());
+    if (!r.ok) throw await apiError(r);   // код ошибки сервера → текст на языке интерфейса
     return r.json();
   }
 
@@ -1825,7 +1819,7 @@ function renderEvap(d) {
       await selectProfile(id);
       setStatus(t('status_saved_ok'), 3000);
     } catch (e) {
-      setStatus(t('status_err') + String(e));
+      setStatus(t('status_err') + (e.message || e));
     }
   }
 
@@ -1844,7 +1838,7 @@ function renderEvap(d) {
       renderAll();
       setStatus(t('status_saved_ok'), 3000);
     } catch (e) {
-      setStatus(t('status_err') + String(e));
+      setStatus(t('status_err') + (e.message || e));
     }
   }
 
@@ -1855,7 +1849,7 @@ function renderEvap(d) {
       await loadProfilesList();
       await selectProfile(profileCfg.default_growth_profile);
     } catch (e) {
-      setStatus(t('status_err') + String(e));
+      setStatus(t('status_err') + (e.message || e));
     }
   }
 
@@ -1903,11 +1897,11 @@ function renderEvap(d) {
       await selectProfile(profileForHouse());
     } catch (e) {
       const container = document.getElementById('profile-editor');
-      if (container) container.innerHTML = `<div class="card"><div class="danger">${esc(t('err_prefix') + String(e))}</div></div>`;
+      if (container) container.innerHTML = `<div class="card"><div class="danger">${esc(t('err_prefix') + (e.message || e))}</div></div>`;
     }
   }
 
-  growthSel.addEventListener('change', () => selectProfile(growthSel.value).catch(e => setStatus(t('status_err') + String(e))));
+  growthSel.addEventListener('change', () => selectProfile(growthSel.value).catch(e => setStatus(t('status_err') + (e.message || e))));
   // Другой корпус — свой профиль роста
   if (houseSel) houseSel.addEventListener('change', () => selectProfile(profileForHouse()).catch(() => {}));
 

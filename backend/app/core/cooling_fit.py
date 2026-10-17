@@ -38,6 +38,7 @@ from dataclasses import dataclass, field
 from typing import Callable, List, Sequence, Tuple
 
 from .building_thermal import AIR_CP_J_PER_KG_K, air_density_kg_m3
+from .errors import CalcError
 
 MIN_TAPS = 4                 # точек после старта: меньше — параметры не разделяются
 RECOMMENDED_DELTA_T = 15.0   # °C, минимальная разница с улицей для точности
@@ -124,16 +125,16 @@ def fit_cooling_curve(
     """
     pts = sorted(points, key=lambda p: p[0])
     if len(pts) < MIN_TAPS + 1:
-        raise ValueError(f"Нужно минимум {MIN_TAPS} отметки после старта")
+        raise CalcError("too_few_taps", min=MIN_TAPS)
     if pts[0][0] != 0:
-        raise ValueError("Первая точка — момент старта (0 с)")
+        raise CalcError("first_tap_not_start")
     for (t0, temp0), (t1, temp1) in zip(pts, pts[1:]):
         if t1 <= t0:
-            raise ValueError("Время отметок должно возрастать")
+            raise CalcError("taps_time_not_increasing")
         if temp1 >= temp0:
-            raise ValueError("Температура между отметками должна снижаться")
+            raise CalcError("taps_temp_not_decreasing")
     if pts[-1][1] <= t_outside_c:
-        raise ValueError("Температура внутри должна оставаться выше наружной")
+        raise CalcError("temp_not_above_outside")
 
     temp_start = pts[0][1]
     delta_t0 = temp_start - t_outside_c

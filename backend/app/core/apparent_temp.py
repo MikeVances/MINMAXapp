@@ -17,6 +17,8 @@
 
 from __future__ import annotations
 
+from .errors import CalcError
+
 REFERENCE_RH = 60.0
 
 # Колонки таблицы 2.5, % RH — за их пределами таблица ничего не утверждает
@@ -48,14 +50,14 @@ def _row_for_weight(weight_g: float) -> tuple[float, ...]:
         if w0 <= weight_g <= w1:
             k = (weight_g - w0) / (w1 - w0)
             return tuple(a + (b - a) * k for a, b in zip(row0, row1))
-    raise AssertionError("недостижимо: таблица отсортирована по массе")
+    raise AssertionError("unreachable: table is sorted by weight")
 
 
 def _temp_at_rh(row: tuple[float, ...], rh: float) -> float:
     for (rh0, t0), (rh1, t1) in zip(zip(RH_COLUMNS, row), zip(RH_COLUMNS[1:], row[1:])):
         if rh0 <= rh <= rh1:
             return t0 + (t1 - t0) * (rh - rh0) / (rh1 - rh0)
-    raise ValueError(f"RH {rh} % вне таблицы 2.5 ({RH_COLUMNS[0]:.0f}–{RH_COLUMNS[-1]:.0f} %)")
+    raise CalcError("rh_out_of_table", rh=rh, min=round(RH_COLUMNS[0]), max=round(RH_COLUMNS[-1]))
 
 
 def rh_temperature_shift(weight_g: float, target_rh: float) -> float:
