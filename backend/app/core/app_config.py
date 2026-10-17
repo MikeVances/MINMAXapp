@@ -5,6 +5,7 @@ import logging
 import os
 from dataclasses import asdict, dataclass, fields
 
+from .json_store import atomic_write_json
 from .paths import data_path
 
 logger = logging.getLogger(__name__)
@@ -60,6 +61,4 @@ def load_app_config(path: str = APP_CONFIG_PATH) -> AppConfig:
 
 
 def save_app_config(cfg: AppConfig, path: str = APP_CONFIG_PATH) -> None:
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(asdict(cfg), f, ensure_ascii=False, indent=2)
+    atomic_write_json(path, asdict(cfg))

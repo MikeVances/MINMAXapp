@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import Optional, List
 
 from ..models.flock import FlockInfo, FlockDiaryEntry
+from .json_store import atomic_write_json, path_lock
 from .paths import data_path
 
 
@@ -81,8 +82,8 @@ def save_flock_info(house_id: str, info: FlockInfo) -> None:
 
     path = _get_info_path(house_id)
     try:
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(info.to_dict(), f, ensure_ascii=False, indent=2)
+        with path_lock(path):
+            atomic_write_json(path, info.to_dict())
     except Exception as e:
         raise IOError(f"Failed to save flock info for {house_id}: {e}")
 
@@ -150,6 +151,14 @@ def save_diary_entry(house_id: str, entry: FlockDiaryEntry) -> None:
     """
     _ensure_flocks_dir()
 
+    # Весь цикл «прочитать → изменить → записать» под блокировкой файла дневника:
+    # иначе два одновременных сохранения читают одну версию, и второе затирает первое
+    path = _get_diary_path(house_id)
+    with path_lock(path):
+        _save_diary_entry_locked(house_id, entry, path)
+
+
+def _save_diary_entry_locked(house_id: str, entry: FlockDiaryEntry, path: Path) -> None:
     # Установить метаданные
     now = datetime.utcnow().isoformat() + "Z"
     existing_entries = load_diary_entries(house_id)
@@ -178,11 +187,8 @@ def save_diary_entry(house_id: str, entry: FlockDiaryEntry) -> None:
     existing_entries.sort(key=lambda e: e.day_of_cycle)
 
     # Сохранить
-    path = _get_diary_path(house_id)
     try:
-        with open(path, "w", encoding="utf-8") as f:
-            data = [e.to_dict() for e in existing_entries]
-            json.dump(data, f, ensure_ascii=False, indent=2)
+        atomic_write_json(path, [e.to_dict() for e in existing_entries])
     except Exception as e:
         raise IOError(f"Failed to save diary entry for {house_id}: {e}")
 
@@ -269,24 +275,23 @@ def delete_diary_entry(house_id: str, day: int) -> bool:
     Raises:
         IOError: Если не удалось сохранить файл
     """
-    entries = load_diary_entries(house_id)
-    initial_count = len(entries)
-
-    # Удалить запись за указанный день
-    entries = [e for e in entries if e.day_of_cycle != day]
-
-    if len(entries) == initial_count:
-        return False  # Записи не было
-
-    # Сохранить обновлённый список
     path = _get_diary_path(house_id)
-    try:
-        with open(path, "w", encoding="utf-8") as f:
-            data = [e.to_dict() for e in entries]
-            json.dump(data, f, ensure_ascii=False, indent=2)
-        return True
-    except Exception as e:
-        raise IOError(f"Failed to delete diary entry for {house_id}: {e}")
+    with path_lock(path):
+        entries = load_diary_entries(house_id)
+        initial_count = len(entries)
+
+        # Удалить запись за указанный день
+        entries = [e for e in entries if e.day_of_cycle != day]
+
+        if len(entries) == initial_count:
+            return False  # Записи не было
+
+        # Сохранить обновлённый список
+        try:
+            atomic_write_json(path, [e.to_dict() for e in entries])
+            return True
+        except Exception as e:
+            raise IOError(f"Failed to delete diary entry for {house_id}: {e}")
 
 
 def delete_all_flock_data(house_id: str) -> None:

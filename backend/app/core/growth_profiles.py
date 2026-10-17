@@ -27,13 +27,12 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 import re
-import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional
 
+from .json_store import atomic_write_json
 from .paths import data_path
 
 logger = logging.getLogger(__name__)
@@ -183,22 +182,6 @@ def _to_json(profile: GrowthProfile) -> dict:
     }
 
 
-def _atomic_write_json(path: Path, data: dict) -> None:
-    """
-    Запись через временный файл + os.replace: при сбое посреди записи на диске
-    остаётся старая версия профиля, а не обрезанный JSON.
-    """
-    path.parent.mkdir(parents=True, exist_ok=True)
-    fd, tmp = tempfile.mkstemp(dir=path.parent, suffix=".tmp")
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-        os.replace(tmp, path)
-    except BaseException:
-        Path(tmp).unlink(missing_ok=True)
-        raise
-
-
 # ─── Публичный API ───────────────────────────────────────────────────────────
 
 def list_profiles() -> List[GrowthProfile]:
@@ -234,7 +217,7 @@ def save_custom_profile(profile: GrowthProfile) -> GrowthProfile:
         raise BuiltinProfileReadOnly(profile.id)
     if not profile.points:
         raise ValueError("Профиль должен содержать хотя бы одну точку")
-    _atomic_write_json(_custom_dir() / f"{profile.id}.json", _to_json(profile))
+    atomic_write_json(_custom_dir() / f"{profile.id}.json", _to_json(profile))
     return load_profile(profile.id)
 
 

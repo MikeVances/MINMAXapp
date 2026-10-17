@@ -6,12 +6,12 @@
 """
 
 from fastapi import APIRouter
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from typing import Literal, Optional
 
 from ..core.leakage_calc import LeakageInput, LeakageResult, calculate_leakage
 from ..core.evap_cooling_calc import (
-    EvapCoolingInput, EvapCoolingResult, calculate_evap_cooling,
+    SANHE_PADS, EvapCoolingInput, EvapCoolingResult, calculate_evap_cooling,
 )
 from ..core.tunnel_speed_calc import (
     TunnelSpeedInput, TunnelSpeedResult, calculate_tunnel_speed,
@@ -114,6 +114,18 @@ class EvapCoolingRequest(BaseModel):
         None, ge=1, le=40,
         description="Температура воды подачи на пэд, °C (скважина ≈ 8–12, бак летом до 35)"
     )
+
+    @model_validator(mode="after")
+    def _thickness_exists_for_pad_type(self):
+        # Толщины берём из той же таблицы SANHE, по которой идёт расчёт: иначе
+        # недопустимая пара (5090/200, 7090/125) падала KeyError → 500
+        allowed = SANHE_PADS[self.pad_type]["thicknesses"]
+        if self.pad_thickness_mm not in allowed:
+            raise ValueError(
+                f"pad_thickness_mm={self.pad_thickness_mm} недоступна для {self.pad_type}; "
+                f"допустимо: {', '.join(map(str, allowed))} мм"
+            )
+        return self
 
 
 class EvapCoolingResponse(BaseModel):

@@ -21,7 +21,7 @@
       <div class="modal-card" style="width:min(480px,92vw);">
         <h3 style="margin:0 0 10px;" data-i18n="feedback_title">Send Feedback</h3>
         <textarea id="feedbackText"
-          rows="5"
+          rows="5" maxlength="2000"
           style="width:100%;box-sizing:border-box;resize:vertical;
                  background:var(--input-bg,#1e1e1e);color:inherit;
                  border:1px solid var(--border);border-radius:6px;
@@ -75,7 +75,7 @@
           headers: { 'Content-Type': 'application/json' },
           body:    JSON.stringify({
             message: text,
-            page:    document.title || location.pathname,
+            page:    (document.title || location.pathname).slice(0, 200),
           }),
         });
 
@@ -84,7 +84,9 @@
           statusEl.style.color = '#4caf50';
           setTimeout(closeModal, 1500);
         } else {
-          statusEl.textContent = window.t ? window.t('feedback_error') : 'Error. Try again.';
+          // 429 — сервер ограничивает частоту: сказать прямо, а не «ошибка, повторите»
+          const key = resp.status === 429 ? 'feedback_rate_limited' : 'feedback_error';
+          statusEl.textContent = window.t ? window.t(key) : 'Error. Try again.';
           statusEl.style.color = '#ff7a7a';
         }
       } catch (_) {

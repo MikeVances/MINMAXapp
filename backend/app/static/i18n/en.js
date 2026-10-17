@@ -445,6 +445,7 @@
     feedback_cancel:      'Cancel',
     feedback_sent:        '✓ Sent! Thank you.',
     feedback_error:       'Failed to send. Please try again.',
+    feedback_rate_limited: 'Too many messages — try again in 10 minutes',
 
     // ── Footer cross-link ─────────────────────────────────────────────────────
     footer_see_also:      'Also see:',

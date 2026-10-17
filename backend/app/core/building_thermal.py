@@ -34,6 +34,7 @@ import os
 from dataclasses import dataclass, asdict, field
 from typing import Optional
 
+from .json_store import atomic_write_json
 from .paths import data_path
 
 logger = logging.getLogger(__name__)
@@ -381,8 +382,6 @@ def load_thermal_config(path: str = THERMAL_CONFIG_PATH) -> ThermalConfig:
 
 def save_thermal_config(config: ThermalConfig, path: str = THERMAL_CONFIG_PATH) -> None:
     """Сохраняет конфигурацию теплотехнических параметров в JSON"""
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-
     data = {}
     if config.house_id is not None:
         data["house_id"] = config.house_id
@@ -393,5 +392,4 @@ def save_thermal_config(config: ThermalConfig, path: str = THERMAL_CONFIG_PATH) 
     if config.calibration:
         data["calibration"] = asdict(config.calibration)
 
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+    atomic_write_json(path, data)
