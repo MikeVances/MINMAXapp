@@ -530,4 +530,14 @@
     val_string_too_short:          'co najmniej {min_length} znaków',
     val_literal_error:             'dozwolone wartości: {expected}',
     val_json_invalid:              'nieprawidłowy JSON',
+
+    // ── Growth profile source (structured source of builtin profiles) ──
+    gp_src_weight:                    'Masa ciała',
+    gp_src_climate:                   'Klimat',
+    gp_src_page:                      's. {n}',
+    gp_src_table:                     'tab. {n}',
+    gp_src_column:                    'kolumna {c}',
+    gp_src_basis_as_hatched_on_farm:  'masa na fermie (z treścią przewodu pokarmowego), płeć mieszana',
+    gp_src_method_mitchell_by_weight: 'temperatura według masy żywej (wzór dr. M. Mitchella, SRUC), przeliczona na dzienną masę tego krzyżowania; RH 60 %',
+    gp_src_copied_from:               'skopiowano z {id}',
 };

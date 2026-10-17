@@ -12,7 +12,7 @@ API библиотеки профилей роста (см. core/growth_profiles
 from __future__ import annotations
 
 import re
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
@@ -38,6 +38,10 @@ router = APIRouter()
 
 # ─── Модели ──────────────────────────────────────────────────────────────────
 
+# Источник данных профиля: строка (свободный текст) или структура с полями
+# ref/page/table/column/basis/method/url — клиент собирает из неё подпись на своём языке
+SourceValue = Union[str, Dict[str, Union[str, int, float]]]
+
 class PointModel(BaseModel):
     day: int = Field(..., ge=0, le=70)
     body_weight_g: Optional[float] = Field(None, gt=0, le=10_000)
@@ -55,7 +59,7 @@ class ProfileSummary(BaseModel):
     name: str
     breed: Optional[str] = None
     builtin: bool
-    source: Dict[str, str] = {}
+    source: Dict[str, SourceValue] = {}
     first_day: int
     last_day: int
 
@@ -69,7 +73,7 @@ class ProfileIn(BaseModel):
     # Имя и кросс выводятся в UI (через textContent) — ограничиваем длину
     name: str = Field(..., min_length=1, max_length=80)
     breed: Optional[str] = Field(None, max_length=80)
-    source: Dict[str, str] = Field(default_factory=dict)
+    source: Dict[str, SourceValue] = Field(default_factory=dict)
     points: List[PointModel] = Field(..., min_length=2, max_length=71)
 
 

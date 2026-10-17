@@ -530,4 +530,14 @@
     val_string_too_short:          '{min_length} caractères minimum',
     val_literal_error:             'valeurs autorisées : {expected}',
     val_json_invalid:              'JSON invalide',
+
+    // ── Growth profile source (structured source of builtin profiles) ──
+    gp_src_weight:                    'Poids',
+    gp_src_climate:                   'Climat',
+    gp_src_page:                      'p. {n}',
+    gp_src_table:                     'tableau {n}',
+    gp_src_column:                    'colonne {c}',
+    gp_src_basis_as_hatched_on_farm:  'poids en élevage (avec contenu digestif), sexes mélangés',
+    gp_src_method_mitchell_by_weight: 'température selon le poids vif (formule Dr M. Mitchell, SRUC), recalculée sur le poids journalier de cette souche ; HR 60 %',
+    gp_src_copied_from:               'copié depuis {id}',
 };

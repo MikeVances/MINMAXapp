@@ -1708,8 +1708,28 @@ function renderEvap(d) {
     </tr>`;
   }
 
+  // Источник профиля. У встроенных профилей это структура (ref/page/table/column/
+  // basis/method/url), подпись к которой собирается на языке интерфейса; строка —
+  // свободный текст пользователя или служебное copied_from.
+  function sourceEntryHTML(key, v) {
+    const label = ['weight', 'climate'].includes(key) ? t('gp_src_' + key) : esc(key);
+    if (v && typeof v === 'object') {
+      const bits = [];
+      if (v.ref)    bits.push(esc(v.ref));
+      if (v.table)  bits.push(t('gp_src_table',  { n: esc(v.table) }));
+      if (v.page)   bits.push(t('gp_src_page',   { n: esc(v.page) }));
+      if (v.column) bits.push(t('gp_src_column', { c: esc(v.column) }));
+      if (v.basis)  bits.push(t('gp_src_basis_'  + v.basis));
+      if (v.method) bits.push(t('gp_src_method_' + v.method));
+      if (v.url)    bits.push(`<a href="${esc(v.url)}" target="_blank" rel="noopener">PDF</a>`);
+      return `${label}: ${bits.join(', ')}`;
+    }
+    if (key === 'copied_from') return t('gp_src_copied_from', { id: esc(v) });
+    return `${label}: ${esc(v)}`;
+  }
+
   function sourceHTML(src) {
-    const parts = Object.entries(src || {}).map(([k, v]) => `${esc(k)}: ${esc(v)}`);
+    const parts = Object.entries(src || {}).map(([k, v]) => sourceEntryHTML(k, v));
     return parts.length ? `<p class="muted" style="font-size:11px;margin:0 0 10px;">${t('gp_source')}: ${parts.join(' · ')}</p>` : '';
   }
 

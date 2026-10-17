@@ -3,9 +3,20 @@
   "name": "Hubbard Efficiency Plus — as-hatched",
   "breed": "Hubbard Efficiency Plus",
   "source": {
-    "weight": "Hubbard, Efficiency Plus Broiler Performance Objectives V-2026-01, Bodyweight As hatched (g), стр. 2. https://www.hubbardbreeders.com/wp-content/uploads/2025/09/broiler-performance-objectives-efficiency-plus-enfres.pdf",
-    "climate": "Aviagen, Ross Broiler Management Handbook 2025, табл. 2.5 (стр. 30), колонка 60 % RH (формула Dr. M. Mitchell, SRUC): температура по живой массе, пересчитана на массу этого кросса по дням; RH 60 %. https://aviagen.com/assets/Tech_Center/Ross_Broiler/Aviagen-ROSS-Broiler-Handbook-EN.pdf",
-    "notes": "Масса — on-farm (с кормом в ЖКТ), смешанный пол. Встроенный профиль только для чтения: для своей площадки сделайте копию."
+    "weight": {
+      "ref": "Hubbard, Efficiency Plus Broiler Performance Objectives V-2026-01, Bodyweight As hatched (g)",
+      "page": 2,
+      "basis": "as_hatched_on_farm",
+      "url": "https://www.hubbardbreeders.com/wp-content/uploads/2025/09/broiler-performance-objectives-efficiency-plus-enfres.pdf"
+    },
+    "climate": {
+      "ref": "Aviagen, Ross Broiler Management Handbook 2025",
+      "table": "2.5",
+      "page": 30,
+      "column": "60 % RH",
+      "method": "mitchell_by_weight",
+      "url": "https://aviagen.com/assets/Tech_Center/Ross_Broiler/Aviagen-ROSS-Broiler-Handbook-EN.pdf"
+    }
   },
   "points": [
     {

@@ -531,4 +531,14 @@
     val_string_too_short:          'не менее {min_length} символов',
     val_literal_error:             'допустимые значения: {expected}',
     val_json_invalid:              'некорректный JSON',
+
+    // ── Growth profile source (structured source of builtin profiles) ──
+    gp_src_weight:                    'Масса',
+    gp_src_climate:                   'Климат',
+    gp_src_page:                      'стр. {n}',
+    gp_src_table:                     'табл. {n}',
+    gp_src_column:                    'колонка {c}',
+    gp_src_basis_as_hatched_on_farm:  'масса on-farm (с кормом в ЖКТ), смешанный пол',
+    gp_src_method_mitchell_by_weight: 'температура по живой массе (формула Dr. M. Mitchell, SRUC), пересчитана на массу этого кросса по дням; RH 60 %',
+    gp_src_copied_from:               'скопировано из {id}',
 };

@@ -15,7 +15,7 @@
 Формат файла:
   {
     "id": "ross308", "name": "Ross 308 — as-hatched", "breed": "Ross 308",
-    "source": {"weight": "...", "climate": "..."},
+    "source": {"weight": {"ref": "...", "page": 2, "url": "..."}, "climate": {...}},
     "points": [{"day": 0, "body_weight_g": 44, "min_temp_c": 33, "rv_percent": 60}, ...]
   }
 
@@ -30,7 +30,7 @@ import logging
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from .errors import CalcError
 from .json_store import atomic_write_json
@@ -71,8 +71,11 @@ class GrowthProfile:
     name: str
     breed: Optional[str] = None
     builtin: bool = False
-    # Откуда взяты числа: {"weight": "...", "climate": "..."} — свободный текст
-    source: Dict[str, str] = field(default_factory=dict)
+    # Откуда взяты числа. У встроенных профилей — структура, которую клиент
+    # выводит на языке интерфейса: {"weight": {"ref", "page", "basis", "url"},
+    # "climate": {"ref", "table", "page", "column", "method", "url"}}.
+    # Значение может быть и строкой (свободный текст пользователя, copied_from).
+    source: Dict[str, Any] = field(default_factory=dict)
     points: List[GrowthPoint] = field(default_factory=list)
 
     def daily(self) -> Dict[int, GrowthPoint]:

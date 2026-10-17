@@ -54,25 +54,23 @@ class LeakageResult:
     ela_m2: float                  # Суммарная площадь щелей/утечек (ELA), м²
     house_area_m2: float           # Площадь пола птичника, м²
     relative_leakage: float        # Относительная утечка, м² на 1000 м² пола (безразмерна)
-    tightness_class: TightnessClass  # Класс герметичности
-    tightness_label_ru: str        # Метка на русском
+    tightness_class: TightnessClass  # Класс герметичности — текст подставляет клиент (tightness_<class>)
     static_pressure_pa: float      # Введённое давление (для справки)
 
 
 # Классификация по относительной утечке (м²/1000 м² = ft²/1000 ft² — безразмерна)
-_TIGHTNESS_THRESHOLDS: list[tuple[float, TightnessClass, str]] = [
-    (0.25, "tight",      "Герметичный ✅"),
-    (0.50, "moderate",   "Умеренный 🟡"),
-    (1.00, "leaky",      "Негерметичный ⚠️"),
-    (9999, "very_leaky", "Критически негерметичный 🔴"),
+_TIGHTNESS_THRESHOLDS: list[tuple[float, TightnessClass]] = [
+    (0.25, "tight"),
+    (0.50, "moderate"),
+    (1.00, "leaky"),
 ]
 
 
-def _classify(relative_leakage: float) -> tuple[TightnessClass, str]:
-    for threshold, cls, label in _TIGHTNESS_THRESHOLDS:
+def _classify(relative_leakage: float) -> TightnessClass:
+    for threshold, cls in _TIGHTNESS_THRESHOLDS:
         if relative_leakage < threshold:
-            return cls, label
-    return "very_leaky", "Критически негерметичный 🔴"
+            return cls
+    return "very_leaky"
 
 
 def _fan_correction(q_rated_m3h: float, pressure_pa: float) -> float:
@@ -107,7 +105,7 @@ def calculate_leakage(inp: LeakageInput) -> LeakageResult:
     relative_leakage = ela_m2 / (house_area_m2 / 1000.0)
 
     # Класс герметичности
-    t_class, t_label = _classify(relative_leakage)
+    t_class = _classify(relative_leakage)
 
     return LeakageResult(
         fan_corrected_m3h  = round(q_corrected_m3h, 0),
@@ -115,6 +113,5 @@ def calculate_leakage(inp: LeakageInput) -> LeakageResult:
         house_area_m2      = round(house_area_m2, 1),
         relative_leakage   = round(relative_leakage, 4),
         tightness_class    = t_class,
-        tightness_label_ru = t_label,
         static_pressure_pa = inp.measured_pressure_pa,
     )

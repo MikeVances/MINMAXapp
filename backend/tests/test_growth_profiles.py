@@ -150,3 +150,38 @@ def test_calc_with_unknown_profile_is_404_not_silent_fallback(client):
     r = client.post("/calc/minmax", json={**_CALC, "growth_profile_id": "no-such-breed"})
 
     assert r.status_code == 404
+
+
+# ─── Источник профиля: структура вместо текста на одном языке ─────────────────
+
+def test_builtin_profile_sources_are_structured_and_language_neutral():
+    """
+    Подпись источника встроенного профиля собирает клиент на языке интерфейса,
+    поэтому в данных — только поля (ref/page/url …) без фраз на русском.
+    """
+    import json
+    import re
+    from pathlib import Path
+
+    builtin_dir = Path(__file__).resolve().parents[2] / "data" / "growth_profiles" / "builtin"
+    files = sorted(builtin_dir.glob("*.json"))
+    assert files, builtin_dir
+
+    for path in files:
+        source = json.loads(path.read_text(encoding="utf-8"))["source"]
+        assert isinstance(source["weight"], dict) and {"ref", "page", "url"} <= source["weight"].keys(), path.name
+        assert isinstance(source["climate"], dict) and {"ref", "table", "page", "url"} <= source["climate"].keys(), path.name
+        assert not re.search(r"[А-Яа-яЁё]", json.dumps(source, ensure_ascii=False)), path.name
+
+
+def test_custom_profile_source_accepts_structured_and_plain_values(client):
+    """API принимает и структурированный источник, и свободный текст, и отдаёт их как есть."""
+    source = {
+        "weight": {"ref": "Farm scales 2026", "page": 1, "url": "https://example.org/w.pdf"},
+        "notes": "free text",
+        "copied_from": "ross308",
+    }
+    r = client.put(f"/profiles/{CUSTOM_ID}", json={**CUSTOM_PROFILE, "source": source})
+
+    assert r.status_code == 200, r.json()
+    assert client.get(f"/profiles/{CUSTOM_ID}").json()["source"] == source

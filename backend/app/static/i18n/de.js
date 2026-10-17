@@ -530,4 +530,14 @@
     val_string_too_short:          'mindestens {min_length} Zeichen',
     val_literal_error:             'zulässige Werte: {expected}',
     val_json_invalid:              'ungültiges JSON',
+
+    // ── Growth profile source (structured source of builtin profiles) ──
+    gp_src_weight:                    'Körpermasse',
+    gp_src_climate:                   'Klima',
+    gp_src_page:                      'S. {n}',
+    gp_src_table:                     'Tab. {n}',
+    gp_src_column:                    'Spalte {c}',
+    gp_src_basis_as_hatched_on_farm:  'Lebendmasse im Stall (mit Darminhalt), gemischtgeschlechtlich',
+    gp_src_method_mitchell_by_weight: 'Temperatur nach Lebendmasse (Formel Dr. M. Mitchell, SRUC), auf die Tagesmasse dieser Linie umgerechnet; RH 60 %',
+    gp_src_copied_from:               'kopiert aus {id}',
 };

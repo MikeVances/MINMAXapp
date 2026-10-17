@@ -531,4 +531,14 @@
     val_string_too_short:          'at least {min_length} characters',
     val_literal_error:             'allowed values: {expected}',
     val_json_invalid:              'invalid JSON',
+
+    // ── Growth profile source (structured source of builtin profiles) ──
+    gp_src_weight:                    'Body weight',
+    gp_src_climate:                   'Climate',
+    gp_src_page:                      'p. {n}',
+    gp_src_table:                     'table {n}',
+    gp_src_column:                    'column {c}',
+    gp_src_basis_as_hatched_on_farm:  'on-farm weight (with gut fill), as-hatched',
+    gp_src_method_mitchell_by_weight: 'temperature by live weight (Dr. M. Mitchell, SRUC formula), recalculated to this breed\'s daily weight; RH 60 %',
+    gp_src_copied_from:               'copied from {id}',
 };

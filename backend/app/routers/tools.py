@@ -55,7 +55,6 @@ class LeakageResponse(BaseModel):
     house_area_m2:          float
     relative_leakage:       float
     tightness_class:        str
-    tightness_label_ru:     str
 
     static_pressure_pa:     float
 
@@ -399,6 +398,5 @@ def calc_leakage(req: LeakageRequest) -> LeakageResponse:
         house_area_m2      = result.house_area_m2,
         relative_leakage   = result.relative_leakage,
         tightness_class    = result.tightness_class,
-        tightness_label_ru = result.tightness_label_ru,
         static_pressure_pa = result.static_pressure_pa,
     )
