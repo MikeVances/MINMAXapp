@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>MINIMAX — Poultry House</title>
   <link rel="stylesheet" href="./styles.css" />
+  <link rel="stylesheet" href="./theme.css" />
   <script src="./i18n/en.js"></script>
   <script src="./i18n/ru.js"></script>
   <script src="./i18n/pl.js"></script>
@@ -77,7 +78,7 @@
             </label>
           </div>
 
-          <div id="uaBadge" style="display:none; margin-top:8px; padding:6px 12px; background:#0f1f15; border-left:3px solid #4ade80; border-radius:4px; font-size:12px;"></div>
+          <div id="uaBadge" style="display:none; margin-top:8px; padding:6px 12px; background:var(--ok-bg); border-left:3px solid var(--ok); border-radius:4px; font-size:12px;"></div>
 
           <p class="muted" style="font-size:12px; margin:12px 0 4px;" data-i18n="label_tunnel_fans_grp">Tunnel ventilation fans</p>
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
@@ -123,7 +124,7 @@
       <small data-i18n="footer_text">Reference tool only. Verify all setpoints with your breed guide and technical advisor.</small>
       <small class="muted" style="display:block; margin-top:4px;">
         <span data-i18n="footer_see_also">Also see:</span>
-        <a href="https://github.com/MikeVances/PigMaxApp" target="_blank" style="color:var(--muted,#888);">PigMaxApp</a>
+        <a href="https://github.com/MikeVances/PigMaxApp" target="_blank" style="color:var(--muted);">PigMaxApp</a>
         — <span data-i18n="footer_related_pig">Pig house ventilation calculator</span>
       </small>
       <!-- Хэш коммита из /version: быстрая проверка, что деплой на Render прошёл -->
@@ -145,7 +146,7 @@
       <p class="muted" id="modalText" data-i18n="modal_default_txt">Are you sure you want to remove this house?</p>
       <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:12px;">
         <button id="modalCancel" class="btn btn-secondary" data-i18n="modal_cancel">Cancel</button>
-        <button id="modalOk" class="btn" style="background:#ff7a7a; color:#1b0b0b;" data-i18n="modal_remove">Remove</button>
+        <button id="modalOk" class="btn btn-danger" data-i18n="modal_remove">Remove</button>
       </div>
     </div>
   </div>

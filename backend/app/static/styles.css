@@ -1,49 +1,133 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   Дизайн-токены. Единственное место, где заданы цвета, радиусы и шрифт.
+   Разметка и JS ссылаются только на var(--…); чтобы перекрасить интерфейс,
+   достаточно переопределить переменные в data/theme.css (подключается после
+   этого файла, см. README «Customizing the look»).
+   ───────────────────────────────────────────────────────────────────────────── */
 :root {
-  --bg: #0b0c10;
-  --card: #15161a;
-  --text: #e6e7eb;
-  --muted: #9aa0a6;
-  --accent: #6aa0ff;
-  --accent-2: #74d69b;
-  --border: #26272c;
+  /* Поверхности: от самой тёмной (фон страницы) к приподнятым */
+  --bg:              #0b0c10;
+  --card:            #15161a;
+  --surface:         #0e1013;   /* поля ввода, строки «ключ-значение», инфо-блоки, code */
+  --surface-raised:  #101217;   /* неактивная вкладка */
+  --surface-active:  #111827;   /* активная вкладка */
+  --bar-track:       #1a1b20;   /* дорожка индикатора в процентах */
+  --btn-secondary:   #2a2c33;
+  --border:          #26272c;
+  --border-active:   #2b2e35;
+
+  /* Текст и акценты */
+  --text:            #e6e7eb;
+  --muted:           #9aa0a6;
+  --accent:          #6aa0ff;   /* основная кнопка, ссылки, первая серия графика */
+  --accent-2:        #74d69b;   /* активная вкладка, третья серия графика */
+  --on-accent:       #05122b;   /* текст на кнопке акцентного цвета */
+
+  /* Статусы: три уровня «хорошо / внимание / плохо» и фон для заметок */
+  --ok:              #74d69b;
+  --ok-bg:           #0f1f15;
+  --warn:            #ffcf6b;
+  --warn-bg:         #3a2f1a;
+  --danger:          #ff7a7a;
+  --danger-bg:       #2a1a1a;
+  --on-danger:       #1b0b0b;   /* текст на кнопке цвета danger */
+
+  /* Шкала оценки из четырёх ступеней (герметичность, качество калибровки,
+     индекс THI, скорость в приточных): от отличного к плохому */
+  --grade-1:         #4ade80;  --grade-1-bg: #14532d;
+  --grade-2:         #fbbf24;  --grade-2-bg: #713f12;
+  --grade-3:         #fb923c;  --grade-3-bg: #7c2d12;
+  --grade-4:         #f87171;  --grade-4-bg: #450a0a;
+
+  /* Серии графиков профиля (вес, температура, вентиляция) */
+  --chart-1:         var(--accent);
+  --chart-2:         var(--warn);
+  --chart-3:         var(--accent-2);
+
+  /* Геометрия и прочее */
+  --radius-xs:       4px;
+  --radius-sm:       6px;
+  --radius:          8px;
+  --radius-lg:       12px;
+  --radius-pill:     999px;
+  --overlay:         rgba(0, 0, 0, 0.5);
+  --shadow-modal:    0 10px 30px rgba(0, 0, 0, 0.4);
+  --font:            14px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Arial;
 }
+
+/* ─── База ─────────────────────────────────────────────────────────────────── */
 * { box-sizing: border-box; }
-body { background: var(--bg); color: var(--text); margin: 0; font: 14px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Arial; }
+body { background: var(--bg); color: var(--text); margin: 0; font: var(--font); }
 .container { max-width: 980px; margin: 24px auto; padding: 0 16px; }
 h1 { margin: 0 0 16px; font-size: 22px; }
 h2 { font-size: 16px; margin: 0 0 12px; }
 .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
-.card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+.card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px; }
 label { display: block; margin: 10px 0; }
 label.inline { display: inline-flex; align-items: center; gap: 6px; margin-right: 10px; }
-input[type="number"], input[type="text"] { width: 100%; padding: 8px 10px; background: #0e1013; color: var(--text); border: 1px solid var(--border); border-radius: 8px; }
-select { width: 100%; padding: 8px 10px; background: #0e1013; color: var(--text); border: 1px solid var(--border); border-radius: 8px; }
-.btn { background: var(--accent); color: #05122b; border: 0; padding: 10px 14px; border-radius: 10px; cursor: pointer; font-weight: 600; }
-.btn-secondary { background: #2a2c33; color: var(--text); border: 1px solid var(--border); }
+input[type="number"], input[type="text"] { width: 100%; padding: 8px 10px; background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius); }
+select { width: 100%; padding: 8px 10px; background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius); }
+
+/* ─── Кнопки ───────────────────────────────────────────────────────────────── */
+.btn { background: var(--accent); color: var(--on-accent); border: 0; padding: 10px 14px; border-radius: 10px; cursor: pointer; font-weight: 600; }
+.btn-secondary { background: var(--btn-secondary); color: var(--text); border: 1px solid var(--border); }
+.btn-danger { background: var(--danger); color: var(--on-danger); }
 .btn:disabled { opacity: 0.38; cursor: not-allowed; }
 .btn:not(:disabled):hover { filter: brightness(1.12); }
+
+/* ─── Вкладки помещений ────────────────────────────────────────────────────── */
 /* overflow-x:auto + nowrap — вкладки скроллятся горизонтально, а не переносятся.
    Без этого при большом числе домов вкладки занимают весь экран. */
 .tabs { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
 .tabs::-webkit-scrollbar { display: none; }
 /* flex-shrink:0 — таб не сжимается при nowrap, сохраняет читаемость текста */
-.tab { flex-shrink: 0; padding: 6px 10px; border: 1px solid var(--border); border-radius: 999px; cursor: pointer; background: #101217; color: var(--text); }
-.tab.active { background: #111827; border-color: #2b2e35; color: var(--accent-2); }
+.tab { flex-shrink: 0; padding: 6px 10px; border: 1px solid var(--border); border-radius: var(--radius-pill); cursor: pointer; background: var(--surface-raised); color: var(--text); }
+.tab.active { background: var(--surface-active); border-color: var(--border-active); color: var(--accent-2); }
+
+/* ─── Вкладки инструментов (calculators.html) ──────────────────────────────── */
+.tool-tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+.tool-tab { padding: 8px 16px; border: 1px solid var(--border); border-radius: var(--radius-pill); cursor: pointer; background: var(--surface-raised); color: var(--text); transition: all .15s; touch-action: manipulation; }
+.tool-tab.active { background: var(--surface-active); border-color: var(--border-active); color: var(--accent-2); }
+.tool-panel { display: none; }
+.tool-panel.active { display: block; }
+
+/* ─── Результаты ───────────────────────────────────────────────────────────── */
 .muted { color: var(--muted); }
 .result { display: grid; gap: 8px; }
-.kv { display: flex; justify-content: space-between; border: 1px solid var(--border); padding: 8px 10px; border-radius: 8px; background: #0e1013; }
+.kv { display: flex; justify-content: space-between; border: 1px solid var(--border); padding: 8px 10px; border-radius: var(--radius); background: var(--surface); }
 .big { font-size: 22px; font-weight: 700; }
-.ok { color: var(--accent-2); }
-.warn { color: #ffcf6b; }
-.danger { color: #ff7a7a; }
+.ok { color: var(--ok); }
+.warn { color: var(--warn); }
+.danger { color: var(--danger); }
+
+/* Бейдж итоговой оценки и его четыре ступени (классы герметичности из API) */
+.result-badge { display: inline-block; padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 16px; margin-bottom: 12px; }
+.badge-tight      { background: var(--grade-1-bg); color: var(--grade-1); }
+.badge-moderate   { background: var(--grade-2-bg); color: var(--grade-2); }
+.badge-leaky      { background: var(--grade-3-bg); color: var(--grade-3); }
+.badge-very_leaky { background: var(--grade-4-bg); color: var(--grade-4); }
+
+.section-divider { border: 0; border-top: 1px solid var(--border); margin: 20px 0; }
+.field-row   { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.field-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+@media (max-width: 600px) {
+  .field-row, .field-row-3 { grid-template-columns: 1fr; }
+}
+
+.info-block { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; margin-top: 8px; font-size: 13px; color: var(--muted); line-height: 1.6; }
+.pct-bar-wrap { background: var(--bar-track); border-radius: var(--radius-sm); height: 10px; overflow: hidden; margin-top: 6px; }
+.pct-bar { height: 10px; border-radius: var(--radius-sm); transition: width .4s; }
+
+/* ─── Таблицы ──────────────────────────────────────────────────────────────── */
 table { width: 100%; border-collapse: collapse; margin-top: 12px; }
 th, td { border-bottom: 1px solid var(--border); padding: 8px 6px; text-align: right; }
 th:first-child, td:first-child { text-align: left; }
 /* input внутри td создаёт свой formatting context — наследование text-align не работает */
 td input[type="number"], td input[type="text"] { text-align: right; }
 footer { margin-top: 18px; color: var(--muted); }
-code { background: #0e1013; padding: 2px 6px; border-radius: 6px; border: 1px solid var(--border); }
+code { background: var(--surface); padding: 2px 6px; border-radius: var(--radius-sm); border: 1px solid var(--border); }
 
+/* ─── Мобильные нюансы ─────────────────────────────────────────────────────── */
 /* Предотвращаем авто-зум iOS Safari при фокусе на инпуте (триггер < 16px) */
 input[type="number"], input[type="text"], select, textarea { font-size: 16px; }
 
@@ -60,7 +144,7 @@ input[type="number"], input[type="text"], select, textarea { font-size: 16px; }
   .lang-switcher { position: static; justify-content: flex-end; padding: 8px 16px 0; }
 }
 
-/* Modal */
-.modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: grid; place-items: center; z-index: 1000; }
+/* ─── Модальное окно ───────────────────────────────────────────────────────── */
+.modal { position: fixed; inset: 0; background: var(--overlay); display: grid; place-items: center; z-index: 1000; }
 .modal.hidden { display: none; }
-.modal-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; width: min(420px, 90vw); box-shadow: 0 10px 30px rgba(0,0,0,0.4); }
+.modal-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px; width: min(420px, 90vw); box-shadow: var(--shadow-modal); }

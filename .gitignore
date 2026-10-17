@@ -141,6 +141,8 @@ data/*.json
 
 # Пользовательские профили роста — данные площадки, не код; встроенные (builtin/) в git
 data/growth_profiles/custom/
+# Оформление площадки (переопределения CSS-переменных); пример theme.example.css — в git
+data/theme.css
 
 # Claude Code локальные настройки
 .claude/

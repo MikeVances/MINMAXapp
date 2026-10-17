@@ -102,6 +102,15 @@ it). Calculations stay open. Without `WRITE_TOKEN` writes are open — fine for 
 
 ---
 
+## Customizing the look
+
+All colours, radii and the font are CSS custom properties declared once in
+`backend/app/static/styles.css` (`:root`). Markup and scripts reference only `var(--…)`.
+To restyle a deployment, create `data/theme.css` (see `data/theme.example.css`) and
+override the variables you need — the file is served at `/theme.css` after the base
+stylesheet and is not tracked by git, so updates never overwrite it. Path can be
+changed with the `THEME_CSS` environment variable.
+
 ## Data Sources
 
 | Source | Used for |

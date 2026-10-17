@@ -20,8 +20,8 @@ function renderConfig() {
         <div class="kv"><span>${t('mortality_lbl')}</span><span><input id="mort_total" type="number" step="0.01" min="0" max="100" value="${(100 - (cfg.total_mortality_pct ?? 4)).toFixed(2)}"> %</span></div>
       </div>
 
-      <hr style="border:none;border-top:1px solid #26272c;margin:14px 0;">
-      <div style="font-weight:600;font-size:13px;color:#e6e7eb;margin-bottom:10px;">${t('cigr_section_h')}</div>
+      <hr style="border:none;border-top:1px solid var(--border);margin:14px 0;">
+      <div style="font-weight:600;font-size:13px;color:var(--text);margin-bottom:10px;">${t('cigr_section_h')}</div>
       <div style="display:grid;gap:10px;">
         <div class="kv"><span>${t('v_tunnel_lbl')}</span><span><input id="v_tunnel" type="number" step="0.1" min="0.5" max="5.0" value="${cfg.v_tunnel_ms ?? 2.5}"> ${t('unit_ms')}</span></div>
         <div class="kv"><span>${t('safety_factor_lbl')}</span><span><input id="safety_factor" type="number" step="0.1" min="1.0" max="3.0" value="${cfg.safety_factor_qmin ?? 1.5}"></span></div>

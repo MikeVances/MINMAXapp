@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Farm Audit — MINMAXapp</title>
   <link rel="stylesheet" href="./styles.css" />
+  <link rel="stylesheet" href="./theme.css" />
   <script src="./i18n/en.js"></script>
   <script src="./i18n/ru.js"></script>
   <script src="./i18n/pl.js"></script>
@@ -12,40 +13,6 @@
   <script src="./i18n/fr.js"></script>
   <script src="./i18n.js"></script>
   <script src="./write-token.js"></script>
-  <style>
-    .tool-tabs   { display:flex; gap:8px; margin-bottom:20px; flex-wrap:wrap; }
-    .tool-tab    { padding:8px 16px; border:1px solid var(--border); border-radius:999px;
-                   cursor:pointer; background:#101217; color:var(--text); transition:all .15s; touch-action:manipulation; }
-    .tool-tab.active { background:#111827; border-color:#2b2e35; color:var(--accent-2); }
-
-    .tool-panel  { display:none; }
-    .tool-panel.active { display:block; }
-
-    .result-badge {
-      display:inline-block; padding:6px 14px; border-radius:20px;
-      font-weight:700; font-size:16px; margin-bottom:12px;
-    }
-    .badge-tight    { background:#14532d; color:#4ade80; }
-    .badge-moderate { background:#713f12; color:#fbbf24; }
-    .badge-leaky    { background:#7c2d12; color:#fb923c; }
-    .badge-very_leaky { background:#450a0a; color:#f87171; }
-
-    .section-divider {
-      border:0; border-top:1px solid var(--border); margin:20px 0;
-    }
-    .field-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-    .field-row-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; }
-    @media(max-width:600px) {
-      .field-row, .field-row-3 { grid-template-columns:1fr; }
-    }
-
-    .info-block {
-      background:#0e1013; border:1px solid var(--border); border-radius:8px;
-      padding:12px 14px; margin-top:8px; font-size:13px; color:var(--muted); line-height:1.6;
-    }
-    .pct-bar-wrap { background:#1a1b20; border-radius:6px; height:10px; overflow:hidden; margin-top:6px; }
-    .pct-bar      { height:10px; border-radius:6px; transition:width .4s; }
-  </style>
 </head>
 <body data-page-title="calc_title">
 <main class="container">
@@ -514,7 +481,7 @@
             <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_treal">Actual temperature</td>
                 <td style="text-align:right;" id="tn-r-treal">—</td></tr>
             <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_wind_chill">Wind cooling</td>
-                <td style="text-align:right; color:#4ade80;" id="tn-r-windchill">—</td></tr>
+                <td style="text-align:right; color:var(--ok);" id="tn-r-windchill">—</td></tr>
             <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_eff_temp">Effective temperature</td>
                 <td style="text-align:right; font-size:18px; font-weight:700;" id="tn-r-efftemp">—</td></tr>
           </table>
@@ -935,7 +902,7 @@ initHouseSelector('tn-house-sel', tab => {
   } else {
     if (hintHeight) {
       hintHeight.textContent = t('hint_tn_height_missing');
-      hintHeight.style.color = 'var(--warn, #fbbf24)';
+      hintHeight.style.color = 'var(--warn)';
       hintHeight.style.display = 'block';
     }
   }
@@ -1106,19 +1073,19 @@ function renderTunnel(d, t_real) {
   const thiEl = document.getElementById('tn-r-thi');
   thiEl.textContent = d.thi_value.toFixed(1);
   // Пороги THVI (Tao & Xin 2003): 35 / 38 / 40 °C
-  thiEl.style.color = d.thi_value < 35 ? '#4ade80'
-                    : d.thi_value < 38 ? '#fbbf24'
-                    : d.thi_value < 40 ? '#fb923c'
-                    : '#f87171';
+  thiEl.style.color = d.thi_value < 35 ? 'var(--grade-1)'
+                    : d.thi_value < 38 ? 'var(--grade-2)'
+                    : d.thi_value < 40 ? 'var(--grade-3)'
+                    : 'var(--grade-4)';
   document.getElementById('tn-r-thi-status').textContent = t('thvi_' + d.thi_status);
 
   // Inlet system
   document.getElementById('tn-r-inlet-area').textContent =
     d.inlet_area_m2.toFixed(1) + ' ' + uM2;
-  const inletVelColor = d.inlet_velocity_ms < 2.0 ? '#4ade80'
-                      : d.inlet_velocity_ms < 3.0 ? '#fbbf24'
-                      : d.inlet_velocity_ms < 4.0 ? '#fb923c'
-                      : '#f87171';
+  const inletVelColor = d.inlet_velocity_ms < 2.0 ? 'var(--grade-1)'
+                      : d.inlet_velocity_ms < 3.0 ? 'var(--grade-2)'
+                      : d.inlet_velocity_ms < 4.0 ? 'var(--grade-3)'
+                      : 'var(--grade-4)';
   document.getElementById('tn-r-inlet-vel').innerHTML =
     `<span style="color:${inletVelColor};">${d.inlet_velocity_ms.toFixed(2)} ${uMs}</span>`;
   document.getElementById('tn-r-inlet-sp').textContent =
@@ -1139,8 +1106,8 @@ function renderTunnel(d, t_real) {
   const noteEl   = document.getElementById('tn-decision-note');
   const evapBtn  = document.getElementById('tn-to-evap-btn');
   const limitOk  = d.tunnel_sufficient;
-  const accentOk   = '#6fcf97';
-  const accentWarn = '#ff7a7a';
+  const accentOk   = 'var(--ok)';
+  const accentWarn = 'var(--danger)';
 
   decCard.style.borderLeftColor = limitOk ? accentOk : accentWarn;
   decCard.style.display = 'block';
@@ -1307,12 +1274,12 @@ function renderEvap(d) {
     const noteEl = document.getElementById('ev-water-note');
     const minT   = d.t_dew_c.toFixed(1);
     if (d.water_regime === 'safe') {
-      waterCard.style.borderLeft = '3px solid var(--ok, #6fcf97)';
-      noteEl.style.background    = 'rgba(111,207,151,0.08)';
+      waterCard.style.borderLeft = '3px solid var(--ok)';
+      noteEl.style.background    = 'var(--ok-bg)';
       noteEl.textContent = t('ev_water_safe', { t_water: d.water_supply_t_c.toFixed(1), t_dew: minT });
     } else {
-      waterCard.style.borderLeft = '3px solid var(--danger, #ff7a7a)';
-      noteEl.style.background    = 'rgba(255,122,122,0.08)';
+      waterCard.style.borderLeft = '3px solid var(--danger)';
+      noteEl.style.background    = 'var(--danger-bg)';
       noteEl.textContent = t('ev_water_cold', { t_water: d.water_supply_t_c.toFixed(1), t_dew: minT });
     }
 
@@ -1375,7 +1342,7 @@ function renderEvap(d) {
       </label>
       <label><span data-i18n="heating_cap_lbl">Total capacity, kW</span><input id="heaterPower" type="number" step="1" min="0" max="10000" placeholder="500"></label>
     </div>
-    <div id="gasInfo" style="margin-top:12px; padding:12px; background:var(--warning-bg,#3a2f1a); border-left:3px solid var(--warning,#f4b942); border-radius:4px;" data-i18n-html="gas_info_html"></div>
+    <div id="gasInfo" style="margin-top:12px; padding:12px; background:var(--warn-bg); border-left:3px solid var(--warn); border-radius:4px;" data-i18n-html="gas_info_html"></div>
     <button id="saveHeaterBtn" class="btn" style="margin-top:12px;" data-i18n="btn_save_heater">Save configuration</button>
     <span id="heaterStatus" class="muted" style="margin-left:10px;"></span>
   </div>
@@ -1550,23 +1517,23 @@ function renderEvap(d) {
     const xLabels = allX.filter(x => x === 1 || x % 14 === 0 || x === xMax);
 
     let o = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block;">`;
-    o += `<rect width="${W}" height="${H}" fill="#15161a" rx="8"/>`;
-    o += `<text x="${P.l}" y="17" fill="#e6e7eb" font-size="12" font-weight="600" font-family="system-ui,Arial">${title}</text>`;
-    o += `<text x="${W - P.r}" y="17" fill="#9aa0a6" font-size="10" text-anchor="end" font-family="system-ui,Arial">${yUnit}</text>`;
+    o += `<rect width="${W}" height="${H}" fill="var(--card)" rx="8"/>`;
+    o += `<text x="${P.l}" y="17" fill="var(--text)" font-size="12" font-weight="600" font-family="system-ui,Arial">${title}</text>`;
+    o += `<text x="${W - P.r}" y="17" fill="var(--muted)" font-size="10" text-anchor="end" font-family="system-ui,Arial">${yUnit}</text>`;
 
     for (const y of yTicks) {
       const cy = ty(y);
       if (cy < P.t - 2 || cy > P.t + CH + 2) continue;
-      o += `<line x1="${P.l}" y1="${cy.toFixed(1)}" x2="${P.l + CW}" y2="${cy.toFixed(1)}" stroke="#26272c"/>`;
+      o += `<line x1="${P.l}" y1="${cy.toFixed(1)}" x2="${P.l + CW}" y2="${cy.toFixed(1)}" stroke="var(--border)"/>`;
       const lbl = y >= 1000 ? (Math.round(y / 100) / 10) + 'k' : (y >= 10 ? Math.round(y) : y.toFixed(1));
-      o += `<text x="${P.l - 4}" y="${(cy + 3.5).toFixed(1)}" fill="#9aa0a6" font-size="9" text-anchor="end" font-family="system-ui,Arial">${lbl}</text>`;
+      o += `<text x="${P.l - 4}" y="${(cy + 3.5).toFixed(1)}" fill="var(--muted)" font-size="9" text-anchor="end" font-family="system-ui,Arial">${lbl}</text>`;
     }
 
-    o += `<line x1="${P.l}" y1="${P.t}" x2="${P.l}" y2="${P.t + CH}" stroke="#26272c"/>`;
-    o += `<line x1="${P.l}" y1="${P.t + CH}" x2="${P.l + CW}" y2="${P.t + CH}" stroke="#26272c"/>`;
+    o += `<line x1="${P.l}" y1="${P.t}" x2="${P.l}" y2="${P.t + CH}" stroke="var(--border)"/>`;
+    o += `<line x1="${P.l}" y1="${P.t + CH}" x2="${P.l + CW}" y2="${P.t + CH}" stroke="var(--border)"/>`;
 
-    for (const x of xTicks)  { const cx = tx(x); o += `<line x1="${cx.toFixed(1)}" y1="${P.t + CH}" x2="${cx.toFixed(1)}" y2="${P.t + CH + 4}" stroke="#9aa0a6"/>`; }
-    for (const x of xLabels) { const cx = tx(x); o += `<text x="${cx.toFixed(1)}" y="${P.t + CH + 16}" fill="#9aa0a6" font-size="9" text-anchor="middle" font-family="system-ui,Arial">${x}</text>`; }
+    for (const x of xTicks)  { const cx = tx(x); o += `<line x1="${cx.toFixed(1)}" y1="${P.t + CH}" x2="${cx.toFixed(1)}" y2="${P.t + CH + 4}" stroke="var(--muted)"/>`; }
+    for (const x of xLabels) { const cx = tx(x); o += `<text x="${cx.toFixed(1)}" y="${P.t + CH + 16}" fill="var(--muted)" font-size="9" text-anchor="middle" font-family="system-ui,Arial">${x}</text>`; }
 
     if (series.length >= 2) {
       const top = series[0].data.filter(p => p.y != null).map(p => `${tx(p.x).toFixed(1)},${ty(p.y).toFixed(1)}`).join(' ');
@@ -1584,7 +1551,7 @@ function renderEvap(d) {
       if (!s.anchors) continue;
       for (const a of s.anchors) {
         if (a.y == null) continue;
-        o += `<circle cx="${tx(a.x).toFixed(1)}" cy="${ty(a.y).toFixed(1)}" r="3.5" fill="${s.color}" stroke="#0b0c10" stroke-width="1.5"/>`;
+        o += `<circle cx="${tx(a.x).toFixed(1)}" cy="${ty(a.y).toFixed(1)}" r="3.5" fill="${s.color}" stroke="var(--bg)" stroke-width="1.5"/>`;
       }
     }
 
@@ -1677,7 +1644,7 @@ function renderEvap(d) {
     const wChart = makeSVGChart({
       series: [{
         data:    chartData.map(p => ({ x: p.day, y: p.body_weight_g })),
-        color:   '#6aa0ff',
+        color:   'var(--chart-1)',
         anchors: anchors.map(p => ({ x: p.day, y: p.body_weight_g })),
       }],
       title: t('chart_weight'), yUnit: t('unit_g'),
@@ -1685,7 +1652,7 @@ function renderEvap(d) {
     const tChart = makeSVGChart({
       series: [{
         data:    chartData.map(p => ({ x: p.day, y: p.min_temp_c })),
-        color:   '#ffcf6b',
+        color:   'var(--chart-2)',
         anchors: anchors.map(p => ({ x: p.day, y: p.min_temp_c })),
       }],
       title: t('chart_temp'), yUnit: '°C',
@@ -1694,7 +1661,7 @@ function renderEvap(d) {
     const vChart = makeSVGChart({
       series: [{
         data:    chartData.map(p => ({ x: p.day, y: ventVal(p, 'q_min_per_bird') })),
-        color:   '#74d69b',
+        color:   'var(--chart-3)',
         anchors: anchors.map(p => ({ x: p.day, y: ventVal(p, 'q_min_per_bird') })),
       }],
       title: t('chart_vent'), yUnit: unitLabel,

@@ -23,7 +23,7 @@
         <textarea id="feedbackText"
           rows="5" maxlength="2000"
           style="width:100%;box-sizing:border-box;resize:vertical;
-                 background:var(--input-bg,#1e1e1e);color:inherit;
+                 background:var(--surface);color:inherit;
                  border:1px solid var(--border);border-radius:6px;
                  padding:8px;font-size:14px;font-family:inherit;"
           data-i18n-placeholder="feedback_placeholder"></textarea>
@@ -81,18 +81,18 @@
 
         if (resp.ok) {
           statusEl.textContent = window.t ? window.t('feedback_sent') : 'Sent!';
-          statusEl.style.color = '#4caf50';
+          statusEl.style.color = 'var(--ok)';
           setTimeout(closeModal, 1500);
         } else {
           // Сервер отвечает кодом (feedback_rate_limited, feedback_not_configured …) —
           // текст на языке интерфейса подбирает общий переводчик ошибок API
           const err = window.apiError ? await window.apiError(resp) : null;
           statusEl.textContent = (err && err.message) || (window.t ? window.t('feedback_error') : 'Error. Try again.');
-          statusEl.style.color = '#ff7a7a';
+          statusEl.style.color = 'var(--danger)';
         }
       } catch (_) {
         statusEl.textContent = window.t ? window.t('feedback_error') : 'Error. Try again.';
-        statusEl.style.color = '#ff7a7a';
+        statusEl.style.color = 'var(--danger)';
       } finally {
         sendBtn.disabled = false;
       }

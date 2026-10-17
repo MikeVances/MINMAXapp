@@ -213,10 +213,10 @@ async function computeCurveResult(done) {
 }
 
 function uaQuality(uaM2) {
-  if (uaM2 < 0.5) return { label: t('ua_quality_excellent'), bg: '#14532d', color: '#4ade80' };
-  if (uaM2 < 1.0) return { label: t('ua_quality_good'),      bg: '#713f12', color: '#fbbf24' };
-  if (uaM2 < 2.0) return { label: t('ua_quality_avg'),       bg: '#7c2d12', color: '#fb923c' };
-  return              { label: t('ua_quality_poor'),          bg: '#450a0a', color: '#f87171' };
+  if (uaM2 < 0.5) return { label: t('ua_quality_excellent'), bg: 'var(--grade-1-bg)', color: 'var(--grade-1)' };
+  if (uaM2 < 1.0) return { label: t('ua_quality_good'),      bg: 'var(--grade-2-bg)', color: 'var(--grade-2)' };
+  if (uaM2 < 2.0) return { label: t('ua_quality_avg'),       bg: 'var(--grade-3-bg)', color: 'var(--grade-3)' };
+  return              { label: t('ua_quality_poor'),          bg: 'var(--grade-4-bg)', color: 'var(--grade-4)' };
 }
 
 function renderCurveResult(res) {
@@ -238,7 +238,7 @@ function renderCurveResult(res) {
     `<p class="warn" style="margin:6px 0 0;font-size:12px;">⚠️ ${t('cal_warn_' + w)}</p>`).join('');
 
   elCalibrationResult.innerHTML = `
-    <div style="padding:12px; background:var(--ok-bg,#1a3a1a); border-left:3px solid var(--ok,#7bc96f); border-radius:4px;">
+    <div style="padding:12px; background:var(--ok-bg); border-left:3px solid var(--ok); border-radius:4px;">
       <strong>${t('cal_curve_complete')}</strong>
       <div style="margin-top:8px; display:grid; gap:6px;">
         <div class="kv"><span>${t('ua_coeff_lbl')}</span><span><strong>${res.uaTotal.toFixed(0)} ${uaUnit}</strong></span></div>
@@ -314,7 +314,7 @@ elSaveBuildingBtn.addEventListener('click', async () => {
 
   if (!l || !w || !hEff || l <= 0 || w <= 0 || hEff <= 0) {
     elBuildingStatus.textContent = t('err_valid_dims');
-    elBuildingStatus.style.color = 'var(--danger, #ff7a7a)';
+    elBuildingStatus.style.color = 'var(--danger)';
     return;
   }
 
@@ -348,12 +348,12 @@ elSaveBuildingBtn.addEventListener('click', async () => {
     if (!r.ok) throw await apiError(r);
 
     elBuildingStatus.textContent = t('status_saved');
-    elBuildingStatus.style.color = 'var(--ok, #7bc96f)';
+    elBuildingStatus.style.color = 'var(--ok)';
     await loadAndDisplayConfig();
 
   } catch (e) {
     elBuildingStatus.textContent = t('err_prefix') + e.message;
-    elBuildingStatus.style.color = 'var(--danger, #ff7a7a)';
+    elBuildingStatus.style.color = 'var(--danger)';
   }
 });
 
@@ -364,7 +364,7 @@ elSaveHeaterBtn.addEventListener('click', async () => {
 
   if (!power || power < 0) {
     elHeaterStatus.textContent = t('err_valid_heater');
-    elHeaterStatus.style.color = 'var(--danger, #ff7a7a)';
+    elHeaterStatus.style.color = 'var(--danger)';
     return;
   }
 
@@ -381,12 +381,12 @@ elSaveHeaterBtn.addEventListener('click', async () => {
     if (!r.ok) throw await apiError(r);
 
     elHeaterStatus.textContent = t('status_saved');
-    elHeaterStatus.style.color = 'var(--ok, #7bc96f)';
+    elHeaterStatus.style.color = 'var(--ok)';
     await loadAndDisplayConfig();
 
   } catch (e) {
     elHeaterStatus.textContent = t('err_prefix') + e.message;
-    elHeaterStatus.style.color = 'var(--danger, #ff7a7a)';
+    elHeaterStatus.style.color = 'var(--danger)';
   }
 });
 
@@ -467,16 +467,16 @@ function renderAnalysis(data) {
   const combAir      = data.combustion_air_m3h.toFixed(0);
 
   // Цвет duty cycle: зелёный → жёлтый → красный
-  const dutyColor = data.duty_cycle >= 0.95 ? 'var(--danger,#e05252)'
-                  : data.duty_cycle >= 0.75 ? 'var(--warning,#f4b942)'
-                  : 'var(--success,#4caf50)';
+  const dutyColor = data.duty_cycle >= 0.95 ? 'var(--danger)'
+                  : data.duty_cycle >= 0.75 ? 'var(--warn)'
+                  : 'var(--ok)';
 
   const overloadBanner = !data.heater_covers_need
     ? `<div class="danger" style="padding:6px 8px; border-radius:4px; margin-top:4px;">${t('heater_overload_warn')}</div>`
     : '';
 
   const airSection = data.combustion_air_m3h > 0
-    ? `<div class="kv" style="background:var(--warning-bg,#3a2f1a); padding:8px; border-radius:4px; border-left:3px solid var(--warning,#f4b942);">
+    ? `<div class="kv" style="background:var(--warn-bg); padding:8px; border-radius:4px; border-left:3px solid var(--warn);">
          <span>${t('combustion_lbl')}</span>
          <span><strong>${combAir} ${t('unit_m3h')}</strong></span>
        </div>

@@ -168,27 +168,6 @@ elDelTab.onclick = () => {
   if (elModal && elModalText) {
     elModalText.textContent = t('modal_remove_txt', { name });
     elModal.classList.remove('hidden');
-    // Inline fallback styles (in case CSS cache)
-    elModal.style.position = 'fixed';
-    elModal.style.top = '0';
-    elModal.style.left = '0';
-    elModal.style.right = '0';
-    elModal.style.bottom = '0';
-    elModal.style.background = 'rgba(0,0,0,0.5)';
-    elModal.style.display = 'flex';
-    elModal.style.alignItems = 'center';
-    elModal.style.justifyContent = 'center';
-    elModal.style.zIndex = '1000';
-    const card = elModal.querySelector('.modal-card');
-    if (card) {
-      card.style.background = getComputedStyle(document.body).getPropertyValue('--card') || '#15161a';
-      card.style.border = '1px solid ' + (getComputedStyle(document.body).getPropertyValue('--border') || '#26272c');
-      card.style.borderRadius = '12px';
-      card.style.padding = '16px';
-      card.style.width = '420px';
-      card.style.maxWidth = '90vw';
-      card.style.boxShadow = '0 10px 30px rgba(0,0,0,0.4)';
-    }
   }
 };
 
