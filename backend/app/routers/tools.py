@@ -248,6 +248,17 @@ class TunnelSpeedRequest(BaseModel):
     num_inlets:    int   = Field(1,   ge=1, le=500, description="Количество приточных секций/проёмов, шт")
     inlet_width_m:  float = Field(0.0, ge=0, le=50,  description="Ширина одного проёма, м (0 = авто: ширина птичника)")
     inlet_height_m: float = Field(0.0, ge=0, le=10,  description="Высота одного проёма, м (0 = авто: высота туннеля)")
+    fan_capacity_25pa_m3h: float = Field(
+        0.0, ge=0,
+        description="Производительность одного вентилятора при 25 Па, м³/ч (0 = неизвестна → расчёт по 0 Па)",
+    )
+
+    @model_validator(mode="after")
+    def _rating_point_below_free_air(self):
+        # При 25 Па вентилятор не может дать больше, чем при 0 Па
+        if self.fan_capacity_25pa_m3h and self.fan_capacity_25pa_m3h >= self.fan_capacity_m3h:
+            raise ValueError("fan_capacity_25pa_m3h должна быть меньше fan_capacity_m3h")
+        return self
 
 
 class TunnelSpeedResponse(BaseModel):
@@ -274,6 +285,8 @@ class TunnelSpeedResponse(BaseModel):
     tunnel_sufficient:        bool
     t_outdoor_tunnel_limit_c: float
     temp_margin_c:            float
+    velocity_basis:           str
+    fan_operating_m3h:        float
 
 
 @router.post(
@@ -283,18 +296,18 @@ class TunnelSpeedResponse(BaseModel):
 )
 def calc_tunnel_speed(req: TunnelSpeedRequest) -> TunnelSpeedResponse:
     """
-    Рассчитывает скорость воздуха в туннеле, ветровое охлаждение и THI.
+    Рассчитывает скорость воздуха в туннеле, ветровое охлаждение и THVI (Tao & Xin 2003).
 
     **Ветровое охлаждение:**
     Ощущаемая температура рассчитывается по российской нормативной таблице
     (трилинейная интерполяция по T × RH × V), учитывающей испарение со слизистых.
     Эффект значительно сильнее линейного UGA-приближения (100 FPM = -1°F).
 
-    **THI (Temperature Humidity Index):**
-    - < 74 — Комфорт
-    - 74–78 — Тревога
-    - 79–83 — Опасность
-    - > 83 — Критично
+    **THVI (Tao & Xin 2003, бройлеры):** (0.85·T_db + 0.15·T_wb)·V^−0.058
+    - < 35 — Норма
+    - 35–38 — Тревога
+    - 38–40 — Опасность
+    - > 40 — Критично
 
     **Рекомендуемая скорость по возрасту:**
     - 1–21 день: 1.5–2.0 м/с
@@ -312,6 +325,7 @@ def calc_tunnel_speed(req: TunnelSpeedRequest) -> TunnelSpeedResponse:
         num_inlets       = req.num_inlets,
         inlet_width_m    = req.inlet_width_m,
         inlet_height_m   = req.inlet_height_m,
+        fan_capacity_25pa_m3h = req.fan_capacity_25pa_m3h,
     )
     r: TunnelSpeedResult = calculate_tunnel_speed(inp)
     return TunnelSpeedResponse(
@@ -338,6 +352,8 @@ def calc_tunnel_speed(req: TunnelSpeedRequest) -> TunnelSpeedResponse:
         tunnel_sufficient         = r.tunnel_sufficient,
         t_outdoor_tunnel_limit_c  = r.t_outdoor_tunnel_limit_c,
         temp_margin_c             = r.temp_margin_c,
+        velocity_basis            = r.velocity_basis,
+        fan_operating_m3h         = r.fan_operating_m3h,
     )
 
 

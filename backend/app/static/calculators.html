@@ -435,6 +435,12 @@
               <input id="tn-fan-cap" type="number" step="100" min="1000" placeholder="25000"
                      data-i18n-title="hint_tn_fan_cap" required />
             </label>
+            <!-- Вторая точка паспорта: без неё скорость считается по 0 Па (завышена) -->
+            <label>
+              <span data-i18n="label_tn_fan_cap25">Capacity at 25 Pa, m³/h (optional)</span>
+              <input id="tn-fan-cap25" type="number" step="100" min="0" placeholder="—"
+                     data-i18n-title="hint_tn_fan_cap25" />
+            </label>
           </div>
 
           <hr class="section-divider" />
@@ -514,15 +520,15 @@
           </table>
         </div>
 
-        <!-- THI -->
+        <!-- THVI (Tao & Xin 2003) -->
         <div class="card" style="margin-bottom:12px;">
-          <h3 style="font-size:13px; color:var(--muted); margin:0 0 8px;" data-i18n="tunnel_thi_h3">Heat stress index (THI)</h3>
+          <h3 style="font-size:13px; color:var(--muted); margin:0 0 8px;" data-i18n="tunnel_thi_h3">Broiler heat stress index (THVI)</h3>
           <div style="display:flex; align-items:baseline; gap:12px;">
             <span style="font-size:32px; font-weight:700;" id="tn-r-thi">—</span>
             <span id="tn-r-thi-status" style="font-size:14px;">—</span>
           </div>
           <div class="info-block" style="margin-top:8px; font-size:12px;" data-i18n="thi_scale">
-            &lt;74 Comfortable · 74–78 Alert · 79–83 Danger · &gt;83 Critical
+            &lt;35 Normal · 35–38 Alert · 38–40 Danger · &gt;40 Critical
           </div>
         </div>
 
@@ -1022,6 +1028,7 @@ document.getElementById('tunnel-form').addEventListener('submit', async e => {
       num_inlets:       +document.getElementById('tn-num-inlets').value || 1,
       inlet_width_m:    +document.getElementById('tn-inlet-w').value  || 0,
       inlet_height_m:   +document.getElementById('tn-inlet-h').value  || 0,
+      fan_capacity_25pa_m3h: +document.getElementById('tn-fan-cap25').value || 0,
     };
 
     const resp = await fetch('./calc/tools/tunnel_speed', {
@@ -1064,19 +1071,24 @@ function renderTunnel(d, t_real) {
   const vHigh = d.air_velocity_ms > d.target_v_max_ms;
   document.getElementById('tn-r-vel').innerHTML =
     `<span class="${vOk ? 'ok' : vHigh ? 'warn' : 'danger'}">${d.air_velocity_ms.toFixed(2)} ${uMs}</span>`;
-  document.getElementById('tn-r-vel-status').textContent = d.velocity_status;
+  // Расход по паспорту «0 Па» завышен — сказать об этом рядом со скоростью
+  document.getElementById('tn-r-vel-status').textContent = d.velocity_status +
+    (d.velocity_basis === 'rated_0pa' ? ' · ' + t('tn_basis_rated_note') : '');
 
   // Wind cooling
   document.getElementById('tn-r-treal').textContent     = t_real.toFixed(1) + ' °C';
-  document.getElementById('tn-r-windchill').textContent = '−' + d.wind_chill_c.toFixed(1) + ' °C';
+  // Знак явный: при влажном воздухе и слабом потоке «охлаждение» отрицательное (ощущается жарче)
+  const wc = d.wind_chill_c;
+  document.getElementById('tn-r-windchill').textContent = (wc >= 0 ? '−' : '+') + Math.abs(wc).toFixed(1) + ' °C';
   document.getElementById('tn-r-efftemp').textContent   = d.effective_temp_c.toFixed(1) + ' °C';
 
-  // THI
+  // THVI
   const thiEl = document.getElementById('tn-r-thi');
   thiEl.textContent = d.thi_value.toFixed(1);
-  thiEl.style.color = d.thi_value < 74 ? '#4ade80'
-                    : d.thi_value < 79 ? '#fbbf24'
-                    : d.thi_value < 84 ? '#fb923c'
+  // Пороги THVI (Tao & Xin 2003): 35 / 38 / 40 °C
+  thiEl.style.color = d.thi_value < 35 ? '#4ade80'
+                    : d.thi_value < 38 ? '#fbbf24'
+                    : d.thi_value < 40 ? '#fb923c'
                     : '#f87171';
   document.getElementById('tn-r-thi-status').textContent = d.thi_status;
 

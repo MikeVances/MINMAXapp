@@ -20,15 +20,27 @@
   V = Q / A_cross  (скорость воздуха в туннеле, м/с)
   P_dyn = 0.5 × ρ × V²  (динамическое давление, Па)
 
-THI (Temperature Humidity Index, Buffington 1981):
-  THI = 0.8 × T_db + (RH/100) × (T_db − 14.4) + 46.4
-  Пороги для бройлеров: <74 комфорт, 74–78 тревога, 79–83 опасность, >83 критично
+Индекс теплового стресса для БРОЙЛЕРОВ — THVI (Tao & Xin 2003,
+Transactions of the ASAE 46(2):491–497, doi:10.13031/2013.12971):
+  THVI = (0.85 × T_db + 0.15 × T_wb) × V^−0.058
+  Получен на бройлерах Ross 2.8 кг при V = 0.2–1.2 м/с. Пороги (экспозиция 90 мин,
+  по росту температуры тела): <35 норма, 35–38 тревога, 38–40 опасность, >40 критично.
+  Раньше здесь стоял THI NRC 1971 (для КРС, ошибочно подписан Buffington 1981)
+  с порогами для коров 74/79/84.
+
+Рабочая точка вентиляторов:
+  Паспорт «при 0 Па» завышает расход: в туннеле вентилятор работает против давления
+  впуска и сечения. Если задана производительность при 25 Па, характеристика
+  линеаризуется q = q₀ − s·P, сопротивление системы P = c·Q², и рабочая точка —
+  их пересечение. Без второй точки скорость считается по паспорту 0 Па с пометкой.
 """
 
 from __future__ import annotations
 
 import math
 from dataclasses import dataclass
+
+from .evap_cooling_calc import _wet_bulb_stull
 
 # ─────────────────────────────────────────────────
 # Таблица ощущаемой температуры [°C]
@@ -65,14 +77,19 @@ _V_KEYS  = [0.0, 0.5, 1.0, 1.5, 2.0, 2.5]
 # Плотность воздуха при +25°C, кг/м³
 RHO_AIR_KG_M3 = 1.184
 
-# THI-пороги для бройлеров (Buffington 1981)
-# Правило: < threshold → эта категория. Границы: <74, 74-78, 79-83, ≥84
-_THI_THRESHOLDS = [
-    (74.0, "Комфорт ✅"),
-    (79.0, "Тревога 🟡"),
-    (84.0, "Опасность ⚠️"),
+# Пороги THVI (Tao & Xin 2003, экспозиция 90 мин), °C. < threshold → категория
+_THVI_THRESHOLDS = [
+    (35.0, "Норма ✅"),
+    (38.0, "Тревога 🟡"),
+    (40.0, "Опасность ⚠️"),
     (999,  "Критично 🔴"),
 ]
+# Диапазон скоростей, на котором получена формула THVI: за ним эффект скорости
+# не экстраполируем (выше 1.2 м/с охлаждение берём как при 1.2 — в безопасную сторону)
+_THVI_V_RANGE = (0.2, 1.2)
+
+# Давление второй точки паспорта вентилятора, Па (0.1" вод. ст. ≈ 25 Па — типовая точка BESS)
+FAN_RATING_POINT_PA = 25.0
 
 # Рекомендуемые скорости по возрасту (дней: v_min, v_max)
 _SPEED_TARGETS = [
@@ -117,6 +134,8 @@ class TunnelSpeedInput:
     num_inlets:    int   = 1    # Количество приточных секций/проёмов, шт
     inlet_width_m:  float = 0.0 # Ширина одного проёма, м (0 = авто: ширина птичника)
     inlet_height_m: float = 0.0 # Высота одного проёма, м (0 = авто: высота туннеля)
+    # Производительность одного вентилятора при 25 Па, м³/ч (0 = неизвестна)
+    fan_capacity_25pa_m3h: float = 0.0
 
 
 @dataclass
@@ -145,6 +164,9 @@ class TunnelSpeedResult:
     tunnel_sufficient:        bool   # Туннель справляется при текущих условиях
     t_outdoor_tunnel_limit_c: float  # Макс. T_нар при которой туннель достаточен
     temp_margin_c:            float  # Запас: T_цель − T_ощущ (>0 = запас есть)
+    # Откуда расход: "operating_point" (с учётом давления) или "rated_0pa" (паспорт, завышен)
+    velocity_basis:           str = "rated_0pa"
+    fan_operating_m3h:        float = 0.0   # расход одного вентилятора в рабочей точке
 
 
 # ─────────────────────────────────────────────────
@@ -210,19 +232,39 @@ def _effective_temperature(t_db: float, rh: float, v_ms: float) -> float:
     val_rh0 = interp_at_rh(rh0)
     val_rh1 = interp_at_rh(rh1)
     rh_t = (rh_c - rh0) / (rh1 - rh0)
-    t_eff = _lerp(val_rh0, val_rh1, rh_t)
-    # Физическое ограничение: ветер может только охлаждать, но не нагревать
-    # T_eff не может быть выше фактической температуры воздуха
-    return min(t_eff, t_db)
+    # Без min(t_eff, t_db): таблица содержит и эффект ВЛАЖНОСТИ — при RH 70 % и
+    # слабом потоке ощущаемая температура выше термометра (35 °C → 38.3 °C при 0 м/с).
+    # Срез по T_db выбрасывал этот эффект и занижал тепловую нагрузку
+    return _lerp(val_rh0, val_rh1, rh_t)
 
 
-def _calc_thi(t_db: float, rh: float) -> tuple[float, str]:
-    """THI = 0.8 × T + (RH/100) × (T − 14.4) + 46.4  (Buffington, 1981)."""
-    thi = 0.8 * t_db + (rh / 100.0) * (t_db - 14.4) + 46.4
-    for threshold, label in _THI_THRESHOLDS:
-        if thi < threshold:
-            return round(thi, 1), label
-    return round(thi, 1), "Критично 🔴"
+def _calc_thvi(t_db: float, rh: float, v_ms: float) -> tuple[float, str]:
+    """THVI = (0.85·T_db + 0.15·T_wb) · V^−0.058 (Tao & Xin 2003), V в пределах исследования."""
+    t_wb = _wet_bulb_stull(t_db, rh)
+    v = min(max(v_ms, _THVI_V_RANGE[0]), _THVI_V_RANGE[1])
+    thvi = (0.85 * t_db + 0.15 * t_wb) * v ** -0.058
+    for threshold, label in _THVI_THRESHOLDS:
+        if thvi < threshold:
+            return round(thvi, 1), label
+    return round(thvi, 1), "Критично 🔴"
+
+
+def _fan_operating_flow_m3s(
+    q0_m3s: float, q25_m3s: float, num_fans: int, resistance_pa_per_m3s2: float
+) -> float:
+    """
+    Расход ОДНОГО вентилятора в рабочей точке, м³/с.
+
+    Характеристика вентилятора (линейно по двум точкам паспорта): q = q₀ − s·P,
+      s = (q₀ − q₂₅) / 25 Па.
+    Сопротивление системы: P = c · (N·q)².
+    Подстановка: s·c·N²·q² + q − q₀ = 0 → q = (−1 + √(1 + 4·s·c·N²·q₀)) / (2·s·c·N²).
+    """
+    s = (q0_m3s - q25_m3s) / FAN_RATING_POINT_PA
+    a = s * resistance_pa_per_m3s2 * num_fans ** 2
+    if a <= 0:
+        return q0_m3s
+    return (-1.0 + math.sqrt(1.0 + 4.0 * a * q0_m3s)) / (2.0 * a)
 
 
 def _target_speed(age_days: int) -> tuple[float, float]:
@@ -276,23 +318,7 @@ def _find_tunnel_temp_limit(rh_pct: float, v_ms: float, t_target_c: float) -> fl
 def calculate_tunnel_speed(inp: TunnelSpeedInput) -> TunnelSpeedResult:
     """Расчёт параметров туннельной вентиляции с таблицей ощущаемой температуры."""
 
-    # Площадь сечения и скорость воздуха
     cross_section = inp.house_width_m * inp.tunnel_height_m
-    total_m3h = inp.num_fans * inp.fan_capacity_m3h
-    total_m3s = total_m3h / 3600.0
-    v_ms = total_m3s / cross_section if cross_section > 0 else 0.0
-    v_fpm = v_ms * 196.85
-
-    # Ощущаемая температура из таблицы (трилинейная интерполяция)
-    t_eff = _effective_temperature(inp.t_outdoor_db_c, inp.rh_outdoor_pct, v_ms)
-    wind_chill = inp.t_outdoor_db_c - t_eff   # положительное = охлаждение
-
-    # THI считаем по ощущаемой температуре: птица в туннеле воспринимает T_eff,
-    # а не T_outdoor. При V=0 t_eff=t_outdoor и THI совпадает с классическим.
-    thi_val, thi_status = _calc_thi(t_eff, inp.rh_outdoor_pct)
-
-    # Динамическое давление в туннеле
-    p_dynamic = 0.5 * RHO_AIR_KG_M3 * v_ms ** 2
 
     # Геометрия впускных проёмов
     # 0 → авто: открытый торец = ширина птичника × высота сечения туннеля
@@ -306,6 +332,37 @@ def calculate_tunnel_speed(inp: TunnelSpeedInput) -> TunnelSpeedResult:
     # Открытый торец: Cd≈0.90 (лёгкое сжатие + сетка)
     # Шторные/панельные клапаны: Cd=0.62
     cd = CD_INLET_OPEN if is_open_end else CD_INLET
+
+    # Сопротивление системы P = c·Q² [Па при Q в м³/с]: динамическое давление в
+    # сечении + потеря на впуске (модель UGA)
+    resistance = RHO_AIR_KG_M3 / 2.0 * (
+        (1.0 / cross_section ** 2 if cross_section > 0 else 0.0) + 1.0 / (inlet_area * cd) ** 2
+    )
+
+    # Расход вентиляторов: рабочая точка, если известна вторая точка паспорта
+    q0_m3s = inp.fan_capacity_m3h / 3600.0
+    q25_m3s = inp.fan_capacity_25pa_m3h / 3600.0
+    if 0.0 < q25_m3s < q0_m3s:
+        q_fan_m3s = _fan_operating_flow_m3s(q0_m3s, q25_m3s, inp.num_fans, resistance)
+        velocity_basis = "operating_point"
+    else:
+        q_fan_m3s = q0_m3s
+        velocity_basis = "rated_0pa"
+
+    total_m3s = inp.num_fans * q_fan_m3s
+    total_m3h = total_m3s * 3600.0
+    v_ms = total_m3s / cross_section if cross_section > 0 else 0.0
+    v_fpm = v_ms * 196.85
+
+    # Ощущаемая температура из таблицы (трилинейная интерполяция)
+    t_eff = _effective_temperature(inp.t_outdoor_db_c, inp.rh_outdoor_pct, v_ms)
+    wind_chill = inp.t_outdoor_db_c - t_eff   # положительное = охлаждение
+
+    # THVI по фактическим T и RH: скорость входит в индекс сама
+    thi_val, thi_status = _calc_thvi(inp.t_outdoor_db_c, inp.rh_outdoor_pct, v_ms)
+
+    # Динамическое давление в туннеле
+    p_dynamic = 0.5 * RHO_AIR_KG_M3 * v_ms ** 2
 
     inlet_v    = total_m3s / inlet_area
     inlet_sp   = RHO_AIR_KG_M3 * (inlet_v / cd) ** 2 / 2
@@ -337,7 +394,8 @@ def calculate_tunnel_speed(inp: TunnelSpeedInput) -> TunnelSpeedResult:
 
     # Вентиляторов для нижней границы целевой скорости
     q_need_m3s = v_min_t * cross_section
-    q_per_fan = inp.fan_capacity_m3h / 3600.0 if inp.fan_capacity_m3h > 0 else 1
+    # В рабочей точке, если она известна (паспорт 0 Па занизил бы потребность)
+    q_per_fan = q_fan_m3s if q_fan_m3s > 0 else 1
     fans_needed = math.ceil(q_need_m3s / q_per_fan)
 
     # Тепловой вердикт (нужен до формирования status_label)
@@ -355,12 +413,12 @@ def calculate_tunnel_speed(inp: TunnelSpeedInput) -> TunnelSpeedResult:
         if not tunnel_ok:
             # Скорость в норме, но ощущаемая T превышает целевую — нужно охлаждение
             status_label = "Скорость в норме, ощущаемая T выше цели — рассмотрите испарительное охлаждение ⚠️"
-        elif thi_val < 74:
+        elif thi_val < _THVI_THRESHOLDS[0][0]:
             status_label = "Система в норме, тепловой стресс минимален ✅"
-        elif thi_val < 79:
-            status_label = "Скорость в норме, THI немного повышен — следите за птицей 🟡"
+        elif thi_val < _THVI_THRESHOLDS[1][0]:
+            status_label = "Скорость в норме, THVI в зоне тревоги — следите за птицей 🟡"
         else:
-            status_label = "Скорость ОК, но высокий THI — рассмотрите испарительное охлаждение ⚠️"
+            status_label = "Скорость ОК, но высокий THVI — рассмотрите испарительное охлаждение ⚠️"
     elif v_ms < v_min_t:
         status_label = "Скорость воздуха недостаточна — добавьте вентиляторы 🔴"
     elif v_ms > 4.0:
@@ -392,4 +450,6 @@ def calculate_tunnel_speed(inp: TunnelSpeedInput) -> TunnelSpeedResult:
         tunnel_sufficient         = tunnel_ok,
         t_outdoor_tunnel_limit_c  = t_limit,
         temp_margin_c             = round(temp_margin, 1),
+        velocity_basis            = velocity_basis,
+        fan_operating_m3h         = round(q_fan_m3s * 3600.0, 0),
     )
