@@ -46,6 +46,19 @@ Where:
 - `W` — average bird weight (kg), `N` — number of birds
 - `0.335` — volumetric heat capacity of air (Wh/m³·K)
 
+Minimum ventilation is the larger of two limits:
+
+```
+Q_min,CO2      = 10.62 × W^0.75 × 0.153 / 2.6 × safety      (m³/h per bird, CIGR 1984)
+Q_min,moisture = G / (ρ × (W_in − W_out))                    (m³/h)
+G              = 10.62 × W^0.75 × (1 − f_s(T)) / h_fg × N    (vapour from birds and litter)
+f_s(T)         = [0.61 × (1000 + 20 × (20 − T)) − 0.228 × T²] / 1000   (CIGR 2002, house level)
+```
+
+Growth curves (body weight by day) come from breeder performance objectives; the
+temperature setpoint follows the Ross Broiler Handbook 2025 apparent-temperature table
+(by body weight and target RH).
+
 ---
 
 ## Interface

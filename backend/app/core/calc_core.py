@@ -32,6 +32,26 @@ def humidity_ratio_g_per_kg(T_c: float, rh_pct: float) -> float:
     return 0.622 * P_v / max(P_atm - P_v, 1.0) * 1000.0  # г/кг
 
 
+def house_sensible_fraction_cigr2002(t_inside_c: float) -> float:
+    """
+    Доля явного тепла на уровне КОРПУСА для бройлеров (CIGR 2002, «Heat and moisture
+    production at animal and house levels»; уравнение в изложении Aarnink, CIGR Journal,
+    ур. 13):
+
+        Q_s = [0.61 · (1000 + 20 · (20 − T)) − 0.228 · T²] · Q_total / 1000
+
+    «Уровень корпуса» — уже с испарением с подстилки и мокрых поверхностей: часть
+    явного тепла птицы уходит на испарение и превращается в скрытое. Доля
+    0.54 при 19 °C и 0.20 при 33 °C (сходится с рис. 5 статьи). Против животного
+    уровня (6.90/10.62 = 0.65) влаги в воздух поступает больше — особенно на брудинге.
+
+    Оговорка Aarnink: формула не учитывает массу птицы и в первые недели, вероятно,
+    завышает скрытую долю — для влагобаланса это ошибка в безопасную сторону.
+    """
+    fraction = (0.61 * (1000.0 + 20.0 * (20.0 - t_inside_c)) - 0.228 * t_inside_c ** 2) / 1000.0
+    return min(max(fraction, 0.0), 1.0)
+
+
 # ─── Модели данных ────────────────────────────────────────────────────────────
 
 @dataclass
@@ -216,7 +236,11 @@ def compute(ci: CalcInput) -> CalcResult:
         # снаружи, тем МЕНЬШЕ получался Qmin (135 тыс. → 28 тыс. м³/ч при 60 → 80 % RH)
         humidity_uncontrollable = _delta_w <= 0.1
         if _delta_w > 0.1:
-            q_latent_w   = 3.72 * (weight_kg ** 0.75)
+            # Скрытое тепло корпуса = полное − явное на уровне корпуса (CIGR 2002):
+            # дыхание птицы + испарение с подстилки. Раньше бралось только дыхание
+            # 3.72·W^0.75 (животный уровень), и влажностный Qmin был занижен
+            q_total_w    = 10.62 * (weight_kg ** 0.75)
+            q_latent_w   = q_total_w * (1.0 - house_sensible_fraction_cigr2002(t_target_inside))
             _G_birds_gph = q_latent_w * 3600.0 / 2430.0 * birds_eff
             rho_in       = 353.05 / (t_target_inside + 273.15)
             q_min_moisture_birds = _G_birds_gph / (rho_in * _delta_w)

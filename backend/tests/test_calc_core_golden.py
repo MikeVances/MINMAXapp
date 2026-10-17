@@ -48,13 +48,17 @@ def test_qmin_moisture_dominates_with_humid_outside_air():
     """
     День 21 (W = 1.012 кг), внутри 25 °C / 60 %, снаружи 20 °C / 75 %.
       W_вн  = 11.889 г/кг,  W_нар = 10.949 г/кг  → ΔW = 0.9406 г/кг   (Magnus, P = 101 325 Па)
-      G     = 3.72 × 1.012^0.75 × 3600 / 2430 × 10 000 = 55 656 г/ч   (скрытое тепло → пар)
+      Явная доля на уровне корпуса (CIGR 2002, с подстилкой) при 25 °C:
+        f_s   = [0.61 × (1000 + 20 × (20 − 25)) − 0.228 × 25²] / 1000 = 0.4065
+      Скрытое = 10.62 × 1.012^0.75 × (1 − 0.4065) = 6.3596 Вт/гол
+      G     = 6.3596 × 3600 / 2430 × 10 000 = 94 216 г/ч   (скрытое тепло → пар)
       ρ_вн  = 353.05 / 298.15 = 1.1841 кг/м³
-      Qmin  = G / (ρ × ΔW) = 49 926 м³/ч   > 9 460 по CO₂ → основание «moisture»
+      Qmin  = G / (ρ × ΔW) = 84 592 м³/ч   > 9 460 по CO₂ → основание «moisture»
+    До учёта подстилки (ревью 2026-10-16) — только дыхание 3.72·W^0.75: 49 926 м³/ч.
     """
     r = _calc(age_days=21, outside_t=20.0, outside_rh=75.0)
 
-    assert r.q_min_m3h == pytest.approx(49_926.2, rel=1e-4)
+    assert r.q_min_m3h == pytest.approx(84_592.3, rel=1e-4)
     assert r.qmin_basis == "moisture"
 
 
@@ -68,6 +72,14 @@ def test_humid_outside_air_flags_uncontrollable_humidity():
 
     assert r.humidity_uncontrollable is True
     assert r.qmin_basis == "co2"
+
+
+def test_house_sensible_fraction_matches_cigr_2002_figure():
+    """CIGR 2002 (ур. 13 у Aarnink): 0.54 при 19 °C и 0.20 при 33 °C — как на рис. 5 статьи."""
+    from backend.app.core.calc_core import house_sensible_fraction_cigr2002 as fs
+
+    assert fs(19.0) == pytest.approx((0.61 * 1020 - 0.228 * 361) / 1000)   # 0.5399
+    assert fs(33.0) == pytest.approx((0.61 * 740 - 0.228 * 1089) / 1000)   # 0.2031
 
 
 def test_dry_outside_air_does_not_flag_humidity():
