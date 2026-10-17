@@ -1,4 +1,8 @@
-fastapi
-uvicorn[standard]
-pydantic>=2
-
+# Единственный источник зависимостей: отсюда ставит Render (render.yaml),
+# Makefile (make venv) и локальная установка (README). Версии закреплены,
+# чтобы деплой не подхватил неожиданный мажор; обновлять осознанно.
+fastapi==0.116.1
+uvicorn[standard]==0.35.0
+pydantic==2.11.7
+# Читает backend/.env (WRITE_TOKEN, TELEGRAM_*) — раньше ставился только транзитивно
+python-dotenv==1.1.1

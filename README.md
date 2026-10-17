@@ -74,11 +74,14 @@ temperature setpoint follows the Ross Broiler Handbook 2025 apparent-temperature
 
 ```bash
 git clone https://github.com/MikeVances/MINMAXapp
-cd MINMAXapp/backend
-pip install .
-uvicorn app.main:app --reload
+cd MINMAXapp
+pip install -r requirements.txt
+uvicorn backend.app.main:app --reload
 # → http://localhost:8000
 ```
+
+`requirements.txt` is the single list of dependencies — Render, `make venv` and
+a local install all read it. Or `make run-api` to create a venv and start the API in one step.
 
 Requires Python 3.10+. No database, no external services needed for core functionality.
 
