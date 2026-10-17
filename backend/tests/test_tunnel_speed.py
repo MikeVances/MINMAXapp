@@ -63,7 +63,7 @@ def test_thvi_for_broilers_tao_xin_2003():
     expected = (0.85 * 32 + 0.15 * t_wb) * 1.2 ** -0.058
 
     assert r.thi_value == pytest.approx(expected, abs=0.05)
-    assert r.thi_status.startswith("Норма")       # < 35 °C
+    assert r.thi_status == "normal"       # < 35 °C
 
 
 def test_api_rejects_rating_point_not_below_free_air(client):

@@ -450,4 +450,45 @@
     // ── Footer cross-link ─────────────────────────────────────────────────────
     footer_see_also:      'Auch interessant:',
     footer_related_pig:   'Lüftungsrechner Schweinestall',
+
+    // ── Server-Statuscodes → Text (Tunnel, Pad-Kühlung, Heizung) ─────────────
+    thvi_normal:   'Normal ✅',
+    thvi_alert:    'Warnung 🟡',
+    thvi_danger:   'Gefahr ⚠️',
+    thvi_critical: 'Kritisch 🔴',
+
+    tn_inlet_good:     'Gut ({v} m/s) — minimaler Widerstand ✅',
+    tn_inlet_normal:   'Normal ({v} m/s) — mäßiger Widerstand 🟡',
+    tn_inlet_high:     'Hoch ({v} m/s) — Ventilatoren verlieren Leistung ⚠️',
+    tn_inlet_critical: 'Kritisch ({v} m/s) — Einlass zu klein, Öffnung vergrößern 🔴',
+
+    tn_vel_too_low:      'Zu niedrig ({v} m/s < {v_min} m/s) — wenig Kühlung 🔴',
+    tn_vel_below_target: 'Unter Empfehlung ({v} m/s, Ziel ≥{v_min} m/s) 🟡',
+    tn_vel_ok:           'Im Bereich ({v} m/s, empf. {v_min}–{v_max} m/s) ✅',
+    tn_vel_above_target: 'Über Bereich ({v} m/s > {v_max} m/s) — Unbehagen möglich 🟡',
+    tn_vel_too_high:     'Zu hoch ({v} m/s) — Tiere können nicht normal stehen ⚠️',
+
+    tn_status_ok:            'System in Ordnung, Hitzestress minimal ✅',
+    tn_status_needs_cooling: 'Geschwindigkeit OK, gefühlte T über Ziel — Verdunstungskühlung erwägen ⚠️',
+    tn_status_thvi_alert:    'Geschwindigkeit OK, THVI im Warnbereich — Tiere beobachten 🟡',
+    tn_status_thvi_high:     'Geschwindigkeit OK, aber THVI hoch — Verdunstungskühlung erwägen ⚠️',
+    tn_status_too_slow:      'Luftgeschwindigkeit unzureichend — Ventilatoren ergänzen 🔴',
+    tn_status_too_fast:      'Geschwindigkeit zu hoch — Zugluftstress möglich ⚠️',
+    tn_status_above_range:   'Geschwindigkeit über Bereich für dieses Alter — Stress möglich 🟡',
+
+    ev_vel_too_low:  'Zu niedrig ({v} m/s < {v_min} m/s) — Schimmelrisiko am Pad',
+    ev_vel_too_high: 'Zu hoch ({v} m/s > {v_max} m/s) — Wassertropfen werden in den Stall getragen',
+    ev_vel_ok:       'In Ordnung: {v} m/s, η = {eta}%, ΔP = {dp} Pa',
+    ev_status_pad_too_small:        'Pad-Fläche zu klein — Wasseraustrag ⚠️',
+    ev_status_pad_too_large:        'Pad-Fläche zu groß — Schimmelrisiko ⚠️',
+    ev_status_cooling_insufficient: 'Kühlung unzureichend — zusätzliche Maßnahmen erwägen 🔴',
+    ev_status_cooling_marginal:     'Kühlung an der Grenze 🟡',
+    ev_status_ok:                   'System arbeitet normal ✅',
+
+    ht_status_no_heating_needed: 'Keine Heizung nötig (draußen wärmer) ✅',
+    ht_status_birds_sufficient:  'Tiere erzeugen genug Wärme — Heizung nicht nötig ✅ (Tiere: +{birds_kw} kW)',
+    ht_status_insufficient:      'Leistung unzureichend! Defizit {deficit_kw} kW — Heizgeräte ergänzen ⚠️',
+    ht_status_near_limit:        'Heizgeräte am Limit ({duty_pct}%) — Reserve empfohlen 🟡',
+    ht_status_moderate:          'Mäßige Auslastung ({duty_pct}%) — System in Ordnung ✅',
+    ht_status_light:             'Geringe Auslastung ({duty_pct}%) — Leistung mit Reserve ✅',
 };

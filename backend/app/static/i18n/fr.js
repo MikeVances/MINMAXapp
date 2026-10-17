@@ -450,4 +450,45 @@
     // ── Footer cross-link ─────────────────────────────────────────────────────
     footer_see_also:      'Voir aussi :',
     footer_related_pig:   'Calculateur ventilation porcherie',
+
+    // ── Codes d'état du serveur → texte (tunnel, pads, chauffage) ────────────
+    thvi_normal:   'Normal ✅',
+    thvi_alert:    'Alerte 🟡',
+    thvi_danger:   'Danger ⚠️',
+    thvi_critical: 'Critique 🔴',
+
+    tn_inlet_good:     'Bon ({v} m/s) — résistance minimale ✅',
+    tn_inlet_normal:   'Normal ({v} m/s) — résistance modérée 🟡',
+    tn_inlet_high:     'Élevée ({v} m/s) — les ventilateurs perdent du débit ⚠️',
+    tn_inlet_critical: 'Critique ({v} m/s) — entrée trop petite, agrandir l\'ouverture 🔴',
+
+    tn_vel_too_low:      'Trop faible ({v} m/s < {v_min} m/s) — peu de refroidissement 🔴',
+    tn_vel_below_target: 'Sous la recommandation ({v} m/s, cible ≥{v_min} m/s) 🟡',
+    tn_vel_ok:           'Dans la plage ({v} m/s, rec. {v_min}–{v_max} m/s) ✅',
+    tn_vel_above_target: 'Au-dessus de la plage ({v} m/s > {v_max} m/s) — inconfort possible 🟡',
+    tn_vel_too_high:     'Trop élevée ({v} m/s) — les volailles ne tiennent pas debout normalement ⚠️',
+
+    tn_status_ok:            'Système correct, stress thermique minimal ✅',
+    tn_status_needs_cooling: 'Vitesse correcte, T ressentie au-dessus de la cible — envisager le refroidissement évaporatif ⚠️',
+    tn_status_thvi_alert:    'Vitesse correcte, THVI en zone d\'alerte — surveiller les volailles 🟡',
+    tn_status_thvi_high:     'Vitesse correcte mais THVI élevé — envisager le refroidissement évaporatif ⚠️',
+    tn_status_too_slow:      'Vitesse d\'air insuffisante — ajouter des ventilateurs 🔴',
+    tn_status_too_fast:      'Vitesse trop élevée — risque de stress dû au courant d\'air ⚠️',
+    tn_status_above_range:   'Vitesse au-dessus de la plage pour cet âge — stress possible 🟡',
+
+    ev_vel_too_low:  'Trop faible ({v} m/s < {v_min} m/s) — risque de moisissure sur le pad',
+    ev_vel_too_high: 'Trop élevée ({v} m/s > {v_max} m/s) — gouttelettes entraînées dans le bâtiment',
+    ev_vel_ok:       'Correct : {v} m/s, η = {eta}%, ΔP = {dp} Pa',
+    ev_status_pad_too_small:        'Surface de pad insuffisante — entraînement d\'eau ⚠️',
+    ev_status_pad_too_large:        'Surface de pad excessive — risque de moisissure ⚠️',
+    ev_status_cooling_insufficient: 'Refroidissement insuffisant — envisager des mesures supplémentaires 🔴',
+    ev_status_cooling_marginal:     'Refroidissement à la limite 🟡',
+    ev_status_ok:                   'Système fonctionnant normalement ✅',
+
+    ht_status_no_heating_needed: 'Pas de chauffage nécessaire (plus chaud dehors) ✅',
+    ht_status_birds_sufficient:  'Les volailles produisent assez de chaleur — chauffage inutile ✅ (volailles : +{birds_kw} kW)',
+    ht_status_insufficient:      'Puissance insuffisante ! Déficit {deficit_kw} kW — ajouter des chauffages ⚠️',
+    ht_status_near_limit:        'Chauffages à la limite ({duty_pct}%) — réserve recommandée 🟡',
+    ht_status_moderate:          'Charge modérée ({duty_pct}%) — système correct ✅',
+    ht_status_light:             'Charge légère ({duty_pct}%) — puissance avec marge ✅',
 };

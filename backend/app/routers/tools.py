@@ -139,7 +139,9 @@ class EvapCoolingResponse(BaseModel):
     pad_area_m2:             float
     air_velocity_ms:         float
     velocity_ok:             bool
-    velocity_status:         str
+    velocity_status:         str    # too_low | ok | too_high
+    pad_v_min_ms:            float
+    pad_v_max_ms:            float
     pad_pressure_drop_pa:    float
 
     # Вода
@@ -150,7 +152,8 @@ class EvapCoolingResponse(BaseModel):
     cooling_sufficient:      bool
     temp_margin_c:           float
     recommended_pad_area_m2: float
-    status_label:            str
+    status_code:             str    # код оценки, перевод на клиенте
+    status_level:            str    # ok | warn | danger
 
     # Психрометрика — точка росы (всегда)
     t_dew_c:             float
@@ -204,13 +207,16 @@ def calc_evap_cooling(req: EvapCoolingRequest) -> EvapCoolingResponse:
         air_velocity_ms         = r.air_velocity_ms,
         velocity_ok             = r.velocity_ok,
         velocity_status         = r.velocity_status,
+        pad_v_min_ms            = r.pad_v_min_ms,
+        pad_v_max_ms            = r.pad_v_max_ms,
         pad_pressure_drop_pa    = r.pad_pressure_drop_pa,
         water_flow_lpm          = r.water_flow_lpm,
         water_per_hour_l        = r.water_per_hour_l,
         cooling_sufficient      = r.cooling_sufficient,
         temp_margin_c           = r.temp_margin_c,
         recommended_pad_area_m2 = r.recommended_pad_area_m2,
-        status_label            = r.status_label,
+        status_code             = r.status_code,
+        status_level            = r.status_level,
         t_dew_c                 = r.t_dew_c,
         water_supply_t_c        = r.water_supply_t_c,
         water_regime            = r.water_regime,
@@ -269,18 +275,19 @@ class TunnelSpeedResponse(BaseModel):
     wind_chill_c:           float
     effective_temp_c:       float
     thi_value:              float
-    thi_status:             str
+    thi_status:             str    # normal | alert | danger | critical
     dynamic_pressure_pa:    float
     inlet_area_m2:          float
     inlet_velocity_ms:      float
     inlet_sp_pa:            float
-    inlet_status:           str
+    inlet_status:           str    # good | normal | high | critical
     total_pressure_pa:      float
     target_v_min_ms:        float
     target_v_max_ms:        float
-    velocity_status:        str
+    velocity_status:        str    # too_low | below_target | ok | above_target | too_high
     fans_needed_for_target: int
-    status_label:           str
+    status_code:            str    # код оценки, перевод на клиенте
+    status_level:           str    # ok | warn | danger
     bird_comfort_target_c:    float
     tunnel_sufficient:        bool
     t_outdoor_tunnel_limit_c: float
@@ -347,7 +354,8 @@ def calc_tunnel_speed(req: TunnelSpeedRequest) -> TunnelSpeedResponse:
         target_v_max_ms           = r.target_v_max_ms,
         velocity_status           = r.velocity_status,
         fans_needed_for_target    = r.fans_needed_for_target,
-        status_label              = r.status_label,
+        status_code               = r.status_code,
+        status_level              = r.status_level,
         bird_comfort_target_c     = r.bird_comfort_target_c,
         tunnel_sufficient         = r.tunnel_sufficient,
         t_outdoor_tunnel_limit_c  = r.t_outdoor_tunnel_limit_c,

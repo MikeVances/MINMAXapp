@@ -502,7 +502,9 @@ elAnalyzeBtn.addEventListener('click', async () => {
             ${t('status_lbl')}
           </div>
           <div style="padding:6px 8px; background:var(--bg); border-radius:4px; font-size:13px;">
-            ${data.status_label}
+            ${t('ht_status_' + data.status_code, {
+              birds_kw: qBirds, deficit_kw: data.heater_deficit_kw.toFixed(1), duty_pct: data.duty_cycle_percent.toFixed(0),
+            })}
           </div>
 
           ${airSection}

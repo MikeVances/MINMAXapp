@@ -230,7 +230,10 @@ class HeatBalance:
 
     # Диагностика
     bird_heat_fraction:   float     # доля потребности, покрытая птицей (может >1)
-    status_label:         str       # текстовая оценка
+    # Оценка кодом (перевод на клиенте: ht_status_<code>) и уровнем для цвета
+    status_code:          str       # no_heating_needed | birds_sufficient | insufficient | near_limit | moderate | light
+    status_level:         str       # ok | warn | danger
+    heater_deficit_kw:    float     # нехватка мощности при insufficient, иначе 0
 
 
 def bird_sensible_heat_w(bird_weight_kg: float) -> float:
@@ -296,20 +299,21 @@ def calculate_heat_balance(
     covers = (heater_power_kw >= q_need_kw) if q_need_kw > 0 else True
     combustion_air = heater_air_demand(heater_power_kw, duty_cycle, heater_type)
 
-    # Текстовая оценка
+    # Оценка: код + уровень, текст собирает клиент на своём языке
+    deficit = 0.0
     if dt <= 0:
-        status = "Обогрев не требуется (снаружи теплее) ✅"
+        status, level = "no_heating_needed", "ok"
     elif q_need_kw == 0:
-        status = f"Птица выделяет достаточно тепла — обогреватели не нужны ✅ (птицы: +{q_birds_kw:.0f} кВт)"
+        status, level = "birds_sufficient", "ok"
     elif not covers:
         deficit = q_need_kw - heater_power_kw
-        status = f"Мощности недостаточно! Дефицит {deficit:.1f} кВт — добавьте обогреватели ⚠️"
+        status, level = "insufficient", "danger"
     elif duty_cycle >= 0.9:
-        status = f"Обогреватели работают на пределе ({duty_cycle*100:.0f}%) — рекомендуется резерв 🟡"
+        status, level = "near_limit", "warn"
     elif duty_cycle >= 0.5:
-        status = f"Умеренная загрузка ({duty_cycle*100:.0f}%) — система в норме ✅"
+        status, level = "moderate", "ok"
     else:
-        status = f"Лёгкая загрузка ({duty_cycle*100:.0f}%) — мощность с запасом ✅"
+        status, level = "light", "ok"
 
     return HeatBalance(
         q_walls_kw            = round(q_walls_kw, 2),
@@ -323,7 +327,9 @@ def calculate_heat_balance(
         duty_cycle_pct        = round(duty_cycle * 100, 1),
         combustion_air_m3h    = round(combustion_air, 1),
         bird_heat_fraction    = round(bird_fraction, 4),
-        status_label          = status,
+        status_code           = status,
+        status_level          = level,
+        heater_deficit_kw     = round(deficit, 2),
     )
 
 

@@ -78,11 +78,12 @@ _V_KEYS  = [0.0, 0.5, 1.0, 1.5, 2.0, 2.5]
 RHO_AIR_KG_M3 = 1.184
 
 # Пороги THVI (Tao & Xin 2003, экспозиция 90 мин), °C. < threshold → категория
+# Коды, не текст: переводит клиент (i18n: thvi_<code>)
 _THVI_THRESHOLDS = [
-    (35.0, "Норма ✅"),
-    (38.0, "Тревога 🟡"),
-    (40.0, "Опасность ⚠️"),
-    (999,  "Критично 🔴"),
+    (35.0, "normal"),
+    (38.0, "alert"),
+    (40.0, "danger"),
+    (999,  "critical"),
 ]
 # Диапазон скоростей, на котором получена формула THVI: за ним эффект скорости
 # не экстраполируем (выше 1.2 м/с охлаждение берём как при 1.2 — в безопасную сторону)
@@ -147,18 +148,22 @@ class TunnelSpeedResult:
     wind_chill_c:           float   # Разница: T_actual − T_effective
     effective_temp_c:       float   # Ощущаемая температура из таблицы
     thi_value:              float
-    thi_status:             str
+    thi_status:             str     # normal | alert | danger | critical
     dynamic_pressure_pa:    float
     inlet_area_m2:          float   # Суммарная площадь впускных проёмов
     inlet_velocity_ms:      float   # Скорость воздуха через впуск
     inlet_sp_pa:            float   # Статическое давление на впуске (из геометрии)
-    inlet_status:           str     # Оценка впускной системы
+    inlet_status:           str     # good | normal | high | critical
     total_pressure_pa:      float   # Суммарное давление = дин. + впуск
     target_v_min_ms:        float
     target_v_max_ms:        float
-    velocity_status:        str
+    velocity_status:        str     # too_low | below_target | ok | above_target | too_high
     fans_needed_for_target: int
-    status_label:           str
+    # Общая оценка: код для перевода на клиенте и уровень для цвета бейджа.
+    # Статусы отдаются кодами, а не фразами: сервер не знает языка пользователя,
+    # а клиент раньше угадывал цвет по эмодзи внутри строки.
+    status_code:            str     # ok | needs_cooling | thvi_alert | thvi_high | too_slow | too_fast | above_range
+    status_level:           str     # ok | warn | danger
     # Тепловой вердикт: туннель vs испарительное охлаждение
     bird_comfort_target_c:    float  # Целевая T комфорта по возрасту птицы
     tunnel_sufficient:        bool   # Туннель справляется при текущих условиях
@@ -246,7 +251,7 @@ def _calc_thvi(t_db: float, rh: float, v_ms: float) -> tuple[float, str]:
     for threshold, label in _THVI_THRESHOLDS:
         if thvi < threshold:
             return round(thvi, 1), label
-    return round(thvi, 1), "Критично 🔴"
+    return round(thvi, 1), "critical"
 
 
 def _fan_operating_flow_m3s(
@@ -369,28 +374,28 @@ def calculate_tunnel_speed(inp: TunnelSpeedInput) -> TunnelSpeedResult:
 
     # Пороги UGA: 400/600/800 FPM → 2.0/3.0/4.0 м/с
     if inlet_v < 2.0:
-        inlet_status = f"Хорошо ({inlet_v:.2f} м/с) — минимальное сопротивление ✅"
+        inlet_status = "good"
     elif inlet_v < 3.0:
-        inlet_status = f"Норма ({inlet_v:.2f} м/с) — умеренное сопротивление 🟡"
+        inlet_status = "normal"
     elif inlet_v < 4.0:
-        inlet_status = f"Высокая ({inlet_v:.2f} м/с) — вентиляторы теряют производительность ⚠️"
+        inlet_status = "high"
     else:
-        inlet_status = f"Критично ({inlet_v:.2f} м/с) — впуск слишком мал, увеличьте проём 🔴"
+        inlet_status = "critical"
 
     p_total = p_dynamic + inlet_sp
 
     # Рекомендации по скорости
     v_min_t, v_max_t = _target_speed(inp.bird_age_days)
     if v_ms < v_min_t * 0.8:
-        velocity_status = f"Слишком низкая ({v_ms:.1f} м/с < {v_min_t:.1f} м/с) — мало охлаждения 🔴"
+        velocity_status = "too_low"
     elif v_ms < v_min_t:
-        velocity_status = f"Ниже рекомендованной ({v_ms:.1f} м/с, цель ≥{v_min_t:.1f} м/с) 🟡"
+        velocity_status = "below_target"
     elif v_ms <= v_max_t:
-        velocity_status = f"В норме ({v_ms:.1f} м/с, рек. {v_min_t:.1f}–{v_max_t:.1f} м/с) ✅"
+        velocity_status = "ok"
     elif v_ms <= 4.0:
-        velocity_status = f"Выше нормы ({v_ms:.1f} м/с > {v_max_t:.1f} м/с) — возможен дискомфорт 🟡"
+        velocity_status = "above_target"
     else:
-        velocity_status = f"Слишком высокая ({v_ms:.1f} м/с) — птица не может стоять нормально ⚠️"
+        velocity_status = "too_high"
 
     # Вентиляторов для нижней границы целевой скорости
     q_need_m3s = v_min_t * cross_section
@@ -398,7 +403,7 @@ def calculate_tunnel_speed(inp: TunnelSpeedInput) -> TunnelSpeedResult:
     q_per_fan = q_fan_m3s if q_fan_m3s > 0 else 1
     fans_needed = math.ceil(q_need_m3s / q_per_fan)
 
-    # Тепловой вердикт (нужен до формирования status_label)
+    # Тепловой вердикт (нужен до формирования status_code)
     comfort_target = _bird_comfort_target(inp.bird_age_days)
     temp_margin    = comfort_target - t_eff
     # Туннель достаточен только если ОБА условия выполнены:
@@ -412,19 +417,19 @@ def calculate_tunnel_speed(inp: TunnelSpeedInput) -> TunnelSpeedResult:
     if in_range:
         if not tunnel_ok:
             # Скорость в норме, но ощущаемая T превышает целевую — нужно охлаждение
-            status_label = "Скорость в норме, ощущаемая T выше цели — рассмотрите испарительное охлаждение ⚠️"
+            status_code, status_level = "needs_cooling", "danger"
         elif thi_val < _THVI_THRESHOLDS[0][0]:
-            status_label = "Система в норме, тепловой стресс минимален ✅"
+            status_code, status_level = "ok", "ok"
         elif thi_val < _THVI_THRESHOLDS[1][0]:
-            status_label = "Скорость в норме, THVI в зоне тревоги — следите за птицей 🟡"
+            status_code, status_level = "thvi_alert", "warn"
         else:
-            status_label = "Скорость ОК, но высокий THVI — рассмотрите испарительное охлаждение ⚠️"
+            status_code, status_level = "thvi_high", "danger"
     elif v_ms < v_min_t:
-        status_label = "Скорость воздуха недостаточна — добавьте вентиляторы 🔴"
+        status_code, status_level = "too_slow", "danger"
     elif v_ms > 4.0:
-        status_label = "Скорость слишком высока — риск стресса от движения воздуха ⚠️"
+        status_code, status_level = "too_fast", "danger"
     else:
-        status_label = "Скорость выше нормы для данного возраста — возможен стресс 🟡"
+        status_code, status_level = "above_range", "warn"
 
     return TunnelSpeedResult(
         cross_section_m2          = round(cross_section, 2),
@@ -445,7 +450,8 @@ def calculate_tunnel_speed(inp: TunnelSpeedInput) -> TunnelSpeedResult:
         target_v_max_ms           = v_max_t,
         velocity_status           = velocity_status,
         fans_needed_for_target    = fans_needed,
-        status_label              = status_label,
+        status_code               = status_code,
+        status_level              = status_level,
         bird_comfort_target_c     = comfort_target,
         tunnel_sufficient         = tunnel_ok,
         t_outdoor_tunnel_limit_c  = t_limit,

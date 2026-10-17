@@ -132,7 +132,9 @@ class HeaterAnalysisModel(BaseModel):
     duty_cycle_percent:   float
     combustion_air_m3h:   float
     bird_heat_fraction:   float
-    status_label:         str
+    status_code:          str   # см. HeatBalance: перевод на клиенте
+    status_level:         str   # ok | warn | danger
+    heater_deficit_kw:    float
 
 
 # ===== Endpoints =====
@@ -315,5 +317,7 @@ def analyze_heaters(req: HeaterAnalysisRequest):
         duty_cycle_percent   = result.duty_cycle_pct,
         combustion_air_m3h   = result.combustion_air_m3h,
         bird_heat_fraction   = result.bird_heat_fraction,
-        status_label         = result.status_label,
+        status_code          = result.status_code,
+        status_level         = result.status_level,
+        heater_deficit_kw    = result.heater_deficit_kw,
     )

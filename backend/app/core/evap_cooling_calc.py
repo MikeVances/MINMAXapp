@@ -166,7 +166,9 @@ class EvapCoolingResult:
     pad_area_m2: float             # Фактическая площадь пэдов, м²
     air_velocity_ms: float         # Скорость воздуха через пэд, м/с
     velocity_ok: bool              # Скорость в допустимом диапазоне
-    velocity_status: str           # Описание статуса скорости
+    velocity_status: str           # too_low | ok | too_high (перевод на клиенте)
+    pad_v_min_ms: float            # Допустимый диапазон скорости для этого пэда —
+    pad_v_max_ms: float            # клиенту для текста статуса
     pad_pressure_drop_pa: float    # Перепад давления на пэде, Па (SANHE, интерп. по скорости)
 
     # --- Водопотребление ---
@@ -179,7 +181,8 @@ class EvapCoolingResult:
 
     # --- Рекомендации ---
     recommended_pad_area_m2: float  # Рекомендуемая площадь пэда для скорости V_REC_MS
-    status_label: str              # Общая оценка системы
+    status_code: str               # pad_too_small | pad_too_large | cooling_insufficient | cooling_marginal | ok
+    status_level: str              # ok | warn | danger — цвет бейджа на клиенте
 
     # --- Точка росы и проверка температуры воды подачи ---
     t_dew_c: float                         # Точка росы входящего воздуха, °C (всегда вычисляется)
@@ -338,18 +341,11 @@ def calculate_evap_cooling(inp: EvapCoolingInput) -> EvapCoolingResult:
     # Проверка диапазона скорости
     velocity_ok = v_min <= air_velocity_ms <= v_max
     if air_velocity_ms < v_min:
-        velocity_status = (
-            f"Слишком низкая ({air_velocity_ms:.2f} м/с < {v_min} м/с) — риск плесени на пэде"
-        )
+        velocity_status = "too_low"      # риск плесени на пэде
     elif air_velocity_ms > v_max:
-        velocity_status = (
-            f"Слишком высокая ({air_velocity_ms:.2f} м/с > {v_max} м/с) — брызги воды в птичник"
-        )
+        velocity_status = "too_high"     # брызги воды в птичник
     else:
-        velocity_status = (
-            f"В норме: {air_velocity_ms:.2f} м/с, "
-            f"η = {eta_pct:.0f}%, ΔP = {dp_pa:.0f} Па"
-        )
+        velocity_status = "ok"
 
     # Водопотребление (психрометрический массовый баланс)
     water_lpm = _water_flow_lpm(inp.total_fan_m3h, inp.t_outdoor_db_c, inp.rh_outdoor_pct, t_wb, eta)
@@ -364,15 +360,15 @@ def calculate_evap_cooling(inp: EvapCoolingInput) -> EvapCoolingResult:
 
     # Общая оценка
     if not velocity_ok and air_velocity_ms > v_max:
-        status_label = "Площадь пэда недостаточна — брызги ⚠️"
+        status_code, status_level = "pad_too_small", "danger"
     elif not velocity_ok and air_velocity_ms < v_min:
-        status_label = "Площадь пэда избыточна — риск плесени ⚠️"
+        status_code, status_level = "pad_too_large", "danger"
     elif not cooling_sufficient:
-        status_label = "Охлаждение недостаточное — рассмотрите дополнительные меры 🔴"
+        status_code, status_level = "cooling_insufficient", "danger"
     elif temp_margin < 2.0:
-        status_label = "Охлаждение на грани нормы 🟡"
+        status_code, status_level = "cooling_marginal", "warn"
     else:
-        status_label = "Система работает в норме ✅"
+        status_code, status_level = "ok", "ok"
 
     # Точка росы входящего воздуха (всегда)
     t_dew = _dew_point(inp.t_outdoor_db_c, inp.rh_outdoor_pct)
@@ -392,13 +388,16 @@ def calculate_evap_cooling(inp: EvapCoolingInput) -> EvapCoolingResult:
         air_velocity_ms         = round(air_velocity_ms, 2),
         velocity_ok             = velocity_ok,
         velocity_status         = velocity_status,
+        pad_v_min_ms            = v_min,
+        pad_v_max_ms            = v_max,
         pad_pressure_drop_pa    = round(dp_pa, 1),
         water_flow_lpm          = round(water_lpm, 1),
         water_per_hour_l        = round(water_per_hour, 0),
         cooling_sufficient      = cooling_sufficient,
         temp_margin_c           = round(temp_margin, 1),
         recommended_pad_area_m2 = round(recommended_pad_area, 2),
-        status_label            = status_label,
+        status_code             = status_code,
+        status_level            = status_level,
         t_dew_c                 = round(t_dew, 1),
         water_supply_t_c        = inp.water_supply_t_c,
         water_regime            = water_regime,

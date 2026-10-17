@@ -450,4 +450,45 @@
     // ── Footer cross-link ─────────────────────────────────────────────────────
     footer_see_also:      'Zobacz też:',
     footer_related_pig:   'Kalkulator wentylacji chlewni',
+
+    // ── Kody statusów serwera → tekst (tunel, pady, nagrzewnice) ─────────────
+    thvi_normal:   'Norma ✅',
+    thvi_alert:    'Ostrzeżenie 🟡',
+    thvi_danger:   'Niebezpieczeństwo ⚠️',
+    thvi_critical: 'Krytycznie 🔴',
+
+    tn_inlet_good:     'Dobrze ({v} m/s) — minimalny opór ✅',
+    tn_inlet_normal:   'Norma ({v} m/s) — umiarkowany opór 🟡',
+    tn_inlet_high:     'Wysoka ({v} m/s) — wentylatory tracą wydajność ⚠️',
+    tn_inlet_critical: 'Krytycznie ({v} m/s) — wlot za mały, powiększ otwór 🔴',
+
+    tn_vel_too_low:      'Za niska ({v} m/s < {v_min} m/s) — słabe chłodzenie 🔴',
+    tn_vel_below_target: 'Poniżej zalecanej ({v} m/s, cel ≥{v_min} m/s) 🟡',
+    tn_vel_ok:           'W normie ({v} m/s, zalec. {v_min}–{v_max} m/s) ✅',
+    tn_vel_above_target: 'Powyżej normy ({v} m/s > {v_max} m/s) — możliwy dyskomfort 🟡',
+    tn_vel_too_high:     'Za wysoka ({v} m/s) — ptaki nie mogą normalnie stać ⚠️',
+
+    tn_status_ok:            'System w normie, stres cieplny minimalny ✅',
+    tn_status_needs_cooling: 'Prędkość w normie, temperatura odczuwalna powyżej celu — rozważ chłodzenie wyparne ⚠️',
+    tn_status_thvi_alert:    'Prędkość w normie, THVI w strefie ostrzeżenia — obserwuj ptaki 🟡',
+    tn_status_thvi_high:     'Prędkość OK, ale wysoki THVI — rozważ chłodzenie wyparne ⚠️',
+    tn_status_too_slow:      'Prędkość powietrza niewystarczająca — dodaj wentylatory 🔴',
+    tn_status_too_fast:      'Prędkość za wysoka — ryzyko stresu od przeciągu ⚠️',
+    tn_status_above_range:   'Prędkość powyżej normy dla tego wieku — możliwy stres 🟡',
+
+    ev_vel_too_low:  'Za niska ({v} m/s < {v_min} m/s) — ryzyko pleśni na padzie',
+    ev_vel_too_high: 'Za wysoka ({v} m/s > {v_max} m/s) — krople wody wnoszone do kurnika',
+    ev_vel_ok:       'W normie: {v} m/s, η = {eta}%, ΔP = {dp} Pa',
+    ev_status_pad_too_small:        'Powierzchnia padów za mała — porywanie wody ⚠️',
+    ev_status_pad_too_large:        'Powierzchnia padów za duża — ryzyko pleśni ⚠️',
+    ev_status_cooling_insufficient: 'Chłodzenie niewystarczające — rozważ dodatkowe środki 🔴',
+    ev_status_cooling_marginal:     'Chłodzenie na granicy normy 🟡',
+    ev_status_ok:                   'System pracuje w normie ✅',
+
+    ht_status_no_heating_needed: 'Ogrzewanie niepotrzebne (na zewnątrz cieplej) ✅',
+    ht_status_birds_sufficient:  'Ptaki wydzielają dość ciepła — nagrzewnice niepotrzebne ✅ (ptaki: +{birds_kw} kW)',
+    ht_status_insufficient:      'Moc niewystarczająca! Deficyt {deficit_kw} kW — dodaj nagrzewnice ⚠️',
+    ht_status_near_limit:        'Nagrzewnice pracują na granicy ({duty_pct}%) — zalecana rezerwa 🟡',
+    ht_status_moderate:          'Umiarkowane obciążenie ({duty_pct}%) — system w normie ✅',
+    ht_status_light:             'Lekkie obciążenie ({duty_pct}%) — moc z zapasem ✅',
 };

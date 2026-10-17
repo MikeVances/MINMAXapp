@@ -584,6 +584,15 @@
 </main>
 
 <script>
+// ─────── Общие помощники страницы ───────
+
+// Класс бейджа по уровню статуса с сервера (ok | warn | danger).
+// Раньше цвет угадывался по эмодзи внутри русской строки.
+function badgeClass(level) {
+  const cls = { ok: 'badge-tight', warn: 'badge-moderate', danger: 'badge-very_leaky' }[level] || 'badge-very_leaky';
+  return 'result-badge ' + cls;
+}
+
 // ─────── Shared house selector utility ───────
 // Заполняет <select> птичниками из localStorage главной страницы.
 // При смене выбора вызывает onSelect(tab) — tab-объект с полями профиля.
@@ -1040,12 +1049,10 @@ function renderTunnel(d, t_real) {
   const uM3h = t('unit_m3h');
   const uPa  = t('unit_pa');
 
-  // Status badge (returned by API as label)
+  // Бейдж: сервер отдаёт код и уровень, текст — из словаря текущего языка
   const statusEl = document.getElementById('tn-status');
-  statusEl.textContent = d.status_label;
-  if (d.status_label.includes('✅')) statusEl.className = 'result-badge badge-tight';
-  else if (d.status_label.includes('🟡')) statusEl.className = 'result-badge badge-moderate';
-  else statusEl.className = 'result-badge badge-very_leaky';
+  statusEl.textContent = t('tn_status_' + d.status_code);
+  statusEl.className = badgeClass(d.status_level);
 
   // Air flow
   document.getElementById('tn-r-section').textContent = d.cross_section_m2.toFixed(2) + ' ' + uM2;
@@ -1057,7 +1064,10 @@ function renderTunnel(d, t_real) {
   document.getElementById('tn-r-vel').innerHTML =
     `<span class="${vOk ? 'ok' : vHigh ? 'warn' : 'danger'}">${d.air_velocity_ms.toFixed(2)} ${uMs}</span>`;
   // Расход по паспорту «0 Па» завышен — сказать об этом рядом со скоростью
-  document.getElementById('tn-r-vel-status').textContent = d.velocity_status +
+  const velText = t('tn_vel_' + d.velocity_status, {
+    v: d.air_velocity_ms.toFixed(1), v_min: d.target_v_min_ms.toFixed(1), v_max: d.target_v_max_ms.toFixed(1),
+  });
+  document.getElementById('tn-r-vel-status').textContent = velText +
     (d.velocity_basis === 'rated_0pa' ? ' · ' + t('tn_basis_rated_note') : '');
 
   // Wind cooling
@@ -1075,7 +1085,7 @@ function renderTunnel(d, t_real) {
                     : d.thi_value < 38 ? '#fbbf24'
                     : d.thi_value < 40 ? '#fb923c'
                     : '#f87171';
-  document.getElementById('tn-r-thi-status').textContent = d.thi_status;
+  document.getElementById('tn-r-thi-status').textContent = t('thvi_' + d.thi_status);
 
   // Inlet system
   document.getElementById('tn-r-inlet-area').textContent =
@@ -1088,7 +1098,8 @@ function renderTunnel(d, t_real) {
     `<span style="color:${inletVelColor};">${d.inlet_velocity_ms.toFixed(2)} ${uMs}</span>`;
   document.getElementById('tn-r-inlet-sp').textContent =
     d.inlet_sp_pa.toFixed(1) + ' ' + uPa;
-  document.getElementById('tn-r-inlet-status').textContent = d.inlet_status;
+  document.getElementById('tn-r-inlet-status').textContent =
+    t('tn_inlet_' + d.inlet_status, { v: d.inlet_velocity_ms.toFixed(2) });
 
   // Pressure & recommendations
   document.getElementById('tn-r-dyn-pa').textContent  = d.dynamic_pressure_pa.toFixed(1) + ' ' + uPa;
@@ -1220,16 +1231,10 @@ function renderEvap(d) {
   const uLpm  = t('unit_lpm');
   const uLh   = t('unit_lh');
 
-  // Status badge
+  // Бейдж: код и уровень с сервера, текст из словаря
   const statusEl = document.getElementById('ev-status');
-  statusEl.textContent = d.status_label;
-  if (d.status_label.includes('✅')) {
-    statusEl.className = 'result-badge badge-tight';
-  } else if (d.status_label.includes('🟡')) {
-    statusEl.className = 'result-badge badge-moderate';
-  } else {
-    statusEl.className = 'result-badge badge-very_leaky';
-  }
+  statusEl.textContent = t('ev_status_' + d.status_code);
+  statusEl.className = badgeClass(d.status_level);
 
   // Psychrometrics
   document.getElementById('ev-r-twb').textContent     = d.t_wb_c.toFixed(1) + ' °C';
@@ -1255,7 +1260,10 @@ function renderEvap(d) {
     const cls = d.velocity_ok ? 'ok' : 'danger';
     return `<span class="${cls}">${d.air_velocity_ms.toFixed(2)} ${uMs}</span>`;
   })();
-  document.getElementById('ev-r-velstatus').textContent = d.velocity_status;
+  document.getElementById('ev-r-velstatus').textContent = t('ev_vel_' + d.velocity_status, {
+    v: d.air_velocity_ms.toFixed(2), v_min: d.pad_v_min_ms, v_max: d.pad_v_max_ms,
+    eta: Math.round(d.pad_efficiency * 100), dp: d.pad_pressure_drop_pa.toFixed(0),
+  });
   document.getElementById('ev-r-rec-area').textContent  = d.recommended_pad_area_m2.toFixed(2) + ' ' + uM2;
   if (d.pad_pressure_drop_pa != null)
     document.getElementById('ev-r-dp').textContent      = d.pad_pressure_drop_pa.toFixed(0) + ' Па';

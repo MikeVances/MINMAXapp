@@ -450,4 +450,46 @@
     // ── Footer cross-link ─────────────────────────────────────────────────────
     footer_see_also:      'Also see:',
     footer_related_pig:   'Pig house ventilation calculator',
+
+    // ── Server status codes → text (tunnel, evaporative cooling, heaters) ────
+    // The API returns machine codes and a level; the wording lives here.
+    thvi_normal:   'Normal ✅',
+    thvi_alert:    'Alert 🟡',
+    thvi_danger:   'Danger ⚠️',
+    thvi_critical: 'Critical 🔴',
+
+    tn_inlet_good:     'Good ({v} m/s) — minimal resistance ✅',
+    tn_inlet_normal:   'Normal ({v} m/s) — moderate resistance 🟡',
+    tn_inlet_high:     'High ({v} m/s) — fans lose capacity ⚠️',
+    tn_inlet_critical: 'Critical ({v} m/s) — inlet too small, enlarge the opening 🔴',
+
+    tn_vel_too_low:      'Too low ({v} m/s < {v_min} m/s) — little cooling 🔴',
+    tn_vel_below_target: 'Below recommended ({v} m/s, target ≥{v_min} m/s) 🟡',
+    tn_vel_ok:           'Within range ({v} m/s, rec. {v_min}–{v_max} m/s) ✅',
+    tn_vel_above_target: 'Above range ({v} m/s > {v_max} m/s) — possible discomfort 🟡',
+    tn_vel_too_high:     'Too high ({v} m/s) — birds cannot stand normally ⚠️',
+
+    tn_status_ok:            'System OK, heat stress minimal ✅',
+    tn_status_needs_cooling: 'Speed OK, effective T above target — consider evaporative cooling ⚠️',
+    tn_status_thvi_alert:    'Speed OK, THVI in the alert zone — watch the birds 🟡',
+    tn_status_thvi_high:     'Speed OK but THVI high — consider evaporative cooling ⚠️',
+    tn_status_too_slow:      'Air speed insufficient — add fans 🔴',
+    tn_status_too_fast:      'Speed too high — risk of draught stress ⚠️',
+    tn_status_above_range:   'Speed above range for this age — possible stress 🟡',
+
+    ev_vel_too_low:  'Too low ({v} m/s < {v_min} m/s) — mould risk on the pad',
+    ev_vel_too_high: 'Too high ({v} m/s > {v_max} m/s) — water droplets carried into the house',
+    ev_vel_ok:       'OK: {v} m/s, η = {eta}%, ΔP = {dp} Pa',
+    ev_status_pad_too_small:        'Pad area insufficient — water carry-over ⚠️',
+    ev_status_pad_too_large:        'Pad area excessive — mould risk ⚠️',
+    ev_status_cooling_insufficient: 'Cooling insufficient — consider additional measures 🔴',
+    ev_status_cooling_marginal:     'Cooling marginal 🟡',
+    ev_status_ok:                   'System operating normally ✅',
+
+    ht_status_no_heating_needed: 'No heating needed (warmer outside) ✅',
+    ht_status_birds_sufficient:  'Birds produce enough heat — heaters not needed ✅ (birds: +{birds_kw} kW)',
+    ht_status_insufficient:      'Capacity insufficient! Deficit {deficit_kw} kW — add heaters ⚠️',
+    ht_status_near_limit:        'Heaters near their limit ({duty_pct}%) — reserve recommended 🟡',
+    ht_status_moderate:          'Moderate load ({duty_pct}%) — system OK ✅',
+    ht_status_light:             'Light load ({duty_pct}%) — capacity to spare ✅',
 };
