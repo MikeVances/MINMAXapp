@@ -122,6 +122,7 @@
     phys_dims_needed:    'Saisir les dimensions du bâtiment pour activer la vérification physique',
     cap_insufficient_note: "La ventilation minimale dépasse la capacité installée — les ventilateurs n'assurent même pas le minimum",
     geometry_missing_note: 'Saisissez les dimensions du bâtiment (largeur et hauteur) pour calculer le Qmax tunnel — sans elles, Qmax est égal à Qmin',
+    humidity_uncontrollable_note: "L'air extérieur n'est pas plus sec que la cible intérieure — la ventilation ne peut pas tenir l'humidité (Qmin de ces lignes selon le CO₂). Il faut déshumidifier ou chauffer l'air entrant.",
     label_target_rh: 'HR cible du bâtiment, %',
     target_rh_ignored: 'HR cible hors 40–70 % (table de température ressentie) — HR du profil utilisée',
     gp_temp_ref: '(à 60 % HR ; ajustée à la HR cible selon la température ressentie)',

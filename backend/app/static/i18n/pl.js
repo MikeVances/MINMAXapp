@@ -122,6 +122,7 @@
     phys_dims_needed:    'Wprowadź wymiary budynku, aby włączyć kontrolę fizyczną',
     cap_insufficient_note: 'Wentylacja minimalna przekracza wydajność zainstalowanych wentylatorów — nie zapewniają nawet minimum',
     geometry_missing_note: 'Podaj wymiary budynku (szerokość i wysokość), aby obliczyć Qmax tunelu — bez nich Qmax równa się Qmin',
+    humidity_uncontrollable_note: 'Powietrze zewnętrzne nie jest suchsze od docelowego wewnętrznego — wentylacja nie utrzyma wilgotności (Qmin w tych wierszach wg CO₂). Potrzebne osuszanie lub podgrzanie powietrza nawiewanego.',
     label_target_rh: 'Docelowa RH w budynku, %',
     target_rh_ignored: 'Docelowa RH poza 40–70% (tabela temperatury odczuwalnej) — użyto RH profilu',
     gp_temp_ref: '(przy 60% RH; korekta do docelowej RH wg temperatury odczuwalnej)',

@@ -6,6 +6,7 @@ import os
 from dataclasses import asdict, dataclass, fields
 
 from .json_store import atomic_write_json
+from .survival import daily_mortality_to_total
 from .paths import data_path
 
 logger = logging.getLogger(__name__)
@@ -41,10 +42,10 @@ def load_app_config(path: str = APP_CONFIG_PATH) -> AppConfig:
             raw = json.load(f) or {}
         # Back-compat: если раньше хранили daily_mortality_pct
         if "daily_mortality_pct" in raw and "total_mortality_pct" not in raw:
-            # Преобразуем условно, как 0.1%/сутки ≈ 4% за цикл
-            daily = float(raw.get("daily_mortality_pct", 0)) / 100.0
-            total = 1.0 - (1.0 - daily) ** 41
-            raw["total_mortality_pct"] = round(total * 100.0, 4)
+            total = daily_mortality_to_total(
+                float(raw.get("daily_mortality_pct", 0)), int(raw.get("cycle_days", 42))
+            )
+            raw["total_mortality_pct"] = round(total, 4)
 
         # Устаревшие ключи (сезонный режим, min_floor_*, n_birds_initial …) отбрасываем.
         # Без этого AppConfig(**raw) падал бы на старом файле, и конфиг молча

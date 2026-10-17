@@ -790,6 +790,10 @@ document.querySelectorAll('.tool-tab:not([disabled])').forEach(btn => {
     const capWarn = d.rows.some(r => r.capacity_insufficient)
       ? `<p class="danger" style="font-size:12px; margin:8px 0 0;">⚠ ${t('cap_insufficient_note')}</p>`
       : '';
+    // Влажный наружный воздух: вентиляцией RH не удержать — Qmin в таких строках по CO₂
+    const humWarn = d.rows.some(r => r.humidity_uncontrollable)
+      ? `<p class="warn" style="font-size:12px; margin:8px 0 0;">⚠ ${t('humidity_uncontrollable_note')}</p>`
+      : '';
     // Туннельный Qmax считается из сечения корпуса — без размеров он равен Qmin
     const geomWarn = d.rows.some(r => r.house_geometry_missing)
       ? `<p class="warn" style="font-size:12px; margin:8px 0 0;">⚠ ${t('geometry_missing_note')}</p>`
@@ -840,6 +844,7 @@ document.querySelectorAll('.tool-tab:not([disabled])').forEach(btn => {
         <tbody>${rows}</tbody>
       </table>
       ${capWarn}
+      ${humWarn}
       ${geomWarn}
       ${physBlock}
     </div>`;

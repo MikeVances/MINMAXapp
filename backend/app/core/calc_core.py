@@ -6,6 +6,7 @@ from typing import Optional
 
 from .growth_profiles import load_profile
 from .apparent_temp import rh_temperature_shift
+from .survival import survival_fraction
 from .ventilation_calc import calc_q_min_per_bird
 from .app_config import load_app_config
 from .building_thermal import (
@@ -71,6 +72,9 @@ class CalcResult:
     tunnel_requirement_m3h: Optional[float] = None
     # Qmax не посчитан: нужен туннельный расход, а размеров корпуса нет (Qmax = Qmin)
     house_geometry_missing: bool = False
+    # Наружный воздух не суше целевого внутреннего (ΔW ≤ 0.1 г/кг): вентиляцией RH
+    # не удержать при любом расходе, Qmin показан по CO₂
+    humidity_uncontrollable: bool = False
     # Профиль роста, по которому шёл расчёт (видно, какие данные кросса использованы)
     growth_profile_id: Optional[str] = None
 
@@ -120,10 +124,7 @@ def compute(ci: CalcInput) -> CalcResult:
         t_target_inside += rh_temperature_shift(body_weight_g, rv_percent)
 
     # --- Effective birds with mortality ---
-    total_m = max(getattr(cfg, "total_mortality_pct", 0.0), 0.0) / 100.0
-    daily_m = 1.0 - (1.0 - total_m) ** (1.0 / max(41, 1))
-    survival = (1.0 - daily_m) ** max(age - 1, 0)
-    birds_eff = ci.birds * survival
+    birds_eff = ci.birds * survival_fraction(age, cfg.total_mortality_pct, cfg.cycle_days)
 
     # --- Qmin: биологический минимум по CO₂ (CIGR 1984) из живой массы ---
     # Норма считается из веса профиля роста, а не хранится в нём: профиль — это
@@ -201,6 +202,7 @@ def compute(ci: CalcInput) -> CalcResult:
     # Вычисляем до секции горелок, чтобы duty_cycle учитывал полный Qmin.
     # Пар горелок добавляется ниже как уточнение.
     qmin_basis = "co2"
+    humidity_uncontrollable = False
     _delta_w: Optional[float] = None   # сохраняем для шага 2 (с паром горелок)
     _G_birds_gph: float = 0.0
 
@@ -209,6 +211,10 @@ def compute(ci: CalcInput) -> CalcResult:
         W_outside    = humidity_ratio_g_per_kg(ci.outside_t, ci.outside_rh)
         _delta_w     = W_inside_max - W_outside
 
+        # ΔW ≤ 0.1: снаружи воздух не суше целевого — сколько ни вентилируй, пар не
+        # вынести. Раньше это место молча переходило на CO₂-норму, и чем влажнее было
+        # снаружи, тем МЕНЬШЕ получался Qmin (135 тыс. → 28 тыс. м³/ч при 60 → 80 % RH)
+        humidity_uncontrollable = _delta_w <= 0.1
         if _delta_w > 0.1:
             q_latent_w   = 3.72 * (weight_kg ** 0.75)
             _G_birds_gph = q_latent_w * 3600.0 / 2430.0 * birds_eff
@@ -299,4 +305,5 @@ def compute(ci: CalcInput) -> CalcResult:
         tunnel_requirement_m3h=tunnel_requirement,
         house_geometry_missing=house_geometry_missing,
         growth_profile_id=profile_id,
+        humidity_uncontrollable=humidity_uncontrollable,
     )

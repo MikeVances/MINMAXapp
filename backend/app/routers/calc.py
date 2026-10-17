@@ -5,6 +5,8 @@ from pydantic import BaseModel, Field
 
 from ..core.calc_core import compute, CalcInput, CalcResult
 from ..core.growth_profiles import ProfileNotFound
+from ..core.survival import survival_fraction
+from ..core.app_config import load_app_config
 
 
 router = APIRouter()
@@ -40,6 +42,8 @@ class CalcOut(BaseModel):
     tunnel_active: bool = False  # Tunnel mode active under current conditions
     qmin_basis: str = "co2"  # "co2" | "moisture"
     growth_profile_id: str | None = None  # профиль роста, по которому шёл расчёт
+    # Снаружи воздух не суше целевого: вентиляцией RH не удержать (Qmin — по CO₂)
+    humidity_uncontrollable: bool = False
     # Qmin больше заданной мощности установки: вентиляторов не хватает даже на минимум
     capacity_insufficient: bool = False
     # Требуемый туннельный расход корпуса v × S × 3600 (None — размеры не заданы)
@@ -106,6 +110,7 @@ def minmax(payload: CalcIn):
         tunnel_requirement_m3h=cr.tunnel_requirement_m3h,
         house_geometry_missing=cr.house_geometry_missing,
         growth_profile_id=cr.growth_profile_id,
+        humidity_uncontrollable=cr.humidity_uncontrollable,
     )
 
 
@@ -149,6 +154,7 @@ class SummaryRow(BaseModel):
     # Qmin больше заданной мощности установки (см. CalcOut.capacity_insufficient)
     capacity_insufficient: bool = False
     house_geometry_missing: bool = False
+    humidity_uncontrollable: bool = False
 
 
 class SummaryOut(BaseModel):
@@ -162,18 +168,11 @@ class SummaryOut(BaseModel):
 @router.post("/summary7", response_model=SummaryOut)
 def summary7(payload: SummaryIn):
     outside_t = payload.outside_t
-    # рассчитываем эффективное количество птиц с учётом смертности
-    try:
-        from ..core.app_config import load_app_config
-        cfg = load_app_config()
-        total_m = max(cfg.total_mortality_pct, 0.0) / 100.0
-        cycle = max(cfg.cycle_days, 7)
-        daily_m = 1.0 - (1.0 - total_m) ** (1.0 / max(cycle - 1, 1))
-        # Еженедельные контрольные точки + последний день цикла
-        days = sorted(set([1] + list(range(7, cycle, 7)) + [cycle]))
-    except Exception:
-        daily_m = 0.0
-        days = [1, 7, 14, 21, 28, 35, 42]
+    # load_app_config не бросает исключений: битый файл → умолчания с записью в лог
+    cfg = load_app_config()
+    cycle = max(cfg.cycle_days, 7)
+    # Еженедельные контрольные точки + последний день цикла
+    days = sorted(set([1] + list(range(7, cycle, 7)) + [cycle]))
     rows: list[SummaryRow] = []
 
     for d in days:
@@ -196,8 +195,7 @@ def summary7(payload: SummaryIn):
         q_max_pct = None
         capacity_insufficient = False
         # Эффективное число птиц на этот день (для последующих представлений на голову/кг)
-        survival = (1.0 - daily_m) ** max(d - 1, 0)
-        birds_eff = payload.birds * survival
+        birds_eff = payload.birds * survival_fraction(d, cfg.total_mortality_pct, cfg.cycle_days)
         if payload.user_max_m3h is not None:
             q_max_final = min(q_max_nominal, float(payload.user_max_m3h))
             # Qmin не обрезаем — см. комментарий в minmax(); q_min_pct может быть > 100 %
@@ -218,6 +216,7 @@ def summary7(payload: SummaryIn):
                 q_max_pct=q_max_pct,
                 capacity_insufficient=capacity_insufficient,
                 house_geometry_missing=cr.house_geometry_missing,
+                humidity_uncontrollable=cr.humidity_uncontrollable,
             )
         )
 

@@ -122,6 +122,7 @@
     phys_dims_needed:    'Enter building dimensions to enable physical check',
     cap_insufficient_note: 'Minimum ventilation exceeds installed fan capacity — fans cannot provide even the minimum',
     geometry_missing_note: 'Enter house dimensions (width and height) to compute tunnel Qmax — without them Qmax equals Qmin',
+    humidity_uncontrollable_note: 'Outside air is not drier than the indoor target — ventilation cannot hold the humidity (Qmin in these rows is CO₂-based). Dehumidification or heating of incoming air is needed.',
     label_target_rh: 'Target house RH, %',
     target_rh_ignored: 'Target RH outside 40–70% (apparent temperature table) — profile RH used',
     gp_temp_ref: '(at 60% RH; adjusted to the target RH by apparent temperature)',

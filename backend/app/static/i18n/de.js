@@ -122,6 +122,7 @@
     phys_dims_needed:    'Gebäudeabmessungen eingeben, um die physikalische Prüfung zu aktivieren',
     cap_insufficient_note: 'Mindestlüftung übersteigt die installierte Lüfterleistung — die Lüfter schaffen nicht einmal das Minimum',
     geometry_missing_note: 'Stallabmessungen (Breite und Höhe) eingeben, um das Tunnel-Qmax zu berechnen — ohne sie ist Qmax gleich Qmin',
+    humidity_uncontrollable_note: 'Die Außenluft ist nicht trockener als das Innenziel — die Feuchte ist durch Lüften nicht zu halten (Qmin in diesen Zeilen nach CO₂). Entfeuchtung oder Erwärmung der Zuluft nötig.',
     label_target_rh: 'Ziel-RH im Stall, %',
     target_rh_ignored: 'Ziel-RH außerhalb 40–70 % (Tabelle gefühlte Temperatur) — RH des Profils verwendet',
     gp_temp_ref: '(bei 60 % RH; Anpassung an Ziel-RH nach gefühlter Temperatur)',

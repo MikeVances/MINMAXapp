@@ -58,6 +58,24 @@ def test_qmin_moisture_dominates_with_humid_outside_air():
     assert r.qmin_basis == "moisture"
 
 
+def test_humid_outside_air_flags_uncontrollable_humidity():
+    """
+    День 21, внутри 25 °C / 60 % (W = 11.89 г/кг), снаружи 25 °C / 80 % (W ≈ 15.9 г/кг):
+    наружный воздух ВЛАЖНЕЕ целевого, вентиляцией RH не удержать. Qmin показан
+    по CO₂, но это должно быть видно флагом, а не тихой подменой (ревью 2026-10-16).
+    """
+    r = _calc(age_days=21, outside_t=25.0, outside_rh=80.0)
+
+    assert r.humidity_uncontrollable is True
+    assert r.qmin_basis == "co2"
+
+
+def test_dry_outside_air_does_not_flag_humidity():
+    r = _calc(age_days=21, outside_t=20.0, outside_rh=75.0)
+
+    assert r.humidity_uncontrollable is False
+
+
 # ─── Qmax и туннель ───────────────────────────────────────────────────────────
 
 # Корпус 12 × 3 м в сечении: туннель 2.5 м/с × 36 м² × 3600 = 324 000 м³/ч
