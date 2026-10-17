@@ -10,6 +10,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
 
 from ..write_access import require_write_token
+from ..core.cooling_fit import fit_cooling_curve
 from ..core.building_thermal import (
     BuildingDimensions,
     HeaterConfig,
@@ -40,13 +41,40 @@ class HeaterConfigModel(BaseModel):
     total_power_kw: float = Field(..., ge=0, le=10000, description="Общая тепловая мощность, кВт")
 
 
+class CurvePointModel(BaseModel):
+    t_s: float = Field(..., ge=0, le=86_400, description="Секунды от старта теста")
+    temp_c: float = Field(..., ge=-20, le=50, description="Температура внутри, °C")
+
+
 class CalibrationTestModel(BaseModel):
     t_initial_c: float = Field(..., ge=-20, le=50, description="Начальная температура, °C")
     t_final_c: float = Field(..., ge=-20, le=50, description="Конечная температура, °C")
     t_outside_c: float = Field(..., ge=-40, le=50, description="Температура снаружи, °C")
-    time_minutes: float = Field(..., gt=0, le=60, description="Время теста, минуты")
+    # Тест по кривой с массивным полом может идти пару часов
+    time_minutes: float = Field(..., gt=0, le=600, description="Время теста, минуты")
     # Возвращается только в GET /config (не требуется при PUT — вычисляется на сервере)
     ua_coefficient: float | None = Field(None, description="Рассчитанный коэффициент теплопотерь, Вт/°C")
+    method: str = Field("air_only_cooling", pattern=r"^(air_only_cooling|cooling_curve)$")
+    # Отметки на каждом градусе (метод cooling_curve), первая — старт
+    points: list[CurvePointModel] | None = Field(None, max_length=60)
+
+
+class CurveCalibrationRequest(BaseModel):
+    t_outside_c: float = Field(..., ge=-40, le=50, description="Температура снаружи, °C")
+    points: list[CurvePointModel] = Field(..., min_length=2, max_length=60)
+    # Объём зоны для многозонного теста; не задан — объём всего корпуса
+    volume_m3: float | None = Field(None, gt=0, le=1_000_000)
+
+
+class CurveCalibrationResult(BaseModel):
+    ua_coefficient: float           # Вт/°C
+    volume_m3: float
+    c_air_j_per_k: float            # теплоёмкость воздуха
+    c_struct_j_per_k: float         # эффективная теплоёмкость пола и стен
+    rms_c: float                    # расхождение модели с отметками, °C
+    duration_minutes: float
+    warnings: list[str]             # small_delta_t | fast_cooling | poor_fit
+    method: str = "cooling_curve"
 
 
 logger = logging.getLogger(__name__)
@@ -74,14 +102,6 @@ class ThermalConfigModel(BaseModel):
     building: BuildingDimensionsModel | None = None
     heater: HeaterConfigModel | None = None
     calibration: CalibrationTestModel | None = None
-
-
-class CalibrationResultModel(BaseModel):
-    ua_coefficient: float = Field(..., description="Коэффициент теплопотерь, Вт/°C")
-    volume_m3: float = Field(..., description="Объем помещения, м³")
-    cooling_rate_per_minute: float = Field(..., description="Скорость охлаждения, °C/мин")
-    # Метод и его ограничение: UA по теплоёмкости только воздуха — условный
-    method: str = "air_only_cooling"
 
 
 class HeaterAnalysisRequest(BaseModel):
@@ -133,6 +153,9 @@ def get_thermal_config():
             t_outside_c=config.calibration.t_outside_c,
             time_minutes=config.calibration.time_minutes,
             ua_coefficient=config.calibration.ua_coefficient,
+            method=config.calibration.method,
+            points=([CurvePointModel(t_s=p[0], temp_c=p[1]) for p in config.calibration.points]
+                    if config.calibration.points else None),
         ) if config.calibration else None,
     )
 
@@ -158,14 +181,31 @@ def update_thermal_config(payload: ThermalConfigModel):
         )
 
     if payload.calibration:
-        if payload.calibration.ua_coefficient is not None:
+        cal = payload.calibration
+        points = [[p.t_s, p.temp_c] for p in cal.points] if cal.points else None
+        if cal.ua_coefficient is not None:
             # UA уже рассчитан (round-trip из loadConfig или явное сохранение) — сохраняем как есть
             config.calibration = CalibrationTest(
-                t_initial_c=payload.calibration.t_initial_c,
-                t_final_c=payload.calibration.t_final_c,
-                t_outside_c=payload.calibration.t_outside_c,
-                time_minutes=payload.calibration.time_minutes,
-                ua_coefficient=payload.calibration.ua_coefficient,
+                t_initial_c=cal.t_initial_c,
+                t_final_c=cal.t_final_c,
+                t_outside_c=cal.t_outside_c,
+                time_minutes=cal.time_minutes,
+                ua_coefficient=cal.ua_coefficient,
+                method=cal.method,
+                points=points,
+            )
+        elif points:
+            # Кривая остывания: UA подгонкой модели «воздух + конструкции» по объёму корпуса
+            if not config.building:
+                raise HTTPException(status_code=400, detail="Building dimensions required for calibration")
+            try:
+                fit = fit_cooling_curve(config.building.volume_m3, cal.t_outside_c, points)
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=str(e))
+            config.calibration = CalibrationTest(
+                t_initial_c=points[0][1], t_final_c=points[-1][1], t_outside_c=cal.t_outside_c,
+                time_minutes=points[-1][0] / 60.0, ua_coefficient=fit.ua_w_per_k,
+                method="cooling_curve", points=points,
             )
         else:
             # UA не задан — рассчитать из данных теста охлаждения
@@ -194,36 +234,33 @@ def update_thermal_config(payload: ThermalConfigModel):
     return {"status": "ok", "message": "Thermal configuration updated"}
 
 
-@router.post("/calibrate", response_model=CalibrationResultModel)
-def run_calibration(test: CalibrationTestModel):
+@router.post("/calibrate-curve", response_model=CurveCalibrationResult)
+def run_curve_calibration(req: CurveCalibrationRequest):
     """
-    Выполнить расчет калибровки по результатам теста охлаждения.
-    НЕ сохраняет результат - только рассчитывает.
+    UA по кривой остывания: отметки времени на каждом градусе падения.
+    НЕ сохраняет результат — только рассчитывает (сохранение — PUT /config с points).
     """
-    config = load_thermal_config()
-
-    if not config.building:
-        raise HTTPException(status_code=400, detail="Building dimensions not configured")
+    volume = req.volume_m3
+    if volume is None:
+        config = load_thermal_config()
+        if not config.building:
+            raise HTTPException(status_code=400, detail="Building dimensions not configured")
+        volume = config.building.volume_m3
 
     try:
-        ua = calculate_ua_coefficient(
-            volume_m3=config.building.volume_m3,
-            t_initial=test.t_initial_c,
-            t_final=test.t_final_c,
-            t_outside=test.t_outside_c,
-            time_minutes=test.time_minutes,
-        )
-
-        cooling_rate = (test.t_initial_c - test.t_final_c) / test.time_minutes
-
-        return CalibrationResultModel(
-            ua_coefficient=ua,
-            volume_m3=config.building.volume_m3,
-            cooling_rate_per_minute=cooling_rate,
-        )
-
+        fit = fit_cooling_curve(volume, req.t_outside_c, [(p.t_s, p.temp_c) for p in req.points])
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+    return CurveCalibrationResult(
+        ua_coefficient=fit.ua_w_per_k,
+        volume_m3=volume,
+        c_air_j_per_k=fit.c_air_j_per_k,
+        c_struct_j_per_k=fit.c_struct_j_per_k,
+        rms_c=fit.rms_c,
+        duration_minutes=fit.duration_s / 60.0,
+        warnings=fit.warnings,
+    )
 
 
 @router.post("/analyze-heaters", response_model=HeaterAnalysisModel)

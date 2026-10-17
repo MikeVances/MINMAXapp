@@ -31,7 +31,7 @@ import json
 import logging
 import math
 import os
-from dataclasses import dataclass, asdict, field
+from dataclasses import dataclass, asdict, field, fields
 from typing import Optional
 
 from .json_store import atomic_write_json
@@ -76,6 +76,12 @@ class CalibrationTest:
     t_outside_c: float      # температура снаружи, °C
     time_minutes: float     # время теста, минуты
     ua_coefficient: float   # рассчитанный коэффициент теплопотерь, Вт/°C
+    # "cooling_curve" — по отметкам на каждом градусе (core/cooling_fit, основной метод);
+    # "air_only_cooling" — по одной точке и теплоёмкости воздуха (условный, старые записи)
+    method: str = "air_only_cooling"
+    # Отметки кривой [[секунды, °C], …], первая — старт. Хранятся, чтобы пересчитать
+    # UA при изменении размеров корпуса
+    points: Optional[list] = None
 
 
 @dataclass
@@ -340,7 +346,9 @@ def load_thermal_config(path: str = THERMAL_CONFIG_PATH) -> ThermalConfig:
 
         calibration = None
         if "calibration" in data and data["calibration"]:
-            calibration = CalibrationTest(**data["calibration"])
+            # Незнакомые ключи (из будущих/прошлых версий) не должны ронять загрузку
+            known = {f.name for f in fields(CalibrationTest)}
+            calibration = CalibrationTest(**{k: v for k, v in data["calibration"].items() if k in known})
 
         return ThermalConfig(
             house_id=data.get("house_id"),

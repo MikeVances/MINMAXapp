@@ -27,11 +27,7 @@ const elGasInfo       = document.getElementById('gasInfo');
 const elSaveHeaterBtn = document.getElementById('saveHeaterBtn');
 const elHeaterStatus  = document.getElementById('heaterStatus');
 
-const elTInitial    = document.getElementById('tInitial');
-const elTFinal      = document.getElementById('tFinal');
 const elTOutside    = document.getElementById('tOutside');
-const elTimeMinutes = document.getElementById('timeMinutes');
-const elCalculateBtn      = document.getElementById('calculateBtn');
 const elSaveCalibrationBtn = document.getElementById('saveCalibrationBtn');
 const elCalibrationResult  = document.getElementById('calibrationResult');
 
@@ -45,354 +41,224 @@ const elAnalysisResult     = document.getElementById('analysisResult');
 
 const elCurrentConfig = document.getElementById('currentConfig');
 
-// ── Таймер теста охлаждения ──────────────────────────────────────────────────
+// ── Тест остывания по кривой: отметка на каждом градусе ──────────────────────
+// Пользователь вводит температуры, выключает обогрев и жмёт кнопку каждый раз,
+// когда градусник показывает на градус меньше. По 4–6 отметкам сервер подгоняет
+// модель «воздух + пол и стены» (core/cooling_fit) и находит UA без допущений
+// о теплоёмкости конструкций. Многозонный режим — то же самое по градуснику каждой зоны.
 const elTimerBtn     = document.getElementById('timerBtn');
+const elFinishBtn    = document.getElementById('finishTestBtn');
 const elTimerDisplay = document.getElementById('timerDisplay');
 const elTimerStatus  = document.getElementById('timerStatus');
+const elTStartInside = document.getElementById('tStartInside');
+const elTapPanel     = document.getElementById('tapPanel');
 
-// Фиксированные температуры — отдельно от DOM, чтобы логика была явной
-const T_TEST_START = 30.0;  // °C — нагреть до этой температуры
-const T_TEST_END   = 25.0;  // °C — остановить таймер при этой температуре
-// Короче — время реакции оператора сравнимо с самим тестом (и 0 с дал бы деление на ноль)
-const MIN_TEST_SEC = 30;
+const MIN_DROPS    = 4;   // меньше — параметры модели не разделяются (как на сервере)
+const TARGET_DROPS = 6;   // после стольких отметок во всех зонах тест завершается сам
+const MIN_DELTA_T  = 10;  // °C: меньшая разница с улицей — тест бессмыслен
 
-// UA по закону остывания Ньютона — ТА ЖЕ формула, что на сервере
-// (building_thermal.calculate_ua_coefficient): C/t · ln(ΔT₀/ΔT₁), ρ при средней T теста.
-// Иначе показанный здесь UA не совпадал бы с сохранённым сервером
-function uaFromCooling(volumeM3, tStart, tEnd, tOut, seconds) {
-  const rho = 353.05 / ((tStart + tEnd) / 2 + 273.15);
-  const C   = volumeM3 * rho * 1006;
-  return C / seconds * Math.log((tStart - tOut) / (tEnd - tOut));
-}
-
-let timerRunning   = false;
-let timerInterval  = null;
-let timerStartTime = null; // timestamp Date.now()
-
-// ── Мультизонное состояние ───────────────────────────────────────────────────
-let mzActive      = false;  // идёт ли мультизонный тест
-let mzStopTimes   = [];     // секунды от старта для каждой зоны (null = ещё не нажата)
-let mzIntervals   = {};     // setInterval для бегущего счётчика каждой зоны
-let mzAvgTime     = null;   // секунды когда контроллер показал среднее 25°C (прямое измерение)
+// test = null | { startMs, tStart, tOut, zones: [[[сек, °C], …], …], interval }
+let test = null;
+let lastResult = null;    // { zones, uaTotal, points (однозонный), tOut }
 
 function timerFormat(totalSeconds) {
-  const m = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60).toString().padStart(2, '0');
   const s = (totalSeconds % 60).toString().padStart(2, '0');
-  return `${m}:${s}`;
+  return h > 0 ? `${h}:${m}:${s}` : `${m}:${s}`;
 }
 
-function mzZoneCount() {
+function zoneCount() {
   return Math.min(Math.max(parseInt(document.getElementById('zoneCount')?.value) || 1, 1), 8);
 }
 
-// Перестраивает кнопки зон под текущее количество (вызывается при смене счётчика и старте)
-function mzBuildUI(disabled) {
-  const n         = mzZoneCount();
-  const container = document.getElementById('zoneTimers');
-  if (!container) return;
-  if (n <= 1) { container.style.display = 'none'; container.innerHTML = ''; return; }
-
-  container.innerHTML = '';
-  container.style.display = 'block';
-
-  // ── Блок "среднее по птичнику" — прямое измерение с дисплея контроллера ──
-  const avgRow = document.createElement('div');
-  avgRow.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 12px;background:#0f1f2a;border:1px solid #1e4060;border-radius:8px;margin-bottom:12px;';
-  avgRow.innerHTML = `
-    <span style="flex:1;font-size:13px;line-height:1.4;">
-      🌡️ <strong>${t('mz_avg_label')}</strong><br>
-      <span class="muted" style="font-size:11px;">${t('mz_avg_hint')}</span>
-    </span>
-    <span id="mz-avg-elapsed" style="font-family:monospace;font-size:18px;min-width:70px;text-align:right;color:var(--muted);">—</span>
-    <button id="mz-avg-btn" class="btn" style="padding:7px 14px;font-size:13px;background:#1e4060;color:#7dd3fc;"
-      ${disabled ? 'disabled' : ''}>${t('mz_avg_mark')}</button>
-    <span id="mz-avg-done" style="color:var(--ok);display:none;font-size:18px;">✓</span>`;
-  container.appendChild(avgRow);
-  document.getElementById('mz-avg-btn')?.addEventListener('click', () => {
-    if (mzAvgTime !== null) return; // нажать можно только один раз
-    mzAvgTime = Math.floor((Date.now() - timerStartTime) / 1000);
-    const btn  = document.getElementById('mz-avg-btn');
-    const disp = document.getElementById('mz-avg-elapsed');
-    const done = document.getElementById('mz-avg-done');
-    if (btn)  btn.disabled = true;
-    if (disp) { disp.textContent = timerFormat(mzAvgTime); disp.style.color = 'var(--ok)'; }
-    if (done) done.style.display = '';
-  });
-
-  // ── Кнопки отдельных зон ──────────────────────────────────────────────────
-  for (let i = 0; i < n; i++) {
-    const isFirst = i === 0, isLast = i === n - 1;
-    const suffix  = isFirst ? ` <span class="muted" style="font-size:11px;">(${t('zone_entry')})</span>`
-                  : isLast  ? ` <span class="muted" style="font-size:11px;">(${t('zone_far')})</span>`
-                  : '';
-    const row = document.createElement('div');
-    row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--bg);border-radius:6px;margin-bottom:6px;';
-    row.innerHTML = `
-      <span style="min-width:90px;font-weight:600;font-size:13px;">${t('zone_lbl', { n: i + 1 })}${suffix}</span>
-      <span id="mz-elapsed-${i}" style="font-family:monospace;font-size:18px;min-width:70px;color:var(--muted);">—</span>
-      <button id="mz-stop-${i}" class="btn" style="padding:6px 12px;font-size:13px;"
-        ${disabled ? 'disabled' : ''} data-zone="${i}">${t('zone_stop_btn')}</button>
-      <span id="mz-done-${i}" style="color:var(--ok);display:none;font-size:18px;">✓</span>`;
-    container.appendChild(row);
-    document.getElementById(`mz-stop-${i}`).addEventListener('click', () => mzStopZone(i));
-  }
+function elapsedSec() {
+  return Math.floor((Date.now() - test.startMs) / 1000);
 }
 
-function mzStopZone(i) {
-  const elapsed = Math.floor((Date.now() - timerStartTime) / 1000);
-  mzStopTimes[i] = elapsed;
-  clearInterval(mzIntervals[i]);
-
-  const btn  = document.getElementById(`mz-stop-${i}`);
-  const disp = document.getElementById(`mz-elapsed-${i}`);
-  const done = document.getElementById(`mz-done-${i}`);
-  if (btn)  btn.disabled = true;
-  if (disp) { disp.textContent = timerFormat(elapsed); disp.style.color = 'var(--ok)'; }
-  if (done) done.style.display = '';
-
-  // Все зоны зафиксированы — завершаем тест автоматически
-  if (mzStopTimes.every(s => s !== null)) mzFinish();
+// Следующая ожидаемая температура зоны: на градус ниже предыдущей отметки.
+// zones[i] начинается с точки старта [0, tStart], поэтому k-я отметка = tStart − k
+function nextTemp(zone) {
+  return Math.round((test.tStart - test.zones[zone].length) * 10) / 10;
 }
 
-function mzFinish() {
-  clearInterval(timerInterval);
-  timerRunning = false;
-  mzActive     = false;
-
-  elTimerBtn.textContent      = t('btn_start_test');
-  elTimerBtn.style.background = '';
-  elTimerBtn.style.color      = '';
-  elTimerDisplay.style.color  = 'var(--accent)';
-  elTimerStatus.style.color   = 'var(--ok)';
-  elTimerStatus.textContent   = t('mz_all_done');
-
-  mzRenderProfile();
-}
-
-function mzCancel() {
-  clearInterval(timerInterval);
-  Object.values(mzIntervals).forEach(id => clearInterval(id));
-  timerRunning = false;
-  mzActive     = false;
-  mzAvgTime    = null;
-
-  elTimerBtn.textContent      = t('btn_start_test');
-  elTimerBtn.style.background = '';
-  elTimerBtn.style.color      = '';
-  elTimerDisplay.textContent  = '00:00';
-  elTimerDisplay.style.color  = 'var(--accent)';
-  elTimerStatus.textContent   = '';
-
-  mzBuildUI(true); // сброс кнопок зон в disabled
-}
-
-function mzRenderProfile() {
-  const n      = mzZoneCount();
-  const tOut   = parseFloat(elTOutside.value);
-  const l      = parseFloat(elLength.value) || 0;
-  const w      = parseFloat(elWidth.value)  || 0;
-  const hEff   = effectiveHeight();
-  const zoneL  = l > 0 ? l / n : 0;
-  const zoneVol  = zoneL * w * hEff;
-  const zoneArea = zoneL * w;
-
-  const uaUnit = t('cfg_ua_unit');
-
-  // Зоны, остановленные быстрее MIN_TEST_SEC, в расчёт не берём: это ошибка нажатия
-  const results = mzStopTimes
-    .map((sec, i) => ({ zone: i + 1, sec }))
-    .filter(r => r.sec >= MIN_TEST_SEC)
-    .map(r => {
-      const ua       = uaFromCooling(zoneVol, T_TEST_START, T_TEST_END, tOut, r.sec);   // Вт/°C
-      const uaM2     = zoneArea > 0 ? ua / zoneArea : 0;
-      const coolRate = (T_TEST_START - T_TEST_END) / r.sec;                             // °C/с
-      return { ...r, ua, uaM2, coolRate };
-    });
-
-  if (!results.length) {
-    document.getElementById('calibrationResult').innerHTML =
-      `<div class="danger">${t('err_test_too_short')}</div>`;
-    elSaveCalibrationBtn.disabled = true;
-    return;
-  }
-
-  const maxUaM2 = Math.max(...results.map(r => r.uaM2));
-  const avgUaM2 = results.reduce((s, r) => s + r.uaM2, 0) / results.length;
-
-  // Эквивалентное время для сохранения в калибровку:
-  //   - прямое измерение (контроллер показал 25°C) — предпочтительно, точнее
-  //   - гармоническое среднее зональных времён     — фолбэк
-  const harmonicMean   = results.length / results.reduce((s, r) => s + 1 / r.sec, 0);
-  const buildingEquivSec = mzAvgTime ?? harmonicMean;
-  const buildingEquivSrc = mzAvgTime != null ? t('mz_ua_src_direct') : t('mz_ua_src_harmonic');
-
-  elTInitial.value    = T_TEST_START;
-  elTFinal.value      = T_TEST_END;
-  elTimeMinutes.value = (buildingEquivSec / 60).toFixed(3);
-
-  // UA здания — по тому же эквивалентному времени и объёму, что уйдут на сервер:
-  // показанное значение совпадёт с сохранённым
-  calculatedUA   = uaFromCooling(zoneVol * n, T_TEST_START, T_TEST_END, tOut, buildingEquivSec);
-  calculatedArea = l * w;
-
-  function quality(uaM2) {
-    if (uaM2 < 0.5) return { label: t('ua_quality_excellent'), bg: '#14532d', color: '#4ade80' };
-    if (uaM2 < 1.0) return { label: t('ua_quality_good'),      bg: '#713f12', color: '#fbbf24' };
-    if (uaM2 < 2.0) return { label: t('ua_quality_avg'),       bg: '#7c2d12', color: '#fb923c' };
-    return              { label: t('ua_quality_poor'),          bg: '#450a0a', color: '#f87171' };
-  }
-
-  const rows = results.map(r => {
-    const q   = quality(r.uaM2);
-    const pct = maxUaM2 > 0 ? Math.round((r.uaM2 / maxUaM2) * 100) : 0;
-    const isFirst = r.zone === 1, isLast = r.zone === n;
-    const sfx = isFirst ? ` <span class="muted" style="font-size:11px;">(${t('zone_entry')})</span>`
-               : isLast ? ` <span class="muted" style="font-size:11px;">(${t('zone_far')})</span>` : '';
+function renderTapPanel() {
+  if (!test) { elTapPanel.innerHTML = ''; return; }
+  const n = test.zones.length;
+  elTapPanel.innerHTML = test.zones.map((marks, i) => {
+    const drops = marks.length - 1;
+    const label = n > 1
+      ? `<span style="min-width:80px;font-weight:600;font-size:13px;">${t('zone_lbl', { n: i + 1 })}${
+          i === 0 ? ` <span class="muted" style="font-size:11px;">(${t('zone_entry')})</span>`
+          : i === n - 1 ? ` <span class="muted" style="font-size:11px;">(${t('zone_far')})</span>` : ''}</span>`
+      : '';
+    const list = marks.slice(1).map(([sec, temp]) => `${temp} °C — ${timerFormat(sec)}`).join(' · ');
     return `
-      <div style="margin-bottom:12px;">
-        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;">
-          <span><strong>${t('zone_lbl', { n: r.zone })}</strong>${sfx}</span>
-          <span style="color:${q.color};font-weight:700;">${r.uaM2.toFixed(2)} ${uaUnit}/м²</span>
-        </div>
-        <div style="background:#1a1b20;border-radius:6px;height:14px;overflow:hidden;">
-          <div style="width:${pct}%;height:14px;background:${q.color};border-radius:6px;transition:width .4s;"></div>
-        </div>
-        <div style="font-size:11px;color:var(--muted);margin-top:3px;">
-          ${t('zone_elapsed')}: ${timerFormat(r.sec)}
-          &nbsp;|&nbsp; ${t('zone_cool_rate')}: ${(r.coolRate * 60).toFixed(3)} °C/${t('unit_min')}
-        </div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px;background:var(--bg);border-radius:8px;margin-bottom:8px;">
+        ${label}
+        <button class="btn" data-zone="${i}" style="${n === 1 ? 'font-size:18px;padding:12px 22px;' : ''}">
+          ${t('tap_btn', { t: nextTemp(i) })}</button>
+        <span class="muted" style="font-size:12px;">${t('marks_count', { n: drops })}</span>
+        <div class="muted" style="flex-basis:100%;font-size:11px;">${list}</div>
       </div>`;
   }).join('');
-
-  const avgQ = quality(avgUaM2);
-
-  document.getElementById('calibrationResult').innerHTML = `
-    <div style="padding:14px;background:var(--ok-bg,#1a3a1a);border-left:3px solid var(--ok,#7bc96f);border-radius:4px;">
-      <strong>📊 ${t('zone_profile_h')}</strong>
-      <div style="margin-top:14px;">${rows}</div>
-      <hr style="border:0;border-top:1px solid var(--border);margin:12px 0;">
-      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-        <span class="muted">${t('zone_avg_lbl')}</span>
-        <strong>${avgUaM2.toFixed(2)} ${uaUnit}/м²</strong>
-        <span style="padding:2px 10px;border-radius:10px;font-size:12px;background:${avgQ.bg};color:${avgQ.color};">${avgQ.label}</span>
-      </div>
-      <div class="kv" style="margin-top:8px;"><span>${t('ua_coeff_lbl')}</span>
-        <span><strong>${calculatedUA.toFixed(0)} ${uaUnit}</strong></span></div>
-      <div style="margin-top:8px;font-size:12px;color:var(--muted);">
-        ${t('mz_ua_source')}: <strong>${buildingEquivSrc}</strong>
-        (${timerFormat(buildingEquivSec)})
-      </div>
-      <p class="warn" style="margin:8px 0 0;font-size:12px;">⚠️ ${t('ua_conditional_note')}</p>
-      <p class="muted" style="margin:10px 0 0;font-size:12px;">⚠️ ${t('zone_note')}</p>
-      <p class="muted" style="margin:6px 0 0;font-size:12px;">${t('cal_save_hint')}</p>
-    </div>`;
-
-  elSaveCalibrationBtn.disabled = false;
+  elTapPanel.querySelectorAll('button[data-zone]').forEach(btn =>
+    btn.addEventListener('click', () => recordMark(Number(btn.dataset.zone))));
 }
 
-// Перестраиваем UI при изменении количества зон (только если тест не идёт)
-document.getElementById('zoneCount')?.addEventListener('input', () => {
-  if (!timerRunning) mzBuildUI(true);
-});
+function recordMark(zone) {
+  if (!test) return;
+  test.zones[zone].push([elapsedSec(), nextTemp(zone)]);
+  const allDone = test.zones.every(m => m.length - 1 >= TARGET_DROPS);
+  const enough  = test.zones.every(m => m.length - 1 >= MIN_DROPS);
+  elFinishBtn.disabled = !enough;
+  if (allDone) { finishTest(); return; }
+  renderTapPanel();
+}
 
-elTimerBtn.addEventListener('click', () => {
-  // ── СТАРТ ──────────────────────────────────────────────────────────────────
-  if (!timerRunning) {
-    const tOut = parseFloat(elTOutside.value);
-    if (isNaN(tOut)) {
-      elTimerStatus.textContent = t('err_enter_outside_first');
-      elTimerStatus.style.color = 'var(--danger)';
-      return;
-    }
-    if (tOut >= T_TEST_END) {
-      elTimerStatus.textContent = t('err_outside_too_warm', { t_end: T_TEST_END });
-      elTimerStatus.style.color = 'var(--danger)';
-      return;
-    }
+function stopTimer() {
+  if (test && test.interval) clearInterval(test.interval);
+  elTimerBtn.textContent      = t('btn_start_test');
+  elTimerBtn.style.background = '';
+  elTimerBtn.style.color      = '';
+  elTimerDisplay.style.color  = 'var(--accent)';
+  elFinishBtn.style.display   = 'none';
+}
 
-    timerRunning   = true;
-    timerStartTime = Date.now();
-    elTimerDisplay.style.color = 'var(--accent-2)';
-    elTimerStatus.style.color  = '';
-
-    // Глобальный счётчик
-    timerInterval = setInterval(() => {
-      const elapsed = Math.floor((Date.now() - timerStartTime) / 1000);
-      elTimerDisplay.textContent = timerFormat(elapsed);
-    }, 500);
-
-    if (mzZoneCount() > 1) {
-      // ── МУЛЬТИЗОННЫЙ РЕЖИМ ───────────────────────────────────
-      mzActive    = true;
-      mzAvgTime   = null;
-      mzStopTimes = new Array(mzZoneCount()).fill(null);
-      mzIntervals = {};
-      mzBuildUI(false); // строим кнопки зон (активные)
-
-      elTimerStatus.textContent   = t('mz_timer_running', { n: mzZoneCount() });
-      elTimerBtn.textContent      = t('mz_cancel');
-      elTimerBtn.style.background = '';
-      elTimerBtn.style.color      = '';
-
-      // Запускаем живые счётчики для каждой зоны
-      for (let i = 0; i < mzZoneCount(); i++) {
-        mzIntervals[i] = setInterval(() => {
-          const el = document.getElementById(`mz-elapsed-${i}`);
-          if (el) {
-            const elapsed = Math.floor((Date.now() - timerStartTime) / 1000);
-            el.style.color  = 'var(--text)';
-            el.textContent  = timerFormat(elapsed);
-          }
-        }, 500);
-      }
-
-    } else {
-      // ── ОДНОЗОННЫЙ РЕЖИМ ─────────────────────────────────────
-      elTimerStatus.textContent   = t('timer_running', { t_end: T_TEST_END });
-      elTimerBtn.textContent      = t('btn_stop_test', { t_end: T_TEST_END });
-      elTimerBtn.style.background = 'var(--danger, #ff7a7a)';
-      elTimerBtn.style.color      = '#1b0b0b';
-    }
-
-  // ── СТОП / ОТМЕНА ──────────────────────────────────────────────────────────
-  } else {
-    if (mzActive) {
-      // В мультизонном режиме кнопка = Отмена
-      mzCancel();
-    } else {
-      // Однозонный стоп
-      clearInterval(timerInterval);
-      timerRunning = false;
-
-      const elapsedSeconds = Math.floor((Date.now() - timerStartTime) / 1000);
-
-      elTimerBtn.textContent      = t('btn_start_test');
-      elTimerBtn.style.background = '';
-      elTimerBtn.style.color      = '';
-      elTimerDisplay.style.color  = 'var(--accent)';
-
-      if (elapsedSeconds < MIN_TEST_SEC) {
-        elTimerStatus.textContent = t('err_test_too_short');
-        elTimerStatus.style.color = 'var(--warn, #ffcf6b)';
-        return;
-      }
-
-      elTInitial.value    = T_TEST_START;
-      elTFinal.value      = T_TEST_END;
-      elTimeMinutes.value = (elapsedSeconds / 60).toFixed(3);
-
-      elTimerStatus.style.color = 'var(--ok)';
-      elTimerStatus.textContent = t('timer_done', { min: (elapsedSeconds / 60).toFixed(1) });
-
-      elCalculateBtn.click();
-    }
+function startTest() {
+  const tOut   = parseFloat(elTOutside.value);
+  const tStart = parseFloat(elTStartInside.value);
+  if (isNaN(tOut) || isNaN(tStart)) {
+    elTimerStatus.textContent = t('err_enter_temps_first');
+    elTimerStatus.style.color = 'var(--danger)';
+    return;
   }
-});
+  if (tStart - tOut < MIN_DELTA_T) {
+    elTimerStatus.textContent = t('err_start_temp', { dt: MIN_DELTA_T });
+    elTimerStatus.style.color = 'var(--danger)';
+    return;
+  }
+  // Отметки — целые градусы ниже старта: стартовую температуру округляем до 0.1
+  const start = Math.round(tStart * 10) / 10;
+  test = {
+    startMs: Date.now(), tStart: start, tOut,
+    zones: Array.from({ length: zoneCount() }, () => [[0, start]]),
+    interval: setInterval(() => { elTimerDisplay.textContent = timerFormat(elapsedSec()); }, 500),
+  };
+  lastResult = null;
+  elSaveCalibrationBtn.disabled = true;
+  elCalibrationResult.innerHTML = '';
+  elTimerDisplay.style.color  = 'var(--accent-2)';
+  elTimerStatus.style.color   = '';
+  elTimerStatus.textContent   = t(zoneCount() > 1 ? 'mz_timer_running' : 'timer_running', { n: zoneCount() });
+  elTimerBtn.textContent      = t('btn_cancel_test');
+  elFinishBtn.style.display   = '';
+  elFinishBtn.disabled        = true;
+  renderTapPanel();
+}
 
-// ── Конец логики таймера ─────────────────────────────────────────────────────
+function cancelTest() {
+  stopTimer();
+  test = null;
+  elTimerDisplay.textContent = '00:00';
+  elTimerStatus.textContent  = t('timer_ready');
+  renderTapPanel();
+}
 
-let calculatedUA    = null;
-let calculatedArea  = null;   // м² — для UA/м² качественной оценки
+async function finishTest() {
+  const done = test;
+  stopTimer();
+  test = null;
+  renderTapPanel();
+  elTimerStatus.style.color = 'var(--ok)';
+  elTimerStatus.textContent = t('timer_done', { min: (Math.max(...done.zones.map(m => m[m.length - 1][0])) / 60).toFixed(1) });
+  try {
+    lastResult = await computeCurveResult(done);
+    renderCurveResult(lastResult);
+    elSaveCalibrationBtn.disabled = false;
+  } catch (e) {
+    elCalibrationResult.innerHTML = `<div class="danger">${escapeHtml(t('err_prefix') + String(e.message || e))}</div>`;
+  }
+}
+
+// Расчёт на сервере (core/cooling_fit). Объём — из СОХРАНЁННЫХ размеров корпуса:
+// по ним же сервер пересчитает UA при сохранении, и показанное совпадёт с сохранённым
+async function computeCurveResult(done) {
+  const config = await loadConfig();
+  const b = config.building;
+  if (!b) throw new Error(t('err_need_dims'));
+  const volume = b.length_m * b.width_m * b.height_m;
+  const n = done.zones.length;
+
+  const zones = [];
+  for (let i = 0; i < n; i++) {
+    const r = await fetch('./thermal/calibrate-curve', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        t_outside_c: done.tOut,
+        points: done.zones[i].map(([t_s, temp_c]) => ({ t_s, temp_c })),
+        ...(n > 1 ? { volume_m3: volume / n } : {}),
+      }),
+    });
+    if (!r.ok) throw new Error(await r.text());
+    zones.push(await r.json());
+  }
+  return {
+    zones, n, tOut: done.tOut, floorArea: b.length_m * b.width_m,
+    uaTotal: zones.reduce((s, z) => s + z.ua_coefficient, 0),
+    points: n === 1 ? done.zones[0] : null,
+    durationMin: Math.max(...zones.map(z => z.duration_minutes)),
+  };
+}
+
+function uaQuality(uaM2) {
+  if (uaM2 < 0.5) return { label: t('ua_quality_excellent'), bg: '#14532d', color: '#4ade80' };
+  if (uaM2 < 1.0) return { label: t('ua_quality_good'),      bg: '#713f12', color: '#fbbf24' };
+  if (uaM2 < 2.0) return { label: t('ua_quality_avg'),       bg: '#7c2d12', color: '#fb923c' };
+  return              { label: t('ua_quality_poor'),          bg: '#450a0a', color: '#f87171' };
+}
+
+function renderCurveResult(res) {
+  const uaUnit  = t('cfg_ua_unit');
+  const zoneArea = res.floorArea / res.n;
+  const uaM2    = res.uaTotal / res.floorArea;
+  const q       = uaQuality(uaM2);
+  const cStruct = res.zones.reduce((s, z) => s + z.c_struct_j_per_k, 0);
+  const cAir    = res.zones.reduce((s, z) => s + z.c_air_j_per_k, 0);
+  const warnings = [...new Set(res.zones.flatMap(z => z.warnings))];
+
+  const zoneRows = res.n > 1 ? res.zones.map((z, i) => {
+    const zq = uaQuality(z.ua_coefficient / zoneArea);
+    return `<div class="kv"><span>${t('zone_lbl', { n: i + 1 })}</span>
+      <span style="color:${zq.color};font-weight:700;">${(z.ua_coefficient / zoneArea).toFixed(2)} ${uaUnit}/м²</span></div>`;
+  }).join('') : '';
+
+  const warnHtml = warnings.map(w =>
+    `<p class="warn" style="margin:6px 0 0;font-size:12px;">⚠️ ${t('cal_warn_' + w)}</p>`).join('');
+
+  elCalibrationResult.innerHTML = `
+    <div style="padding:12px; background:var(--ok-bg,#1a3a1a); border-left:3px solid var(--ok,#7bc96f); border-radius:4px;">
+      <strong>${t('cal_curve_complete')}</strong>
+      <div style="margin-top:8px; display:grid; gap:6px;">
+        <div class="kv"><span>${t('ua_coeff_lbl')}</span><span><strong>${res.uaTotal.toFixed(0)} ${uaUnit}</strong></span></div>
+        <div class="kv"><span>${t('ua_per_m2_lbl')}</span><span>${uaM2.toFixed(2)} ${uaUnit}/м²
+          <span style="padding:2px 10px;border-radius:10px;font-size:12px;background:${q.bg};color:${q.color};">${q.label}</span></span></div>
+        <div class="kv"><span>${t('c_struct_lbl')}</span><span>${t('c_struct_ratio', { x: (cStruct / cAir).toFixed(1) })}</span></div>
+        <div class="kv"><span>${t('duration_lbl')}</span><span>${res.durationMin.toFixed(0)} ${t('unit_min')}</span></div>
+        ${zoneRows}
+      </div>
+      ${warnHtml}
+      <p class="muted" style="margin:8px 0 0;font-size:12px;">ℹ️ ${t('cal_equilibrium_note')}</p>
+      <p class="muted" style="margin:6px 0 0;font-size:13px;">${t('cal_save_hint')}</p>
+    </div>`;
+}
+
+document.getElementById('zoneCount')?.addEventListener('input', () => { if (!test) renderTapPanel(); });
+
+elTimerBtn.addEventListener('click', () => (test ? cancelTest() : startTest()));
+elFinishBtn.addEventListener('click', () => { if (test) finishTest(); });
+
+// ── Конец логики теста ───────────────────────────────────────────────────────
 
 // Читает house_id из dataset опции текущего выбора в dimHouseSelect
 function getSelectedHouseId() {
@@ -459,9 +325,14 @@ elSaveBuildingBtn.addEventListener('click', async () => {
       config.calibration = null;
       config.heater      = null;
     } else if (config.calibration) {
-      // Тот же корпус, но размеры могли измениться: UA пересчитает сервер
-      // по сохранённому тесту и новому объёму
-      delete config.calibration.ua_coefficient;
+      if (config.calibration.points || config.calibration.method !== 'cooling_curve') {
+        // Тот же корпус, но размеры могли измениться: UA пересчитает сервер
+        // по сохранённым отметкам (или старому тесту) и новому объёму
+        delete config.calibration.ua_coefficient;
+      } else {
+        // Многозонная калибровка хранит только итог — пересчитать нельзя, нужен новый тест
+        config.calibration = null;
+      }
     }
     config.house_id  = houseId;
     // Backend принимает height_m — передаём эффективную высоту (среднее стены и конька)
@@ -518,130 +389,31 @@ elSaveHeaterBtn.addEventListener('click', async () => {
   }
 });
 
-// Calculate UA coefficient
-elCalculateBtn.addEventListener('click', async () => {
-  const tInitial    = parseFloat(elTInitial.value);
-  const tFinal      = parseFloat(elTFinal.value);
-  const tOutside    = parseFloat(elTOutside.value);
-  const timeMinutes = parseFloat(elTimeMinutes.value);
-
-  if (isNaN(tInitial) || isNaN(tFinal) || isNaN(tOutside) || isNaN(timeMinutes) || timeMinutes <= 0) {
-    elCalibrationResult.innerHTML = `<div class="danger">${t('err_fill_fields')}</div>`;
-    return;
-  }
-
-  if (tInitial <= tOutside || tFinal <= tOutside) {
-    elCalibrationResult.innerHTML = `<div class="danger">${t('err_temps_outside')}</div>`;
-    return;
-  }
-  if (tFinal >= tInitial) {
-    elCalibrationResult.innerHTML = `<div class="danger">${t('err_no_cooling')}</div>`;
-    return;
-  }
-
-  try {
-    const r = await fetch('./thermal/calibrate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        t_initial_c:  tInitial,
-        t_final_c:    tFinal,
-        t_outside_c:  tOutside,
-        time_minutes: timeMinutes
-      })
-    });
-
-    if (!r.ok) {
-      const errText = await r.text();
-      throw new Error(errText);
-    }
-
-    const data = await r.json();
-    calculatedUA = data.ua_coefficient;
-
-    // Считаем площадь пола из DOM — не нужно менять API
-    const l = parseFloat(elLength.value);
-    const w = parseFloat(elWidth.value);
-    calculatedArea = (l > 0 && w > 0) ? l * w : null;
-
-    const coolingRate = Math.abs(data.cooling_rate_per_minute);
-    const uaUnit      = t('cfg_ua_unit');
-    const volUnit     = t('unit_m3');
-    const rateUnit    = `°C/${t('unit_min')}`;
-
-    // Качественная оценка изоляции по UA/м²
-    let qualityHtml = '';
-    if (calculatedArea && calculatedArea > 0) {
-      const uaPerM2 = calculatedUA / calculatedArea;
-      let qLabel, qBg, qColor;
-      if      (uaPerM2 < 0.5) { qLabel = t('ua_quality_excellent'); qBg = '#14532d'; qColor = '#4ade80'; }
-      else if (uaPerM2 < 1.0) { qLabel = t('ua_quality_good');      qBg = '#713f12'; qColor = '#fbbf24'; }
-      else if (uaPerM2 < 2.0) { qLabel = t('ua_quality_avg');       qBg = '#7c2d12'; qColor = '#fb923c'; }
-      else                    { qLabel = t('ua_quality_poor');       qBg = '#450a0a'; qColor = '#f87171'; }
-      qualityHtml = `
-        <div style="margin-top:10px; padding:10px; background:var(--bg); border-radius:6px; display:grid; gap:6px;">
-          <div class="kv"><span>${t('ua_per_m2_lbl')}</span><span>${uaPerM2.toFixed(2)} ${uaUnit}/м²</span></div>
-          <div style="display:inline-block; padding:5px 14px; border-radius:20px; font-weight:700; font-size:14px; background:${qBg}; color:${qColor};">${qLabel}</div>
-        </div>`;
-    }
-
-    elCalibrationResult.innerHTML = `
-      <div style="padding:12px; background:var(--ok-bg,#1a3a1a); border-left:3px solid var(--ok,#7bc96f); border-radius:4px;">
-        <strong>${t('cal_complete')}</strong>
-        <div style="margin-top:8px; display:grid; gap:6px;">
-          <div class="kv"><span>${t('ua_coeff_lbl')}</span><span><strong>${calculatedUA.toFixed(1)} ${uaUnit}</strong></span></div>
-          <div class="kv"><span>${t('vol_label')}</span><span>${data.volume_m3.toFixed(1)} ${volUnit}</span></div>
-          <div class="kv"><span>${t('cool_rate_lbl')}</span><span>${coolingRate.toFixed(3)} ${rateUnit}</span></div>
-        </div>
-        ${qualityHtml}
-        <p class="warn" style="margin:8px 0 0 0; font-size:12px;">⚠️ ${t('ua_conditional_note')}</p>
-        <p class="muted" style="margin:8px 0 0 0; font-size:13px;">
-          ${t('cal_save_hint')}
-        </p>
-      </div>
-    `;
-
-    elSaveCalibrationBtn.disabled = false;
-
-  } catch (e) {
-    elCalibrationResult.innerHTML = `<div class="danger">${t('err_prefix')}${String(e)}</div>`;
-    elSaveCalibrationBtn.disabled = true;
-  }
-});
-
 // Save calibration
 elSaveCalibrationBtn.addEventListener('click', async () => {
-  if (!calculatedUA) {
-    alert(t('err_calc_first'));
-    return;
-  }
-
-  const tInitial    = parseFloat(elTInitial.value);
-  const tFinal      = parseFloat(elTFinal.value);
-  const tOutside    = parseFloat(elTOutside.value);
-  const timeMinutes = parseFloat(elTimeMinutes.value);
-
+  if (!lastResult) { alert(t('err_calc_first')); return; }
   try {
     const config = await loadConfig();
-    config.house_id  = getSelectedHouseId();
-    config.calibration = {
-      t_initial_c:  tInitial,
-      t_final_c:    tFinal,
-      t_outside_c:  tOutside,
-      time_minutes: timeMinutes
-    };
+    config.house_id = getSelectedHouseId();
+    const r = lastResult;
+    const first = r.points ? r.points[0] : null;
+    const last  = r.points ? r.points[r.points.length - 1] : null;
+    config.calibration = r.points
+      // Однозонный: отправляем отметки, UA посчитает сервер по объёму корпуса
+      // (и пересчитает сам, если размеры потом поменяются)
+      ? { t_initial_c: first[1], t_final_c: last[1], t_outside_c: r.tOut,
+          time_minutes: last[0] / 60, method: 'cooling_curve',
+          points: r.points.map(([t_s, temp_c]) => ({ t_s, temp_c })) }
+      // Многозонный: UA здания = сумма зон; отметки по зонам разные, сохраняем итог
+      : { t_initial_c: 0, t_final_c: 0, t_outside_c: r.tOut, time_minutes: r.durationMin,
+          ua_coefficient: r.uaTotal, method: 'cooling_curve' };
 
-    const r = await fetch('./thermal/config', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(config)
+    const resp = await fetch('./thermal/config', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(config),
     });
-
-    if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
-
+    if (!resp.ok) throw new Error(`${resp.status} ${await resp.text()}`);
     alert(t('cal_saved_alert'));
     await loadAndDisplayConfig();
-
   } catch (e) {
     alert(t('err_save_cal') + e.message);
   }
@@ -809,7 +581,12 @@ async function loadAndDisplayConfig() {
       <div>
         <strong>${t('cfg_cal_h')}</strong>
         <div class="kv"><span>${t('cfg_ua')}</span><span>${uaStr}</span></div>
-        <div class="kv"><span>${t('cfg_test_cond')}</span><span>${t('cfg_test_val', { t0: c.t_initial_c, t1: c.t_final_c, time: c.time_minutes, tout: c.t_outside_c })}</span></div>
+        <div class="kv"><span>${t('cfg_method')}</span><span>${t(c.method === 'cooling_curve' ? 'cfg_method_curve' : 'cfg_method_air_only')}</span></div>
+        ${c.method === 'cooling_curve' && c.points
+          ? `<div class="kv"><span>${t('cfg_test_cond')}</span><span>${t('cfg_curve_val', { n: c.points.length - 1, time: Math.round(c.time_minutes), tout: c.t_outside_c })}</span></div>`
+          : c.method === 'cooling_curve' ? ''
+          : `<div class="kv"><span>${t('cfg_test_cond')}</span><span>${t('cfg_test_val', { t0: c.t_initial_c, t1: c.t_final_c, time: c.time_minutes, tout: c.t_outside_c })}</span></div>
+             <p class="warn" style="margin:6px 0 0;font-size:12px;">⚠️ ${t('cfg_air_only_recalibrate')}</p>`}
       </div>
     `;
   } else {

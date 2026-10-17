@@ -1,15 +1,16 @@
 """
-Калибровка UA по тесту остывания (TODO P1, ревью 2026-10-16).
+Калибровка UA по ОДНОЙ точке остывания и теплоёмкости воздуха (TODO P1, ревью 2026-10-16).
+
+Метод условный и в UI заменён кривой остывания (test_cooling_fit.py); функция
+осталась для пересчёта старых сохранённых калибровок при изменении размеров.
 """
 from __future__ import annotations
 
-import json
 import math
-from pathlib import Path
 
 import pytest
 
-from backend.app.core.building_thermal import THERMAL_CONFIG_PATH, calculate_ua_coefficient
+from backend.app.core.building_thermal import calculate_ua_coefficient
 
 
 def test_ua_uses_exponential_cooling_law():
@@ -36,21 +37,3 @@ def test_warming_house_is_rejected_not_abs():
     """Раньше abs() превращал рост температуры в правдоподобный положительный UA."""
     with pytest.raises(ValueError):
         calculate_ua_coefficient(1000, 18, 20, 0, 10)
-
-
-def test_api_returns_400_for_warming_and_marks_method(client):
-    path = Path(THERMAL_CONFIG_PATH)
-    path.write_text(json.dumps({"building": {"length_m": 10, "width_m": 10, "height_m": 10}}),
-                    encoding="utf-8")
-    try:
-        bad = client.post("/thermal/calibrate",
-                          json={"t_initial_c": 18, "t_final_c": 20, "t_outside_c": 0, "time_minutes": 10})
-        ok = client.post("/thermal/calibrate",
-                         json={"t_initial_c": 20, "t_final_c": 18, "t_outside_c": 0, "time_minutes": 10})
-    finally:
-        path.unlink(missing_ok=True)
-
-    assert bad.status_code == 400
-    assert ok.status_code == 200
-    assert ok.json()["method"] == "air_only_cooling"
-    assert ok.json()["ua_coefficient"] == pytest.approx(213.48, abs=0.01)

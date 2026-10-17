@@ -1351,7 +1351,11 @@ function renderEvap(d) {
     <h2 data-i18n="step3_h2">Step 3: Cooling test</h2>
     <div style="margin-bottom:16px;" data-i18n-html="step3_proc_html"></div>
     <div style="display:flex; gap:16px; flex-wrap:wrap; align-items:flex-end;">
-      <label style="flex:1; min-width:200px;">
+      <label style="flex:1; min-width:180px;">
+        <span data-i18n="label_t_start_inside">Indoor temperature now, °C</span>
+        <input id="tStartInside" type="number" step="0.1" min="-20" max="50" placeholder="25.0">
+      </label>
+      <label style="flex:1; min-width:180px;">
         <span data-i18n="label_t_outside">Outdoor temperature, °C</span>
         <input id="tOutside" type="number" step="0.1" min="-40" max="50" placeholder="-5.0">
       </label>
@@ -1360,21 +1364,14 @@ function renderEvap(d) {
         <input id="zoneCount" type="number" min="1" max="8" value="1" style="text-align:center;">
       </label>
     </div>
-    <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;">
-      <div class="kv" style="flex:1; min-width:130px;"><span data-i18n="lbl_t_start">Start</span><span><strong>30 °C</strong></span></div>
-      <div class="kv" style="flex:1; min-width:130px;"><span data-i18n="lbl_t_stop">Stop</span><span><strong>25 °C</strong></span></div>
-    </div>
     <div style="margin-top:20px; padding:20px 16px; background:var(--bg); border-radius:10px; text-align:center;">
       <div id="timerDisplay" style="font-size:52px; font-weight:700; font-family:monospace; letter-spacing:6px; color:var(--accent);">00:00</div>
       <div id="timerStatus" class="muted" style="margin:10px 0 18px; font-size:13px;" data-i18n="timer_ready"></div>
       <button id="timerBtn" class="btn" data-i18n="btn_start_test">▶ Start test</button>
+      <button id="finishTestBtn" class="btn btn-secondary" style="display:none;" disabled data-i18n="btn_finish_test">✔ Finish</button>
     </div>
-    <!-- Кнопки зон (показываются только в мультизонном режиме) -->
-    <div id="zoneTimers" style="margin-top:12px; display:none;"></div>
-    <input id="tInitial"    type="hidden" value="30">
-    <input id="tFinal"      type="hidden" value="25">
-    <input id="timeMinutes" type="hidden" value="">
-    <button id="calculateBtn" style="display:none;">Calculate</button>
+    <!-- Кнопки «градусник показал N °C» — по одной на зону -->
+    <div id="tapPanel" style="margin-top:12px;"></div>
     <div id="calibrationResult" style="margin-top:14px;"></div>
     <button id="saveCalibrationBtn" class="btn" style="margin-top:10px;" disabled data-i18n="btn_save_cal">💾 Save calibration</button>
   </div>
