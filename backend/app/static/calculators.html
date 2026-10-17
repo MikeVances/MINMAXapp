@@ -607,21 +607,30 @@ document.addEventListener('i18n:change', () => {
 function initHouseSelector(selId, onSelect) {
   const sel = document.getElementById(selId);
   if (!sel) return;
-  try {
-    const tabs = JSON.parse(localStorage.getItem('vent_mvp_tabs_v1') || '[]');
-    sel.innerHTML = `<option value="">— ${t('dims_no_houses') || '…'} —</option>`;
+  let tabs = [];
+  try { tabs = JSON.parse(localStorage.getItem('vent_mvp_tabs_v1') || '[]'); }
+  catch(e) { console.warn('house selector:', e); }
+
+  // Подписи опций — из словаря, поэтому при смене языка список собирается
+  // заново, а текущий выбор сохраняется
+  function fillOptions() {
+    const chosen = sel.value;
+    sel.innerHTML = `<option value="">— ${t('dims_no_houses')} —</option>`;
     tabs.forEach((tab, i) => {
       const opt = document.createElement('option');
       opt.value = i;
-      const name = tab.id ? t('house_tab', { id: tab.id }) : `#${i + 1}`;
-      opt.textContent = name + (tab.birds ? ` — ${Number(tab.birds).toLocaleString()}` : '');
+      const name = tab.id ? houseLabel(tab.id) : `#${i + 1}`;
+      opt.textContent = name + (tab.birds ? ` — ${Number(tab.birds).toLocaleString(I18N.lang)}` : '');
       sel.appendChild(opt);
     });
-    sel.addEventListener('change', () => {
-      const i = parseInt(sel.value, 10);
-      if (!isNaN(i) && tabs[i]) onSelect(tabs[i]);
-    });
-  } catch(e) { console.warn('house selector:', e); }
+    sel.value = chosen;
+  }
+  fillOptions();
+  sel.addEventListener('change', () => {
+    const i = parseInt(sel.value, 10);
+    if (!isNaN(i) && tabs[i]) onSelect(tabs[i]);
+  });
+  document.addEventListener('i18n:change', fillOptions);
 }
 
 function _setVal(id, v) { if (v != null && v !== '') { const el = document.getElementById(id); if (el) el.value = v; } }
@@ -647,12 +656,8 @@ document.querySelectorAll('.tool-tab:not([disabled])').forEach(btn => {
   let profileTabs = [];
   let selIdx = 0;
 
-  function buildSelector() {
-    try {
-      const raw = localStorage.getItem(STORE_KEY);
-      if (raw) profileTabs = JSON.parse(raw) || [];
-    } catch {}
-
+  // Подписи корпусов — из словаря: при смене языка список собирается заново, выбор сохраняется
+  function fillHouseOptions() {
     selEl.innerHTML = '';
     if (!profileTabs.length) {
       const opt = document.createElement('option');
@@ -661,15 +666,26 @@ document.querySelectorAll('.tool-tab:not([disabled])').forEach(btn => {
       selEl.appendChild(opt);
       return;
     }
-
     profileTabs.forEach((tab, idx) => {
       const opt = document.createElement('option');
       opt.value = idx;
-      const name = tab.id ? t('house_tab', { id: tab.id }) : `#${idx + 1}`;
+      const name = tab.id ? houseLabel(tab.id) : `#${idx + 1}`;
       const extra = tab.birds ? ` — ${tab.birds.toLocaleString(I18N.lang)}` : '';
       opt.textContent = name + extra;
       selEl.appendChild(opt);
     });
+    selEl.value = String(selIdx);
+  }
+
+  function buildSelector() {
+    try {
+      const raw = localStorage.getItem(STORE_KEY);
+      if (raw) profileTabs = JSON.parse(raw) || [];
+    } catch {}
+
+    fillHouseOptions();
+    document.addEventListener('i18n:change', fillHouseOptions);
+    if (!profileTabs.length) return;
 
     // Целевая RH — своя у каждого корпуса
     const rhEl = document.getElementById('prof-target-rh');
@@ -1293,11 +1309,11 @@ function renderEvap(d) {
     if (d.water_regime === 'safe') {
       waterCard.style.borderLeft = '3px solid var(--ok, #6fcf97)';
       noteEl.style.background    = 'rgba(111,207,151,0.08)';
-      noteEl.textContent = `✅ Температура воды (${d.water_supply_t_c.toFixed(1)} °C) выше точки росы (${minT} °C). Испарение на пэде не нарушено — вода работает в штатном режиме.`;
+      noteEl.textContent = t('ev_water_safe', { t_water: d.water_supply_t_c.toFixed(1), t_dew: minT });
     } else {
       waterCard.style.borderLeft = '3px solid var(--danger, #ff7a7a)';
       noteEl.style.background    = 'rgba(255,122,122,0.08)';
-      noteEl.textContent = `⚠️ Вода (${d.water_supply_t_c.toFixed(1)} °C) холоднее точки росы (${minT} °C). На поверхности пэда будет конденсироваться влага из воздуха, выделяя скрытую теплоту 2430 кДж/кг — это снижает эффективность насыщения пэда. Подогрейте воду минимум до ${minT} °C или используйте рециркуляцию.`;
+      noteEl.textContent = t('ev_water_cold', { t_water: d.water_supply_t_c.toFixed(1), t_dew: minT });
     }
 
     waterCard.style.display = 'block';
@@ -1460,27 +1476,35 @@ function renderEvap(d) {
     // Only show houses that have at least length or width saved
     const withDims = tabs.filter(t => t.length_m || t.width_m);
 
-    if (withDims.length === 0) {
-      const opt = document.createElement('option');
-      opt.textContent = t('dims_no_houses');
-      opt.value = '';
-      selEl.appendChild(opt);
-      return;
+    // Подписи — из словаря: при смене языка список собирается заново, выбор сохраняется
+    function fillOptions() {
+      const chosen = selEl.value;
+      selEl.innerHTML = '';
+      if (withDims.length === 0) {
+        const opt = document.createElement('option');
+        opt.textContent = t('dims_no_houses');
+        opt.value = '';
+        selEl.appendChild(opt);
+        return;
+      }
+      withDims.forEach((tab, idx) => {
+        const opt  = document.createElement('option');
+        opt.value  = idx;
+        opt.dataset.houseId = tab.id ?? '';   // для calibration.js — читает при сохранении
+        const name = tab.id ? houseLabel(tab.id) : `#${idx + 1}`;
+        const l = tab.length_m, w = tab.width_m;
+        const hw = tab.height_wall_m, hr = tab.height_ridge_m;
+        let dimStr = '';
+        if (l && w) dimStr = `${l}×${w}`;
+        if (hw && hr) dimStr += ` h${hw}/${hr}`;
+        opt.textContent = dimStr ? `${name} (${dimStr})` : name;
+        selEl.appendChild(opt);
+      });
+      if (chosen !== '') selEl.value = chosen;
     }
-
-    withDims.forEach((tab, idx) => {
-      const opt  = document.createElement('option');
-      opt.value  = idx;
-      opt.dataset.houseId = tab.id ?? '';   // для calibration.js — читает при сохранении
-      const name = tab.id ? t('house_tab', { id: tab.id }) : `#${idx + 1}`;
-      const l = tab.length_m, w = tab.width_m;
-      const hw = tab.height_wall_m, hr = tab.height_ridge_m;
-      let dimStr = '';
-      if (l && w) dimStr = `${l}×${w}`;
-      if (hw && hr) dimStr += ` h${hw}/${hr}`;
-      opt.textContent = dimStr ? `${name} (${dimStr})` : name;
-      selEl.appendChild(opt);
-    });
+    fillOptions();
+    document.addEventListener('i18n:change', fillOptions);
+    if (withDims.length === 0) return;
 
     // Auto-fill from the first house on page load
     fillDims(withDims[0]);
@@ -1876,6 +1900,11 @@ function renderEvap(d) {
   // ── Load ─────────────────────────────────────────────────────────────────
   async function loadProfilesList() {
     profilesList = await fetchJSON('./profiles');
+    renderProfilesList();
+  }
+
+  // Группы списка подписаны из словаря — вызывается и при смене языка
+  function renderProfilesList() {
     growthSel.innerHTML = '';
     // Сначала профили производителей, затем свои — двумя группами
     [[true, t('gp_builtin')], [false, t('gp_custom')]].forEach(([builtin, label]) => {
@@ -1926,6 +1955,10 @@ function renderEvap(d) {
   if (houseSel) houseSel.addEventListener('change', () => selectProfile(profileForHouse()).catch(() => {}));
 
   document.addEventListener('DOMContentLoaded', loadProfile);
+
+  // Смена языка: подписи групп, таблица и графики собраны в JS из словаря.
+  // Правки таблицы живут в editedDays и переживают перерисовку
+  document.addEventListener('i18n:change', () => { renderProfilesList(); if (current) renderAll(); });
 })();
 </script>
 <script src="./feedback.js"></script>

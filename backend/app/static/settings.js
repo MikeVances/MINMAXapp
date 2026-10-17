@@ -71,9 +71,12 @@ function renderConfig() {
   });
 }
 
+let configLoaded = false;
+
 async function loadAll() {
   try {
     cfg = await fetchJSON('./settings/app-config');
+    configLoaded = true;
     renderConfig();
   } catch(e) {
     console.error('Settings load error:', e);
@@ -81,3 +84,7 @@ async function loadAll() {
 }
 
 loadAll();
+
+// Смена языка: форма собрана в JS из словаря — перерисовать. Правки пользователя
+// уже лежат в cfg (обработчики change), поэтому ничего не теряется
+document.addEventListener('i18n:change', () => { if (configLoaded) renderConfig(); });

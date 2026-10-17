@@ -88,7 +88,7 @@ function renderTabs() {
   tabs.forEach((tab, i) => {
     const b = document.createElement('button');
     b.className = 'tab' + (i === active ? ' active' : '');
-    b.textContent = t('house_tab', { id: tab.id });
+    b.textContent = houseLabel(tab.id);
     b.onclick = () => { active = i; fillForm(); renderTabs(); renderHouseTabs(); loadFlockInfo(); };
     elTabs.appendChild(b);
   });
@@ -217,9 +217,11 @@ elAddTab.onclick = () => {
     alert(t('err_max_houses', { max: MAX_HOUSES }));
     return;
   }
-  const last = tabs[tabs.length - 1]?.id || '0';
-  const nextNum = parseInt(last, 10);
-  const nextId = isNaN(nextNum) ? `${tabs.length + 1}` : String(nextNum + 1);
+  // Новый корпус получает имя на языке интерфейса («New house 3» / «Новое помещение 3»).
+  // Номер подбираем так, чтобы имя не совпало с существующим: id — ключ данных корпуса
+  const existing = new Set(tabs.map(x => String(x.id)));
+  let n = tabs.length + 1, nextId;
+  do { nextId = t('house_new_name', { n: n++ }); } while (existing.has(nextId));
   tabs.push({ id: nextId, birds: 30000, age_days: 21, outside_t: 10, cap: null });
   active = tabs.length - 1;
   saveTabs(tabs);
@@ -228,7 +230,7 @@ elAddTab.onclick = () => {
 
 elDelTab.onclick = () => {
   const tab = tabs[active];
-  const name = tab?.id ?? (active + 1);
+  const name = houseLabel(tab?.id ?? (active + 1));
   pendingDeleteIndex = active;
   if (elModal && elModalText) {
     elModalText.textContent = t('modal_remove_txt', { name });

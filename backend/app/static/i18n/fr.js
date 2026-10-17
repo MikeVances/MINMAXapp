@@ -540,4 +540,10 @@
     gp_src_basis_as_hatched_on_farm:  'poids en élevage (avec contenu digestif), sexes mélangés',
     gp_src_method_mitchell_by_weight: 'température selon le poids vif (formule Dr M. Mitchell, SRUC), recalculée sur le poids journalier de cette souche ; HR 60 %',
     gp_src_copied_from:               'copié depuis {id}',
+
+    // ── Water supply note (pad cooling), house naming ──
+    ev_water_safe:     '✅ La température de l\'eau ({t_water} °C) est supérieure au point de rosée ({t_dew} °C). L\'évaporation sur le pad n\'est pas perturbée — l\'eau fonctionne normalement.',
+    ev_water_cold:     '⚠️ L\'eau ({t_water} °C) est plus froide que le point de rosée ({t_dew} °C). L\'humidité de l\'air se condensera à la surface du pad en libérant 2430 kJ/kg de chaleur latente — cela réduit l\'efficacité de saturation du pad. Chauffez l\'eau à au moins {t_dew} °C ou utilisez la recirculation.',
+    house_placeholder: 'p. ex. Bâtiment A-1',
+    house_new_name:    'Nouveau bâtiment {n}',
 };

@@ -540,4 +540,10 @@
     gp_src_basis_as_hatched_on_farm:  'masa na fermie (z treścią przewodu pokarmowego), płeć mieszana',
     gp_src_method_mitchell_by_weight: 'temperatura według masy żywej (wzór dr. M. Mitchella, SRUC), przeliczona na dzienną masę tego krzyżowania; RH 60 %',
     gp_src_copied_from:               'skopiowano z {id}',
+
+    // ── Water supply note (pad cooling), house naming ──
+    ev_water_safe:     '✅ Temperatura wody ({t_water} °C) jest wyższa od punktu rosy ({t_dew} °C). Parowanie na panelu nie jest zakłócone — woda pracuje normalnie.',
+    ev_water_cold:     '⚠️ Woda ({t_water} °C) jest zimniejsza od punktu rosy ({t_dew} °C). Na powierzchni panelu będzie skraplać się wilgoć z powietrza, oddając 2430 kJ/kg ciepła utajonego — to obniża skuteczność nasycenia panelu. Podgrzej wodę co najmniej do {t_dew} °C lub zastosuj recyrkulację.',
+    house_placeholder: 'np. Kurnik A-1',
+    house_new_name:    'Nowy kurnik {n}',
 };

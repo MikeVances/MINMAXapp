@@ -541,4 +541,10 @@
     gp_src_basis_as_hatched_on_farm:  'on-farm weight (with gut fill), as-hatched',
     gp_src_method_mitchell_by_weight: 'temperature by live weight (Dr. M. Mitchell, SRUC formula), recalculated to this breed\'s daily weight; RH 60 %',
     gp_src_copied_from:               'copied from {id}',
+
+    // ── Water supply note (pad cooling), house naming ──
+    ev_water_safe:     '✅ Water temperature ({t_water} °C) is above the dew point ({t_dew} °C). Pad evaporation is not disturbed — the water works normally.',
+    ev_water_cold:     '⚠️ Water ({t_water} °C) is colder than the dew point ({t_dew} °C). Moisture from the air will condense on the pad surface, releasing 2430 kJ/kg of latent heat — this reduces the pad saturation efficiency. Heat the water to at least {t_dew} °C or use recirculation.',
+    house_placeholder: 'e.g. House A-1',
+    house_new_name:    'New house {n}',
 };

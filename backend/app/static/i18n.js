@@ -76,6 +76,15 @@
     return err;
   };
 
+  // ── Подпись корпуса ───────────────────────────────────────────────────────
+  // Числовой id — «порядковый» корпус из вкладок по умолчанию, его подписываем
+  // через словарь (House 1 / Птичник 1). Любое другое имя дал пользователь
+  // (или оно создано как «Новое помещение 3» на его языке) — показываем как есть.
+  window.houseLabel = function (id) {
+    const s = String(id ?? '');
+    return /^\d+$/.test(s) ? t('house_tab', { id: s }) : s;
+  };
+
   // ── applyDOM(): translate all data-i18n* attributes in the document ───────
   function applyDOM() {
     const locale   = window.LOCALES[currentLang] || {};

@@ -60,6 +60,7 @@ const MIN_DELTA_T  = 10;  // °C: меньшая разница с улицей 
 // test = null | { startMs, tStart, tOut, zones: [[[сек, °C], …], …], interval }
 let test = null;
 let lastResult = null;    // { zones, uaTotal, points (однозонный), tOut }
+let lastAnalysis = null;  // последний ответ /thermal/analyze-heaters — для перерисовки
 
 function timerFormat(totalSeconds) {
   const h = Math.floor(totalSeconds / 3600);
@@ -447,72 +448,76 @@ elAnalyzeBtn.addEventListener('click', async () => {
 
     if (!r.ok) throw await apiError(r);
 
-    const data = await r.json();
-
-    const dutyCyclePct = data.duty_cycle_percent.toFixed(1);
-    const qWalls       = data.q_walls_kw.toFixed(1);
-    const qVent        = data.q_ventilation_kw.toFixed(1);
-    const qBirds       = data.q_birds_kw.toFixed(1);
-    const qHeater      = data.q_heater_required_kw.toFixed(1);
-    const birdFrac     = (data.bird_heat_fraction * 100).toFixed(0);
-    const combAir      = data.combustion_air_m3h.toFixed(0);
-
-    // Цвет duty cycle: зелёный → жёлтый → красный
-    const dutyColor = data.duty_cycle >= 0.95 ? 'var(--danger,#e05252)'
-                    : data.duty_cycle >= 0.75 ? 'var(--warning,#f4b942)'
-                    : 'var(--success,#4caf50)';
-
-    const overloadBanner = !data.heater_covers_need
-      ? `<div class="danger" style="padding:6px 8px; border-radius:4px; margin-top:4px;">${t('heater_overload_warn')}</div>`
-      : '';
-
-    const airSection = data.combustion_air_m3h > 0
-      ? `<div class="kv" style="background:var(--warning-bg,#3a2f1a); padding:8px; border-radius:4px; border-left:3px solid var(--warning,#f4b942);">
-           <span>${t('combustion_lbl')}</span>
-           <span><strong>${combAir} ${t('unit_m3h')}</strong></span>
-         </div>
-         <p class="muted" style="margin:4px 0 0 0; font-size:12px;">${t('air_added_hint')}</p>`
-      : `<p class="muted" style="margin:8px 0 0 0;">${t('no_combustion')}</p>`;
-
-    elAnalysisResult.innerHTML = `
-      <div style="padding:12px; background:var(--card); border:1px solid var(--border); border-radius:8px; margin-top:12px;">
-        <strong>${t('analysis_title')}</strong>
-        <div style="margin-top:10px; display:grid; gap:6px;">
-
-          <div style="font-size:11px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:.5px;">
-            ${t('heat_balance_title')}
-          </div>
-          <div class="kv"><span>${t('q_walls_lbl')}</span><span>${qWalls} ${t('unit_kw')}</span></div>
-          <div class="kv"><span>${t('q_ventilation_lbl')}</span><span>${qVent} ${t('unit_kw')}</span></div>
-          <div class="kv">
-            <span>${t('q_birds_lbl')}</span>
-            <span>−${qBirds} ${t('unit_kw')} <span class="muted" style="font-size:12px;">(${birdFrac}% ${t('bird_heat_pct_lbl')})</span></span>
-          </div>
-
-          <div class="kv" style="border-top:1px solid var(--border); padding-top:8px; font-weight:600;">
-            <span>${t('q_heater_lbl')}</span>
-            <span style="color:${dutyColor}">${qHeater} ${t('unit_kw')} &nbsp;·&nbsp; ${dutyCyclePct}%</span>
-          </div>
-          ${overloadBanner}
-
-          <div style="font-size:11px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:.5px; margin-top:8px;">
-            ${t('status_lbl')}
-          </div>
-          <div style="padding:6px 8px; background:var(--bg); border-radius:4px; font-size:13px;">
-            ${t('ht_status_' + data.status_code, {
-              birds_kw: qBirds, deficit_kw: data.heater_deficit_kw.toFixed(1), duty_pct: data.duty_cycle_percent.toFixed(0),
-            })}
-          </div>
-
-          ${airSection}
-        </div>
-      </div>
-    `;
+    lastAnalysis = await r.json();
+    renderAnalysis(lastAnalysis);
 
   } catch (e) {
     elAnalysisResult.innerHTML = `<div class="danger">${escapeHtml(t('err_prefix') + (e.message || e))}</div>`;
   }
 });
+
+// Результат анализа обогрева — по последнему ответу сервера; вызывается и при смене языка
+function renderAnalysis(data) {
+  const dutyCyclePct = data.duty_cycle_percent.toFixed(1);
+  const qWalls       = data.q_walls_kw.toFixed(1);
+  const qVent        = data.q_ventilation_kw.toFixed(1);
+  const qBirds       = data.q_birds_kw.toFixed(1);
+  const qHeater      = data.q_heater_required_kw.toFixed(1);
+  const birdFrac     = (data.bird_heat_fraction * 100).toFixed(0);
+  const combAir      = data.combustion_air_m3h.toFixed(0);
+
+  // Цвет duty cycle: зелёный → жёлтый → красный
+  const dutyColor = data.duty_cycle >= 0.95 ? 'var(--danger,#e05252)'
+                  : data.duty_cycle >= 0.75 ? 'var(--warning,#f4b942)'
+                  : 'var(--success,#4caf50)';
+
+  const overloadBanner = !data.heater_covers_need
+    ? `<div class="danger" style="padding:6px 8px; border-radius:4px; margin-top:4px;">${t('heater_overload_warn')}</div>`
+    : '';
+
+  const airSection = data.combustion_air_m3h > 0
+    ? `<div class="kv" style="background:var(--warning-bg,#3a2f1a); padding:8px; border-radius:4px; border-left:3px solid var(--warning,#f4b942);">
+         <span>${t('combustion_lbl')}</span>
+         <span><strong>${combAir} ${t('unit_m3h')}</strong></span>
+       </div>
+       <p class="muted" style="margin:4px 0 0 0; font-size:12px;">${t('air_added_hint')}</p>`
+    : `<p class="muted" style="margin:8px 0 0 0;">${t('no_combustion')}</p>`;
+
+  elAnalysisResult.innerHTML = `
+    <div style="padding:12px; background:var(--card); border:1px solid var(--border); border-radius:8px; margin-top:12px;">
+      <strong>${t('analysis_title')}</strong>
+      <div style="margin-top:10px; display:grid; gap:6px;">
+
+        <div style="font-size:11px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:.5px;">
+          ${t('heat_balance_title')}
+        </div>
+        <div class="kv"><span>${t('q_walls_lbl')}</span><span>${qWalls} ${t('unit_kw')}</span></div>
+        <div class="kv"><span>${t('q_ventilation_lbl')}</span><span>${qVent} ${t('unit_kw')}</span></div>
+        <div class="kv">
+          <span>${t('q_birds_lbl')}</span>
+          <span>−${qBirds} ${t('unit_kw')} <span class="muted" style="font-size:12px;">(${birdFrac}% ${t('bird_heat_pct_lbl')})</span></span>
+        </div>
+
+        <div class="kv" style="border-top:1px solid var(--border); padding-top:8px; font-weight:600;">
+          <span>${t('q_heater_lbl')}</span>
+          <span style="color:${dutyColor}">${qHeater} ${t('unit_kw')} &nbsp;·&nbsp; ${dutyCyclePct}%</span>
+        </div>
+        ${overloadBanner}
+
+        <div style="font-size:11px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:.5px; margin-top:8px;">
+          ${t('status_lbl')}
+        </div>
+        <div style="padding:6px 8px; background:var(--bg); border-radius:4px; font-size:13px;">
+          ${t('ht_status_' + data.status_code, {
+            birds_kw: qBirds, deficit_kw: data.heater_deficit_kw.toFixed(1), duty_pct: data.duty_cycle_percent.toFixed(0),
+          })}
+        </div>
+
+        ${airSection}
+      </div>
+    </div>
+  `;
+}
 
 // Load current configuration
 async function loadConfig() {
@@ -531,7 +536,7 @@ async function loadAndDisplayConfig() {
 
   if (config.house_id) {
     html += `<div style="margin-bottom:10px; padding:6px 12px; background:var(--bg); border-radius:6px; font-size:13px;">
-      🏠 ${t('cfg_house_lbl')}: <strong>${escapeHtml(t('house_tab', { id: config.house_id }))}</strong>
+      🏠 ${t('cfg_house_lbl')}: <strong>${escapeHtml(houseLabel(config.house_id))}</strong>
     </div>`;
   }
 
@@ -627,3 +632,18 @@ updateDimensionsDisplay();
 updateGasInfoVisibility();
 fillFormFromConfig();
 loadAndDisplayConfig();
+
+// Смена языка: разметку с data-i18n переводит i18n.js, а всё собранное здесь из
+// словаря перерисовываем по последним данным. Идущий тест не прерывается.
+document.addEventListener('i18n:change', () => {
+  updateDimensionsDisplay();
+  renderTapPanel();
+  if (test) {
+    // applyDOM вернул кнопке надпись «Старт» по data-i18n — во время теста она «Отменить»
+    elTimerBtn.textContent    = t('btn_cancel_test');
+    elTimerStatus.textContent = t(test.zones.length > 1 ? 'mz_timer_running' : 'timer_running', { n: test.zones.length });
+  }
+  if (lastResult)   renderCurveResult(lastResult);
+  if (lastAnalysis) renderAnalysis(lastAnalysis);
+  loadAndDisplayConfig();
+});

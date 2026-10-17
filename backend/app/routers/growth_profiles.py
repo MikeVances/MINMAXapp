@@ -14,7 +14,7 @@ from __future__ import annotations
 import re
 from typing import Dict, List, Optional, Union
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
 from ..api_errors import api_error
@@ -123,7 +123,7 @@ def get_profile(profile_id: str):
     try:
         return _full(load_profile(profile_id))
     except ProfileNotFound:
-        raise HTTPException(status_code=404, detail="profile_not_found")
+        raise api_error(404, "profile_not_found", id=profile_id)
 
 
 @router.put("/{profile_id}", response_model=ProfileOut, dependencies=[Depends(require_write_token)])
@@ -147,7 +147,7 @@ def put_profile(profile_id: str, payload: ProfileIn):
     try:
         return _full(save_custom_profile(profile))
     except BuiltinProfileReadOnly:
-        raise HTTPException(status_code=403, detail="builtin_profile_read_only")
+        raise api_error(403, "builtin_profile_read_only")
 
 
 @router.delete("/{profile_id}", dependencies=[Depends(require_write_token)])
@@ -156,7 +156,7 @@ def delete_profile(profile_id: str):
     try:
         delete_custom_profile(profile_id)
     except BuiltinProfileReadOnly:
-        raise HTTPException(status_code=403, detail="builtin_profile_read_only")
+        raise api_error(403, "builtin_profile_read_only")
     except ProfileNotFound:
-        raise HTTPException(status_code=404, detail="profile_not_found")
+        raise api_error(404, "profile_not_found", id=profile_id)
     return {"deleted": profile_id}

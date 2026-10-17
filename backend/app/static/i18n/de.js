@@ -540,4 +540,10 @@
     gp_src_basis_as_hatched_on_farm:  'Lebendmasse im Stall (mit Darminhalt), gemischtgeschlechtlich',
     gp_src_method_mitchell_by_weight: 'Temperatur nach Lebendmasse (Formel Dr. M. Mitchell, SRUC), auf die Tagesmasse dieser Linie umgerechnet; RH 60 %',
     gp_src_copied_from:               'kopiert aus {id}',
+
+    // ── Water supply note (pad cooling), house naming ──
+    ev_water_safe:     '✅ Die Wassertemperatur ({t_water} °C) liegt über dem Taupunkt ({t_dew} °C). Die Verdunstung am Pad ist nicht gestört — das Wasser arbeitet normal.',
+    ev_water_cold:     '⚠️ Das Wasser ({t_water} °C) ist kälter als der Taupunkt ({t_dew} °C). Auf der Pad-Oberfläche kondensiert Feuchte aus der Luft und gibt 2430 kJ/kg latente Wärme ab — das senkt den Sättigungswirkungsgrad des Pads. Erwärmen Sie das Wasser auf mindestens {t_dew} °C oder nutzen Sie Umwälzung.',
+    house_placeholder: 'z. B. Stall A-1',
+    house_new_name:    'Neuer Stall {n}',
 };
