@@ -120,7 +120,9 @@ function renderTabs() {
     };
     elTabs.appendChild(b);
   });
+  Tabs.sync(elTabs);
 }
+Tabs.init(elTabs);
 
 // Синхронизирует поле "cap" из num_fans × fan_cap_m3h и показывает подсказку
 function syncCap() {
@@ -219,7 +221,8 @@ elDelTab.onclick = () => {
   pendingDeleteIndex = active;
   if (elModal && elModalText) {
     elModalText.textContent = t('modal_remove_txt', { name });
-    elModal.classList.remove('hidden');
+    // Фокус — на «Отмена»: удаление необратимо, случайный Enter не должен удалять
+    Dialog.open(elModal, elModalCancel, cancelDelete);
   }
 };
 
@@ -236,21 +239,16 @@ function applyDelete(index) {
   renderTabs(); fillForm();
 }
 
+function cancelDelete() {
+  pendingDeleteIndex = null;
+  Dialog.close(elModal);
+}
 if (elModalOk) elModalOk.addEventListener('click', () => {
   applyDelete(pendingDeleteIndex);
   pendingDeleteIndex = null;
-  elModal.classList.add('hidden');
-  elModal.removeAttribute('style');
-  const c = elModal.querySelector('.modal-card');
-  if (c) c.removeAttribute('style');
+  Dialog.close(elModal);
 });
-if (elModalCancel) elModalCancel.addEventListener('click', () => {
-  pendingDeleteIndex = null;
-  elModal.classList.add('hidden');
-  elModal.removeAttribute('style');
-  const c = elModal.querySelector('.modal-card');
-  if (c) c.removeAttribute('style');
-});
+if (elModalCancel) elModalCancel.addEventListener('click', cancelDelete);
 
 // Кнопка "Сохранить данные" — записывает форму в localStorage и показывает подтверждение
 elSum.onclick = () => {

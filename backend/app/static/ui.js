@@ -42,4 +42,74 @@
   document.addEventListener('i18n:change', () => {
     shown.forEach(el => { if (el._statusText) el.textContent = el._statusText(); });
   });
+
+  // ── Вкладки (корпуса на главной, инструменты в калькуляторах) ──────────────
+  // Вид вкладок держится на классе .active. Экранный диктор его не видит: без
+  // role=tab/aria-selected вкладки звучали как ряд одинаковых кнопок, и не было
+  // слышно, какая открыта. Перемещающийся tabindex: Tab заходит в ряд один раз,
+  // дальше стрелки — как у вкладок операционной системы (WAI-ARIA Tabs).
+  window.Tabs = {
+    init(container) {
+      container.setAttribute('role', 'tablist');
+      container.addEventListener('keydown', e => {
+        const step = { ArrowRight: 1, ArrowLeft: -1, Home: 'first', End: 'last' }[e.key];
+        if (step === undefined) return;
+        const tabs = [...container.querySelectorAll('[role="tab"]:not([disabled])')];
+        const i = tabs.indexOf(document.activeElement);
+        if (i < 0) return;
+        e.preventDefault();
+        const next = step === 'first' ? tabs[0]
+                   : step === 'last'  ? tabs[tabs.length - 1]
+                   : tabs[(i + step + tabs.length) % tabs.length];
+        next.click();
+        // Вкладки корпусов пересобираются по клику — фокус ставим на ту, что
+        // в итоге выбрана (переход могла отклонить неверная форма)
+        (container.querySelector('[aria-selected="true"]') || next).focus();
+      });
+      window.Tabs.sync(container);
+    },
+    // Атрибуты — по классу .active; звать после каждой смены вкладки
+    sync(container) {
+      container.querySelectorAll(':scope > button').forEach(b => {
+        const on = b.classList.contains('active');
+        b.setAttribute('role', 'tab');
+        b.setAttribute('aria-selected', on ? 'true' : 'false');
+        b.tabIndex = on ? 0 : -1;
+      });
+    },
+  };
+
+  // ── Модальные окна ─────────────────────────────────────────────────────────
+  // Escape закрывает (как «Отмена»), Tab ходит по кругу внутри окна, а после
+  // закрытия фокус возвращается на кнопку, которая окно открыла. Без этого
+  // клавиатура уходила под затемнение, и окно закрывалось только мышью.
+  const FOCUSABLE = 'button:not([disabled]), [href], input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])';
+
+  window.Dialog = {
+    open(modal, focusEl, onCancel) {
+      modal._returnFocus = document.activeElement;
+      modal._onCancel = onCancel;
+      modal.classList.remove('hidden');
+      (focusEl || modal.querySelector(FOCUSABLE))?.focus();
+    },
+    close(modal) {
+      modal.classList.add('hidden');
+      const back = modal._returnFocus;
+      modal._returnFocus = null;
+      if (back && document.contains(back)) back.focus();
+    },
+  };
+
+  document.addEventListener('keydown', e => {
+    const modal = [...document.querySelectorAll('.modal')].find(m => !m.classList.contains('hidden') && m._onCancel);
+    if (!modal) return;
+    if (e.key === 'Escape') { e.preventDefault(); modal._onCancel(); return; }
+    if (e.key !== 'Tab') return;
+    const items = [...modal.querySelectorAll(FOCUSABLE)];
+    if (!items.length) return;
+    const first = items[0], last = items[items.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    else if (!modal.contains(document.activeElement)) { e.preventDefault(); first.focus(); }
+  });
 })();

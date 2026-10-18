@@ -16,12 +16,12 @@
     modal.id        = 'feedbackModal';
     modal.className = 'modal hidden';
     modal.innerHTML = `
-      <div class="modal-card dialog-narrow">
-        <h3 class="mt-0 mb-10" data-i18n="feedback_title">Send Feedback</h3>
+      <div class="modal-card dialog-narrow" role="dialog" aria-modal="true" aria-labelledby="feedbackTitle">
+        <h3 id="feedbackTitle" class="mt-0 mb-10" data-i18n="feedback_title">Send Feedback</h3>
         <textarea id="feedbackText" class="feedback-text"
-          rows="5" maxlength="2000"
+          rows="5" maxlength="2000" aria-labelledby="feedbackTitle"
           data-i18n-placeholder="feedback_placeholder"></textarea>
-        <div id="feedbackStatus" class="feedback-status"></div>
+        <div id="feedbackStatus" class="feedback-status" role="status"></div>
         <div class="d-flex gap-8 jc-end mt-10">
           <button id="feedbackCancel" class="btn btn-secondary" data-i18n="feedback_cancel">Cancel</button>
           <button id="feedbackSend"   class="btn"               data-i18n="feedback_send">Send</button>
@@ -41,12 +41,11 @@
       textEl.value    = '';
       statusEl.textContent = '';
       setTone(statusEl, null);
-      modal.classList.remove('hidden');
-      textEl.focus();
+      Dialog.open(modal, textEl, closeModal);
     }
 
     function closeModal() {
-      modal.classList.add('hidden');
+      Dialog.close(modal);
     }
 
     btn.addEventListener('click', openModal);

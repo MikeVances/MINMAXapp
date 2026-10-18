@@ -144,8 +144,8 @@
 
   <!-- Confirm delete modal -->
   <div id="modal" class="modal hidden">
-    <div class="modal-card">
-      <h3 class="mt-0 mb-8" data-i18n="modal_title">Remove house?</h3>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle" aria-describedby="modalText">
+      <h3 id="modalTitle" class="mt-0 mb-8" data-i18n="modal_title">Remove house?</h3>
       <p class="muted" id="modalText" data-i18n="modal_default_txt">Are you sure you want to remove this house?</p>
       <div class="d-flex gap-8 jc-end mt-12">
         <button id="modalCancel" class="btn btn-secondary" data-i18n="modal_cancel">Cancel</button>

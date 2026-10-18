@@ -15,22 +15,24 @@ function renderConfig() {
   elConfigSection.innerHTML = `
     <div class="card mb-16">
       <h2>${t('farm_params_h2')}</h2>
+      <!-- label, а не div: подпись становится именем поля для экранного диктора и
+           касание по подписи ставит курсор в поле -->
       <div class="d-grid gap-10">
-        <div class="kv"><span>${t('cycle_days_lbl')}</span><span><input id="cycle_days" type="text" data-num data-int inputmode="numeric" data-min="21" data-max="56" value="${cfg.cycle_days ?? 42}"> ${t('unit_days')}</span></div>
-        <div class="kv"><span>${t('mortality_lbl')}</span><span><input id="mort_total" type="text" data-num inputmode="decimal" data-min="0" data-max="100" value="${(100 - (cfg.total_mortality_pct ?? 4)).toFixed(2)}"> %</span></div>
+        <label class="kv m-0"><span>${t('cycle_days_lbl')}</span><span><input id="cycle_days" type="text" data-num data-int inputmode="numeric" data-min="21" data-max="56" value="${cfg.cycle_days ?? 42}"> ${t('unit_days')}</span></label>
+        <label class="kv m-0"><span>${t('mortality_lbl')}</span><span><input id="mort_total" type="text" data-num inputmode="decimal" data-min="0" data-max="100" value="${(100 - (cfg.total_mortality_pct ?? 4)).toFixed(2)}"> %</span></label>
       </div>
 
       <hr class="divider my-14 mx-0">
       <div class="fw-600 fs-13 c-text mb-10">${t('cigr_section_h')}</div>
       <div class="d-grid gap-10">
-        <div class="kv"><span>${t('v_tunnel_lbl')}</span><span><input id="v_tunnel" type="text" data-num inputmode="decimal" data-min="0.5" data-max="5.0" value="${cfg.v_tunnel_ms ?? 2.5}"> ${t('unit_ms')}</span></div>
-        <div class="kv"><span>${t('safety_factor_lbl')}</span><span><input id="safety_factor" type="text" data-num inputmode="decimal" data-min="1.0" data-max="3.0" value="${cfg.safety_factor_qmin ?? 1.5}"></span></div>
-        <div class="kv"><span>${t('tunnel_min_day_lbl')}</span><span><input id="tunnel_min_day" type="text" data-num data-int inputmode="numeric" data-min="1" data-max="42" value="${cfg.tunnel_min_day ?? 14}"> ${t('unit_days')}</span></div>
-        <div class="kv"><span>${t('tunnel_min_temp_lbl')}</span><span><input id="tunnel_min_temp" type="text" data-num inputmode="decimal" data-min="0" data-max="35" value="${cfg.tunnel_min_temp_c ?? 18.0}"> ${t('unit_celsius')}</span></div>
+        <label class="kv m-0"><span>${t('v_tunnel_lbl')}</span><span><input id="v_tunnel" type="text" data-num inputmode="decimal" data-min="0.5" data-max="5.0" value="${cfg.v_tunnel_ms ?? 2.5}"> ${t('unit_ms')}</span></label>
+        <label class="kv m-0"><span>${t('safety_factor_lbl')}</span><span><input id="safety_factor" type="text" data-num inputmode="decimal" data-min="1.0" data-max="3.0" value="${cfg.safety_factor_qmin ?? 1.5}"></span></label>
+        <label class="kv m-0"><span>${t('tunnel_min_day_lbl')}</span><span><input id="tunnel_min_day" type="text" data-num data-int inputmode="numeric" data-min="1" data-max="42" value="${cfg.tunnel_min_day ?? 14}"> ${t('unit_days')}</span></label>
+        <label class="kv m-0"><span>${t('tunnel_min_temp_lbl')}</span><span><input id="tunnel_min_temp" type="text" data-num inputmode="decimal" data-min="0" data-max="35" value="${cfg.tunnel_min_temp_c ?? 18.0}"> ${t('unit_celsius')}</span></label>
       </div>
       <div class="mt-14 d-flex gap-10 ai-center">
         <button id="saveBtn" class="btn">${t('btn_save')}</button>
-        <span id="saveStatus" class="muted fs-12"></span>
+        <span id="saveStatus" class="muted fs-12" role="status"></span>
       </div>
     </div>`;
 

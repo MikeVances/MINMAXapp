@@ -122,8 +122,8 @@
 
         <!-- House selector -->
         <div class="d-flex ai-center gap-8 mb-16 wrap">
-          <span class="muted fs-12 ws-nowrap" data-i18n="prof_from_house">House:</span>
-          <select id="l-house-sel" class="flex-1 minw-160"><option value="">—</option></select>
+          <span id="l-house-lbl" class="muted fs-12 ws-nowrap" data-i18n="prof_from_house">House:</span>
+          <select id="l-house-sel" aria-labelledby="l-house-lbl" class="flex-1 minw-160"><option value="">—</option></select>
         </div>
 
         <p class="muted fs-12 mt-0 mb-14" data-i18n="leakage_dims_grp">House dimensions</p>
@@ -207,8 +207,8 @@
 
           <!-- House selector -->
           <div class="d-flex ai-center gap-8 mb-16 wrap">
-            <span class="muted fs-12 ws-nowrap" data-i18n="prof_from_house">House:</span>
-            <select id="ev-house-sel" class="flex-1 minw-160"><option value="">—</option></select>
+            <span id="ev-house-lbl" class="muted fs-12 ws-nowrap" data-i18n="prof_from_house">House:</span>
+            <select id="ev-house-sel" aria-labelledby="ev-house-lbl" class="flex-1 minw-160"><option value="">—</option></select>
           </div>
 
           <h3 class="hint mt-0 mb-6" data-i18n="evap_dims_grp">House dimensions</h3>
@@ -394,8 +394,8 @@
 
           <!-- House selector -->
           <div class="d-flex ai-center gap-8 mb-16 wrap">
-            <span class="muted fs-12 ws-nowrap" data-i18n="prof_from_house">House:</span>
-            <select id="tn-house-sel" class="flex-1 minw-160"><option value="">—</option></select>
+            <span id="tn-house-lbl" class="muted fs-12 ws-nowrap" data-i18n="prof_from_house">House:</span>
+            <select id="tn-house-sel" aria-labelledby="tn-house-lbl" class="flex-1 minw-160"><option value="">—</option></select>
           </div>
 
           <h3 class="hint mt-0 mb-6" data-i18n="tunnel_sect_grp">Tunnel cross-section</h3>
@@ -675,15 +675,25 @@ function houseSectionHeight(tab) {
 }
 
 // ─────── Tab switching ───────
+const toolTabs = document.querySelector('.tool-tabs');
 document.querySelectorAll('.tool-tab:not([disabled])').forEach(btn => {
+  // Связка вкладка ↔ панель для экранного диктора: «вкладка, выбрана, 2 из 6»
+  const panel = document.getElementById('panel-' + btn.dataset.tool);
+  btn.id = 'tab-' + btn.dataset.tool;
+  if (panel) {
+    btn.setAttribute('aria-controls', panel.id);
+    panel.setAttribute('role', 'tabpanel');
+    panel.setAttribute('aria-labelledby', btn.id);
+  }
   btn.addEventListener('click', () => {
     document.querySelectorAll('.tool-tab').forEach(tb => tb.classList.remove('active'));
     document.querySelectorAll('.tool-panel').forEach(p => p.classList.remove('active'));
     btn.classList.add('active');
-    const panel = document.getElementById('panel-' + btn.dataset.tool);
     if (panel) panel.classList.add('active');
+    Tabs.sync(toolTabs);
   });
 });
+Tabs.init(toolTabs);
 
 // ─────── Ventilation Profile ───────
 (function() {
@@ -1232,20 +1242,16 @@ function renderTunnel(d, t_real) {
 
 // Кнопка "Перейти к испарительному охлаждению" — переключает вкладку
 document.getElementById('tn-to-evap-btn').addEventListener('click', () => {
-  document.querySelectorAll('.tool-tab').forEach(tb => tb.classList.remove('active'));
-  document.querySelectorAll('.tool-panel').forEach(p => p.classList.remove('active'));
-  const evapTab   = document.querySelector('[data-tool="evap"]');
-  const evapPanel = document.getElementById('panel-evap');
-  if (evapTab)   evapTab.classList.add('active');
-  if (evapPanel) evapPanel.classList.add('active');
-  evapPanel?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  // Тот же путь, что клик по вкладке: панель, класс и aria-selected меняются в одном месте
+  document.querySelector('.tool-tab[data-tool="evap"]').click();
+  document.getElementById('panel-evap')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 });
 
 // ═══════════════════════════════════════════════════
 // EVAPORATIVE COOLING
 // ═══════════════════════════════════════════════════
 
-// Доступные толщины для каждого типа пэда SANHE
+// Доступные толщины для каждого типа панели SANHE
 const SANHE_THICKNESSES = {
   '7090': [75, 100, 150, 200, 300],
   '7060': [75, 100, 150, 200, 300],
@@ -1431,7 +1437,7 @@ function renderEvap(d) {
       <div class="kv"><span data-i18n="bldg_area_lbl">Floor area</span><span id="areaDisplay" class="fw-600" data-i18n="area_default">— m²</span></div>
     </div>
     <button id="saveBuildingBtn" class="btn mt-12" data-i18n="btn_save_dims">Save dimensions</button>
-    <span id="buildingStatus" class="muted ml-10"></span>
+    <span id="buildingStatus" class="muted ml-10" role="status"></span>
   </div>
 
   <!-- Step 2 -->
@@ -1450,7 +1456,7 @@ function renderEvap(d) {
     </div>
     <div id="gasInfo" class="note-warn mt-12 p-12" data-i18n-html="gas_info_html"></div>
     <button id="saveHeaterBtn" class="btn mt-12" data-i18n="btn_save_heater">Save configuration</button>
-    <span id="heaterStatus" class="muted ml-10"></span>
+    <span id="heaterStatus" class="muted ml-10" role="status"></span>
   </div>
 
   <!-- Step 3: Timer -->
@@ -1624,7 +1630,9 @@ function renderEvap(d) {
     const xTicks  = allX.filter(x => x === 1 || x % 7 === 0);
     const xLabels = allX.filter(x => x === 1 || x % 14 === 0 || x === xMax);
 
-    let o = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" class="chart-svg">`;
+    // role=img + название: диктор называет график целиком, а не читает подписи осей
+    // по одной; значения доступны в таблице профиля под графиками
+    let o = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" class="chart-svg" role="img" aria-label="${esc(title + (yUnit ? ', ' + yUnit : ''))}">`;
     o += `<rect width="${W}" height="${H}" fill="var(--card)" rx="8"/>`;
     o += `<text x="${P.l}" y="17" fill="var(--text)" font-size="12" font-weight="600" font-family="system-ui,Arial">${title}</text>`;
     o += `<text x="${W - P.r}" y="17" fill="var(--muted)" font-size="10" text-anchor="end" font-family="system-ui,Arial">${yUnit}</text>`;
@@ -1799,8 +1807,12 @@ function renderEvap(d) {
   // ── Editor ───────────────────────────────────────────────────────────────
   function rowHTML(d, readonly) {
     const dis = readonly ? 'disabled' : '';
+    // Имя поля для экранного диктора: «Вес, г · День 14». Заголовок колонки с полем
+    // в ячейке не связывается, и 21 поле звучали одинаково — «поле ввода»
+    const COL = { body_weight_g: 'col_weight', min_temp_c: 'col_min_temp', rv_percent: 'col_rh' };
     const cell = (key, val, extra) =>
-      `<td><input type="text" data-num ${extra || ''} value="${val ?? ''}" data-key="${key}" data-day="${d.day}" ${dis}/></td>`;
+      `<td><input type="text" data-num ${extra || ''} value="${val ?? ''}" data-key="${key}" data-day="${d.day}" ${dis}
+        aria-label="${esc(t(COL[key]) + ' · ' + t('col_day') + ' ' + d.day)}"/></td>`;
     const r = v => (v == null ? '' : +(+v).toFixed(1));
     return `<tr>
       <td><strong>${d.day}</strong></td>
@@ -1853,7 +1865,7 @@ function renderEvap(d) {
             <span class="muted fs-12 fw-400">(${ro ? t('gp_builtin') : t('gp_custom')})</span></h2>
           <div class="d-flex gap-8 ai-center wrap">
             ${buttons}
-            <span id="prof-status" class="muted fs-12"></span>
+            <span id="prof-status" class="muted fs-12" role="status"></span>
           </div>
         </div>
         ${ro ? `<p class="muted fs-11 mt-0 mb-6">${t('gp_readonly_hint')}</p>` : ''}
