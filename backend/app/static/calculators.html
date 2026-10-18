@@ -13,6 +13,7 @@
   <script src="./i18n/fr.js"></script>
   <script src="./i18n.js"></script>
   <script src="./ui.js"></script>
+  <script src="./numfield.js"></script>
   <script src="./write-token.js"></script>
 </head>
 <body data-page-title="calc_title">
@@ -67,16 +68,16 @@
       <div class="field-row mb-14">
         <label>
           <span data-i18n="label_outdoor_t">Outdoor temperature, °C</span>
-          <input id="prof-outside-t" type="number" step="1" min="-40" max="50" value="15">
+          <input id="prof-outside-t" type="text" data-num data-min="-40" data-max="50" value="15">
         </label>
         <label>
           <span data-i18n="label_outdoor_rh">Outdoor humidity, %</span>
-          <input id="prof-outside-rh" type="number" step="1" min="0" max="100" value="60">
+          <input id="prof-outside-rh" type="text" data-num inputmode="decimal" data-min="0" data-max="100" value="60">
         </label>
         <!-- Целевая RH в корпусе: сдвигает уставку T по ощущаемой температуре (Ross 2025, табл. 2.5) -->
         <label>
           <span data-i18n="label_target_rh">Target house RH, %</span>
-          <input id="prof-target-rh" type="number" step="1" min="40" max="70" value="60">
+          <input id="prof-target-rh" type="text" data-num inputmode="decimal" data-min="40" data-max="70" value="60">
         </label>
         <label>
           <span data-i18n="label_disp_mode">Display mode</span>
@@ -124,11 +125,11 @@
         <div class="field-row">
           <label>
             <span data-i18n="label_l_length">Length, m</span>
-            <input id="l-length" type="number" step="0.5" min="10" value="96" />
+            <input id="l-length" type="text" data-num inputmode="decimal" data-min="10" value="96" required />
           </label>
           <label>
             <span data-i18n="label_l_width">Width, m</span>
-            <input id="l-width" type="number" step="0.5" min="5" value="18" />
+            <input id="l-width" type="text" data-num inputmode="decimal" data-min="5" value="18" required />
           </label>
         </div>
 
@@ -136,12 +137,12 @@
         <p class="muted fs-12 mt-0 mb-14" data-i18n="leakage_test_grp">Tightness test</p>
         <label>
           <span data-i18n="label_fan_cap_25pa">Test fan capacity at 25 Pa, m³/h</span>
-          <input id="l-fan-cap" type="number" step="500" min="500" value="34000" />
+          <input id="l-fan-cap" type="text" data-num inputmode="decimal" data-min="500" value="34000" required />
           <span class="muted fs-11" data-i18n="hint_fan_20000">≈ 20 000 CFM × 1.7</span>
         </label>
         <label>
           <span data-i18n="label_test_pa">Static pressure at test, Pa</span>
-          <input id="l-pressure" type="number" step="1" min="5" max="250" value="25" />
+          <input id="l-pressure" type="text" data-num inputmode="decimal" data-min="5" data-max="250" value="25" required />
           <span class="muted fs-11" data-i18n="hint_pa_val">25 Pa ≈ 0.10″, 63 Pa ≈ 0.25″</span>
         </label>
 
@@ -209,11 +210,11 @@
           <div class="field-row">
             <label>
               <span data-i18n="label_l_length">Length, m</span>
-              <input id="ev-length" type="number" step="0.1" min="10" max="300" placeholder="120" required />
+              <input id="ev-length" type="text" data-num inputmode="decimal" data-min="10" data-max="300" placeholder="120" required />
             </label>
             <label>
               <span data-i18n="label_l_width">Width, m</span>
-              <input id="ev-width" type="number" step="0.1" min="5" max="30" placeholder="12" required />
+              <input id="ev-width" type="text" data-num inputmode="decimal" data-min="5" data-max="30" placeholder="12" required />
             </label>
           </div>
 
@@ -222,11 +223,11 @@
           <div class="field-row">
             <label>
               <span data-i18n="label_tdb">Dry-bulb temperature, °C</span>
-              <input id="ev-tdb" type="number" step="0.5" min="-10" max="55" placeholder="32" required />
+              <input id="ev-tdb" type="text" data-num data-min="-10" data-max="55" placeholder="32" required />
             </label>
             <label>
               <span data-i18n="label_rh">Relative humidity, %</span>
-              <input id="ev-rh" type="number" step="1" min="5" max="100" placeholder="45" required />
+              <input id="ev-rh" type="text" data-num inputmode="decimal" data-min="5" data-max="100" placeholder="45" required />
             </label>
           </div>
 
@@ -234,11 +235,11 @@
           <h3 class="hint mt-0 mb-6" data-i18n="evap_fans_grp">Ventilation</h3>
           <label>
             <span data-i18n="label_total_fans">Total fan capacity, m³/h</span>
-            <input id="ev-fans" type="number" step="100" min="1000" placeholder="180000" required />
+            <input id="ev-fans" type="text" data-num inputmode="decimal" data-min="1000" placeholder="180000" required />
           </label>
           <label>
             <span data-i18n="label_ev_fans25">Total capacity at 25 Pa, m³/h (optional)</span>
-            <input id="ev-fans25" type="number" step="100" min="0" placeholder="—" data-i18n-title="hint_ev_fans25" />
+            <input id="ev-fans25" type="text" data-num inputmode="decimal" data-min="0" placeholder="—" data-i18n-title="hint_ev_fans25" />
           </label>
 
           <hr class="section-divider" />
@@ -262,11 +263,11 @@
           <div class="field-row">
             <label>
               <span data-i18n="label_pad_length">Panel length (total installed), m</span>
-              <input id="ev-pad-length" type="number" step="0.1" min="1" max="100" placeholder="12" required />
+              <input id="ev-pad-length" type="text" data-num inputmode="decimal" data-min="1" data-max="100" placeholder="12" required />
             </label>
             <label>
               <span data-i18n="label_pad_height">Panel height, m</span>
-              <input id="ev-padh" type="number" step="0.1" min="0.5" max="5" placeholder="1.5" required />
+              <input id="ev-padh" type="text" data-num inputmode="decimal" data-min="0.5" data-max="5" placeholder="1.5" required />
             </label>
           </div>
 
@@ -274,18 +275,18 @@
           <h3 class="hint mt-0 mb-6" data-i18n="evap_target_grp">Target</h3>
           <label>
             <span data-i18n="label_target_t">Target indoor temperature, °C</span>
-            <input id="ev-target" type="number" step="0.5" min="15" max="40" value="28" required />
+            <input id="ev-target" type="text" data-num inputmode="decimal" data-min="15" data-max="40" value="28" required />
           </label>
           <!-- Поголовье и расчётный день: воздух после панели ещё греется над птицей —
                достаточность охлаждения оценивается у вентиляторов -->
           <div class="field-row">
             <label>
               <span data-i18n="label_tn_age">Design day (last cycle day), days</span>
-              <input id="ev-age" type="number" step="1" min="1" max="63" value="42" />
+              <input id="ev-age" type="text" data-num data-int inputmode="numeric" data-min="1" data-max="63" value="42" />
             </label>
             <label>
               <span data-i18n="label_tn_birds">Bird count</span>
-              <input id="ev-birds" type="number" step="1" min="0" max="200000" placeholder="35000" />
+              <input id="ev-birds" type="text" data-num data-int inputmode="numeric" data-min="0" data-max="200000" placeholder="35000" />
             </label>
           </div>
 
@@ -293,7 +294,7 @@
           <h3 class="hint mt-0 mb-6" data-i18n="evap_water_src_grp">Water supply (optional)</h3>
           <label>
             <span data-i18n="label_water_t">Water supply temperature, °C</span>
-            <input id="ev-water-t" type="number" step="0.5" min="1" max="40" placeholder="—" />
+            <input id="ev-water-t" type="text" data-num inputmode="decimal" data-min="1" data-max="40" placeholder="—" />
           </label>
           <p class="muted fs-11 mt-4 mb-0 lh-1_5" data-i18n="evap_water_t_hint">
             Well water: typically 8–12 °C
@@ -396,11 +397,11 @@
           <div class="field-row">
             <label>
               <span data-i18n="label_tn_width">House width, m</span>
-              <input id="tn-width" type="number" step="0.1" min="5" max="30" placeholder="12" required />
+              <input id="tn-width" type="text" data-num inputmode="decimal" data-min="5" data-max="30" placeholder="12" required />
             </label>
             <label>
               <span data-i18n="label_tn_height">Free cross-section height, m</span>
-              <input id="tn-height" type="number" step="0.1" min="1" max="8" placeholder="2.0"
+              <input id="tn-height" type="text" data-num inputmode="decimal" data-min="1" data-max="8" placeholder="2.0"
                      data-i18n-title="hint_tn_height" required />
             </label>
           </div>
@@ -414,17 +415,17 @@
           <div class="field-row">
             <label>
               <span data-i18n="label_tn_fans">Number of fans</span>
-              <input id="tn-fans" type="number" step="1" min="1" max="30" placeholder="8" required />
+              <input id="tn-fans" type="text" data-num data-int inputmode="numeric" data-min="1" data-max="30" placeholder="8" required />
             </label>
             <label>
               <span data-i18n="label_tn_fan_cap">Capacity per fan, m³/h</span>
-              <input id="tn-fan-cap" type="number" step="100" min="1000" placeholder="25000"
+              <input id="tn-fan-cap" type="text" data-num inputmode="decimal" data-min="1000" placeholder="25000"
                      data-i18n-title="hint_tn_fan_cap" required />
             </label>
             <!-- Вторая точка паспорта: без неё скорость считается по 0 Па (завышена) -->
             <label>
               <span data-i18n="label_tn_fan_cap25">Capacity at 25 Pa, m³/h (optional)</span>
-              <input id="tn-fan-cap25" type="number" step="100" min="0" placeholder="—"
+              <input id="tn-fan-cap25" type="text" data-num inputmode="decimal" data-min="0" placeholder="—"
                      data-i18n-title="hint_tn_fan_cap25" />
             </label>
           </div>
@@ -435,21 +436,21 @@
           <div class="field-row">
             <label>
               <span data-i18n="label_tn_tdb">Outdoor temperature, °C</span>
-              <input id="tn-tdb" type="number" step="0.5" min="0" max="55" placeholder="33" required />
+              <input id="tn-tdb" type="text" data-num inputmode="decimal" data-min="0" data-max="55" placeholder="33" required />
             </label>
             <label>
               <span data-i18n="label_tn_rh">Relative humidity, %</span>
-              <input id="tn-rh" type="number" step="1" min="5" max="100" placeholder="50" required />
+              <input id="tn-rh" type="text" data-num inputmode="decimal" data-min="5" data-max="100" placeholder="50" required />
             </label>
           </div>
           <div class="field-row">
             <label>
               <span data-i18n="label_tn_age">Design day (last cycle day), days</span>
-              <input id="tn-age" type="number" step="1" min="1" max="60" placeholder="42" required />
+              <input id="tn-age" type="text" data-num data-int inputmode="numeric" data-min="1" data-max="60" placeholder="42" required />
             </label>
             <label>
               <span data-i18n="label_tn_birds">Bird count</span>
-              <input id="tn-birds" type="number" step="100" min="1000" max="100000" placeholder="35000" />
+              <input id="tn-birds" type="text" data-num data-int inputmode="numeric" data-min="0" data-max="200000" placeholder="35000" />
             </label>
           </div>
 
@@ -458,16 +459,16 @@
           <p class="muted fs-11 mt-0 mb-8 lh-1_5" data-i18n="hint_inlet_measure">Open end: 1 section × house width × tunnel height. Curtain panels: count sections × width × height each.</p>
           <label>
             <span data-i18n="label_num_inlets">Number of openings, qty</span>
-            <input id="tn-num-inlets" type="number" min="1" max="500" value="1" />
+            <input id="tn-num-inlets" type="text" data-num data-int inputmode="numeric" data-min="1" data-max="500" value="1" />
           </label>
           <div class="field-row mt-4">
             <label>
               <span data-i18n="label_inlet_width">Opening width, m</span>
-              <input id="tn-inlet-w" type="number" step="0.1" min="0.5" max="30" placeholder="18" />
+              <input id="tn-inlet-w" type="text" data-num inputmode="decimal" data-min="0.5" data-max="30" placeholder="18" />
             </label>
             <label>
               <span data-i18n="label_inlet_height">Opening height, m</span>
-              <input id="tn-inlet-h" type="number" step="0.1" min="0.5" max="5" placeholder="2.2" />
+              <input id="tn-inlet-h" type="text" data-num inputmode="decimal" data-min="0.5" data-max="5" placeholder="2.2" />
             </label>
           </div>
 
@@ -686,21 +687,14 @@ document.querySelectorAll('.tool-tab:not([disabled])').forEach(btn => {
     const tab = profileTabs[selIdx];
     if (!tab) return;
 
-    // Пустое поле → значение по умолчанию, но 0 остаётся нулём:
-    // раньше Number(x) || 15 превращал 0 °C снаружи в 15 °C
-    const numOr = (id, fallback) => {
-      const raw = document.getElementById(id).value.trim();
-      const val = Number(raw);
-      return raw !== '' && Number.isFinite(val) ? val : fallback;
-    };
-    const outsideT  = numOr('prof-outside-t', 15);
-    const outsideRH = numOr('prof-outside-rh', 60);
-
-    // Целевая RH: вне 40–70 % таблица ощущаемой температуры не определена —
-    // пустое или неверное значение не отправляем (сервер возьмёт RH профиля)
-    const rhRaw    = document.getElementById('prof-target-rh').value;
-    const rhNum    = Number(rhRaw);
-    const targetRH = (rhRaw !== '' && rhNum >= 40 && rhNum <= 70) ? rhNum : null;
+    // Неразобранный ввод — ошибка у поля, а не молчаливые 15 °C (раньше «2,5»
+    // или опечатка превращались в значение по умолчанию). Пустое поле — по умолчанию,
+    // 0 остаётся нулём. Целевая RH вне 40–70 % тоже ошибка: таблица ощущаемой
+    // температуры там не определена; пустая — сервер возьмёт RH профиля.
+    if (!NumField.validate(['prof-outside-t', 'prof-outside-rh', 'prof-target-rh'])) return;
+    const outsideT  = NumField.value('prof-outside-t')  ?? 15;
+    const outsideRH = NumField.value('prof-outside-rh') ?? 60;
+    const targetRH  = NumField.value('prof-target-rh');
     tab.target_rh  = targetRH;
     try {
       const tabs = JSON.parse(localStorage.getItem(STORE_KEY) || '[]');
@@ -963,17 +957,13 @@ const TIGHTNESS = {
 
 // ─────── Leakage calculation ───────
 document.getElementById('l-calc-btn').addEventListener('click', async () => {
+  if (!NumField.validate(document.getElementById('panel-leakage'))) return;
   const body = {
-    house_length_m:       +document.getElementById('l-length').value,
-    house_width_m:        +document.getElementById('l-width').value,
-    fan_capacity_m3h:     +document.getElementById('l-fan-cap').value,
-    measured_pressure_pa: +document.getElementById('l-pressure').value,
+    house_length_m:       NumField.value('l-length'),
+    house_width_m:        NumField.value('l-width'),
+    fan_capacity_m3h:     NumField.value('l-fan-cap'),
+    measured_pressure_pa: NumField.value('l-pressure'),
   };
-
-  if (Object.values(body).some(v => !v || v <= 0)) {
-    alert(t('err_fill_valid'));
-    return;
-  }
 
   const btn = document.getElementById('l-calc-btn');
   btn.textContent = t('btn_leakage_busy'); btn.disabled = true;
@@ -1028,24 +1018,26 @@ function renderLeakage(d) {
 
 document.getElementById('tunnel-form').addEventListener('submit', async e => {
   e.preventDefault();
+  // Свой разбор числа вместо браузерного: запятая и шаг поля больше не мешают
+  if (!NumField.validate(e.target)) return;
   const btn = document.getElementById('tunnel-btn');
   btn.disabled = true; btn.textContent = t('btn_tunnel_busy');
 
   try {
     const payload = {
-      house_width_m:    +document.getElementById('tn-width').value,
-      tunnel_height_m:  +document.getElementById('tn-height').value,
-      num_fans:         +document.getElementById('tn-fans').value,
-      fan_capacity_m3h: +document.getElementById('tn-fan-cap').value,
-      t_outdoor_db_c:   +document.getElementById('tn-tdb').value,
-      rh_outdoor_pct:   +document.getElementById('tn-rh').value,
-      bird_age_days:    +document.getElementById('tn-age').value,
-      num_inlets:       +document.getElementById('tn-num-inlets').value || 1,
-      inlet_width_m:    +document.getElementById('tn-inlet-w').value  || 0,
-      inlet_height_m:   +document.getElementById('tn-inlet-h').value  || 0,
-      fan_capacity_25pa_m3h: +document.getElementById('tn-fan-cap25').value || 0,
+      house_width_m:    NumField.value('tn-width'),
+      tunnel_height_m:  NumField.value('tn-height'),
+      num_fans:         NumField.value('tn-fans'),
+      fan_capacity_m3h: NumField.value('tn-fan-cap'),
+      t_outdoor_db_c:   NumField.value('tn-tdb'),
+      rh_outdoor_pct:   NumField.value('tn-rh'),
+      bird_age_days:    NumField.value('tn-age'),
+      num_inlets:       NumField.value('tn-num-inlets') ?? 1,
+      inlet_width_m:    NumField.value('tn-inlet-w')  ?? 0,
+      inlet_height_m:   NumField.value('tn-inlet-h')  ?? 0,
+      fan_capacity_25pa_m3h: NumField.value('tn-fan-cap25') ?? 0,
       // Поголовье — для нагрева воздуха вдоль корпуса (оценка у вентиляторов)
-      num_birds:        +document.getElementById('tn-birds').value || 0,
+      num_birds:        NumField.value('tn-birds') ?? 0,
     };
 
     const resp = await fetch('./calc/tools/tunnel_speed', {
@@ -1219,28 +1211,29 @@ document.getElementById('ev-pad-type').addEventListener('change', updatePadThick
 
 document.getElementById('evap-form').addEventListener('submit', async e => {
   e.preventDefault();
+  if (!NumField.validate(e.target)) return;
   const btn = document.getElementById('evap-btn');
   btn.disabled = true; btn.textContent = t('btn_evap_busy');
 
   try {
-    const waterTVal = document.getElementById('ev-water-t').value;
+    const waterT = NumField.value('ev-water-t');
     const payload = {
-      house_length_m:    +document.getElementById('ev-length').value,
-      t_outdoor_db_c:    +document.getElementById('ev-tdb').value,
-      rh_outdoor_pct:    +document.getElementById('ev-rh').value,
-      total_fan_m3h:     +document.getElementById('ev-fans').value,
+      house_length_m:    NumField.value('ev-length'),
+      t_outdoor_db_c:    NumField.value('ev-tdb'),
+      rh_outdoor_pct:    NumField.value('ev-rh'),
+      total_fan_m3h:     NumField.value('ev-fans'),
       pad_type:           document.getElementById('ev-pad-type').value,
-      pad_thickness_mm:  +document.getElementById('ev-thickness').value,
-      pad_length_m:      +document.getElementById('ev-pad-length').value,
-      pad_height_m:      +document.getElementById('ev-padh').value,
-      t_inside_target_c: +document.getElementById('ev-target').value,
+      pad_thickness_mm:  NumField.value('ev-thickness'),
+      pad_length_m:      NumField.value('ev-pad-length'),
+      pad_height_m:      NumField.value('ev-padh'),
+      t_inside_target_c: NumField.value('ev-target'),
       // Опционально: температура воды. null = стандартный адиабатический расчёт
-      ...(waterTVal !== '' ? { water_supply_t_c: +waterTVal } : {}),
+      ...(waterT !== null ? { water_supply_t_c: waterT } : {}),
       // Нагрев воздуха над птицей до вентиляторов (0 голов — не учитывать)
-      num_birds:         +document.getElementById('ev-birds').value || 0,
+      num_birds:         NumField.value('ev-birds') ?? 0,
       // Вторая точка паспорта: расход в рабочей точке с сопротивлением панели
-      total_fan_25pa_m3h: +document.getElementById('ev-fans25').value || 0,
-      bird_age_days:     +document.getElementById('ev-age').value || null,
+      total_fan_25pa_m3h: NumField.value('ev-fans25') ?? 0,
+      bird_age_days:     NumField.value('ev-age') ?? null,
     };
 
     const resp = await fetch('./calc/tools/evap_cooling', {
@@ -1368,10 +1361,10 @@ function renderEvap(d) {
     </div>
 
     <div class="d-grid cols-fit-150 gap-12">
-      <label><span data-i18n="label_length_m">Length, m</span><input id="length" type="number" step="0.5" min="1" max="500" placeholder="96"></label>
-      <label><span data-i18n="label_width_m">Width, m</span><input id="width" type="number" step="0.5" min="1" max="200" placeholder="18"></label>
-      <label><span data-i18n="label_height_wall_m">Wall height, m</span><input id="height-wall" type="number" step="0.1" min="1" max="10" placeholder="2.5"></label>
-      <label><span data-i18n="label_height_ridge_m">Ridge height, m</span><input id="height-ridge" type="number" step="0.1" min="1" max="20" placeholder="4.5"></label>
+      <label><span data-i18n="label_length_m">Length, m</span><input id="length" type="text" data-num inputmode="decimal" data-min="1" data-max="500" placeholder="96"></label>
+      <label><span data-i18n="label_width_m">Width, m</span><input id="width" type="text" data-num inputmode="decimal" data-min="1" data-max="200" placeholder="18"></label>
+      <label><span data-i18n="label_height_wall_m">Wall height, m</span><input id="height-wall" type="text" data-num inputmode="decimal" data-min="1" data-max="10" placeholder="2.5"></label>
+      <label><span data-i18n="label_height_ridge_m">Ridge height, m</span><input id="height-ridge" type="text" data-num inputmode="decimal" data-min="1" data-max="20" placeholder="4.5"></label>
     </div>
     <div class="mt-12 p-12 bg-bg r-8">
       <div class="kv"><span data-i18n="bldg_volume_lbl">Volume</span><span id="volumeDisplay" class="fw-600" data-i18n="vol_default">— m³</span></div>
@@ -1393,7 +1386,7 @@ function renderEvap(d) {
           <option value="electric" data-i18n="opt_electric">Electric heaters</option>
         </select>
       </label>
-      <label><span data-i18n="heating_cap_lbl">Total capacity, kW</span><input id="heaterPower" type="number" step="1" min="0" max="10000" placeholder="500"></label>
+      <label><span data-i18n="heating_cap_lbl">Total capacity, kW</span><input id="heaterPower" type="text" data-num inputmode="decimal" data-min="0" data-max="10000" placeholder="500"></label>
     </div>
     <div id="gasInfo" class="note-warn mt-12 p-12" data-i18n-html="gas_info_html"></div>
     <button id="saveHeaterBtn" class="btn mt-12" data-i18n="btn_save_heater">Save configuration</button>
@@ -1407,15 +1400,15 @@ function renderEvap(d) {
     <div class="d-flex gap-16 wrap ai-flex-end">
       <label class="flex-1 minw-180">
         <span data-i18n="label_t_start_inside">Indoor temperature now, °C</span>
-        <input id="tStartInside" type="number" step="0.1" min="-20" max="50" placeholder="25.0">
+        <input id="tStartInside" type="text" data-num data-min="-20" data-max="50" placeholder="25.0">
       </label>
       <label class="flex-1 minw-180">
         <span data-i18n="label_t_outside">Outdoor temperature, °C</span>
-        <input id="tOutside" type="number" step="0.1" min="-40" max="50" placeholder="-5.0">
+        <input id="tOutside" type="text" data-num data-min="-40" data-max="50" placeholder="-5.0">
       </label>
       <label class="minw-140">
         <span data-i18n="label_zone_count">Heating zones</span>
-        <input id="zoneCount" type="number" min="1" max="8" value="1" class="ta-center">
+        <input id="zoneCount" type="text" data-num data-int inputmode="numeric" data-min="1" data-max="8" value="1" class="ta-center">
       </label>
     </div>
     <div class="mt-20 py-20 px-16 bg-bg r-10 ta-center">
@@ -1435,11 +1428,11 @@ function renderEvap(d) {
     <h2 data-i18n="step4_h2">Step 4: Heater analysis</h2>
     <p class="muted mb-12" data-i18n="step4_desc"></p>
     <div class="d-grid cols-fit-200 gap-12">
-      <label><span data-i18n="label_t_inside">Target indoor temp, °C</span><input id="tInsideTarget" type="number" step="0.1" min="-20" max="50" placeholder="33.0" value="33.0"></label>
-      <label><span data-i18n="label_t_outside2">Outdoor temp, °C</span><input id="tOutsideAnalysis" type="number" step="0.1" min="-40" max="50" placeholder="-5.0" value="-5.0"></label>
-      <label><span data-i18n="label_q_min_analysis">Min. ventilation Q_min, m³/h</span><input id="qMinAnalysis" type="number" step="100" min="0" placeholder="15000"></label>
-      <label><span data-i18n="label_num_birds_analysis">Number of birds</span><input id="numBirdsAnalysis" type="number" step="1000" min="0" placeholder="35000"></label>
-      <label><span data-i18n="label_bird_weight_analysis">Avg. bird weight, kg</span><input id="birdWeightAnalysis" type="number" step="0.1" min="0.04" max="20" placeholder="1.5"></label>
+      <label><span data-i18n="label_t_inside">Target indoor temp, °C</span><input id="tInsideTarget" type="text" data-num data-min="-20" data-max="50" placeholder="33.0" value="33.0"></label>
+      <label><span data-i18n="label_t_outside2">Outdoor temp, °C</span><input id="tOutsideAnalysis" type="text" data-num data-min="-40" data-max="50" placeholder="-5.0" value="-5.0"></label>
+      <label><span data-i18n="label_q_min_analysis">Min. ventilation Q_min, m³/h</span><input id="qMinAnalysis" type="text" data-num inputmode="decimal" data-min="0" placeholder="15000"></label>
+      <label><span data-i18n="label_num_birds_analysis">Number of birds</span><input id="numBirdsAnalysis" type="text" data-num data-int inputmode="numeric" data-min="0" placeholder="35000"></label>
+      <label><span data-i18n="label_bird_weight_analysis">Avg. bird weight, kg</span><input id="birdWeightAnalysis" type="text" data-num inputmode="decimal" data-min="0.04" data-max="20" placeholder="1.5"></label>
     </div>
     <button id="analyzeBtn" class="btn mt-12" data-i18n="btn_analyse">🔍 Analyse</button>
     <div id="analysisResult" class="mt-12"></div>
@@ -1462,7 +1455,7 @@ function renderEvap(d) {
   </div>
 </div><!-- /panel-help -->
 
-<script src="./calibration.js?v=4"></script>
+<script src="./calibration.js?v=5"></script>
 <script>
 // ── House selector for Step 1 (loads dims from main-page localStorage) ──────
 (function () {
@@ -1741,14 +1734,14 @@ function renderEvap(d) {
   // ── Editor ───────────────────────────────────────────────────────────────
   function rowHTML(d, readonly) {
     const dis = readonly ? 'disabled' : '';
-    const cell = (key, val, step, extra) =>
-      `<td><input type="number" step="${step}" ${extra || ''} value="${val ?? ''}" data-key="${key}" data-day="${d.day}" ${dis}/></td>`;
+    const cell = (key, val, extra) =>
+      `<td><input type="text" data-num ${extra || ''} value="${val ?? ''}" data-key="${key}" data-day="${d.day}" ${dis}/></td>`;
     const r = v => (v == null ? '' : +(+v).toFixed(1));
     return `<tr>
       <td><strong>${d.day}</strong></td>
-      ${cell('body_weight_g', r(d.body_weight_g), '1', 'min="0"')}
-      ${cell('min_temp_c', r(d.min_temp_c), '0.1')}
-      ${cell('rv_percent', r(d.rv_percent), '0.1', 'min="0" max="100"')}
+      ${cell('body_weight_g', r(d.body_weight_g), 'inputmode="decimal" data-min="0"')}
+      ${cell('min_temp_c', r(d.min_temp_c))}
+      ${cell('rv_percent', r(d.rv_percent), 'inputmode="decimal" data-min="0" data-max="100"')}
     </tr>`;
   }
 
@@ -1819,7 +1812,9 @@ function renderEvap(d) {
     container.querySelectorAll('tbody input').forEach(inp => {
       inp.addEventListener('change', () => {
         const day = Number(inp.dataset.day);
-        const val = inp.value === '' ? null : Number(inp.value);
+        // Мусор не записываем: поле подсвечено (numfield.js), прежнее значение остаётся
+        if (NumField.problem(inp)) return;
+        const val = NumField.value(inp);
         editedDays[day] = Object.assign({}, editedDays[day] || {}, { [inp.dataset.key]: val });
         renderCharts();
       });

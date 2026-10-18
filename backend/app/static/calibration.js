@@ -70,7 +70,7 @@ function timerFormat(totalSeconds) {
 }
 
 function zoneCount() {
-  return Math.min(Math.max(parseInt(document.getElementById('zoneCount')?.value) || 1, 1), 8);
+  return Math.min(Math.max(NumField.value('zoneCount') || 1, 1), 8);
 }
 
 function elapsedSec() {
@@ -125,9 +125,11 @@ function stopTimer() {
 }
 
 function startTest() {
-  const tOut   = parseFloat(elTOutside.value);
-  const tStart = parseFloat(elTStartInside.value);
-  if (isNaN(tOut) || isNaN(tStart)) {
+  // parseFloat("2,5") давал 2 — тест стартовал с температурой, срезанной до целого
+  if (!NumField.validate(['tStartInside', 'tOutside', 'zoneCount'])) return;
+  const tOut   = NumField.value(elTOutside);
+  const tStart = NumField.value(elTStartInside);
+  if (tOut === null || tStart === null) {
     elTimerStatus.textContent = t('err_enter_temps_first');
     setTone(elTimerStatus, 'danger');
     return;
@@ -270,16 +272,16 @@ function getSelectedHouseId() {
 // Эффективная высота для двускатной крыши: среднее стены и конька
 // V = L × W × (H_стена + H_конёк) / 2
 function effectiveHeight() {
-  const hw = parseFloat(elHeightWall.value)  || 0;
-  const hr = parseFloat(elHeightRidge.value) || 0;
+  const hw = NumField.value(elHeightWall)  || 0;
+  const hr = NumField.value(elHeightRidge) || 0;
   if (hw > 0 && hr > 0) return (hw + hr) / 2;
   return hw || hr; // если задана только одна — используем её
 }
 
 // Update volume and area display
 function updateDimensionsDisplay() {
-  const l    = parseFloat(elLength.value) || 0;
-  const w    = parseFloat(elWidth.value)  || 0;
+  const l    = NumField.value(elLength) || 0;
+  const w    = NumField.value(elWidth)  || 0;
   const hEff = effectiveHeight();
 
   if (l > 0 && w > 0 && hEff > 0) {
@@ -307,8 +309,9 @@ elHeaterType.addEventListener('change', updateGasInfoVisibility);
 
 // Save building dimensions
 elSaveBuildingBtn.addEventListener('click', async () => {
-  const l    = parseFloat(elLength.value);
-  const w    = parseFloat(elWidth.value);
+  if (!NumField.validate(['length', 'width', 'height-wall', 'height-ridge'])) return;
+  const l    = NumField.value(elLength);
+  const w    = NumField.value(elWidth);
   const hEff = effectiveHeight();
 
   if (!l || !w || !hEff || l <= 0 || w <= 0 || hEff <= 0) {
@@ -361,7 +364,8 @@ elSaveBuildingBtn.addEventListener('click', async () => {
 // Save heater configuration
 elSaveHeaterBtn.addEventListener('click', async () => {
   const heaterType = elHeaterType.value;
-  const power = parseFloat(elHeaterPower.value);
+  if (!NumField.validate(['heaterPower'])) return;
+  const power = NumField.value(elHeaterPower);
 
   if (!power || power < 0) {
     elHeaterStatus.textContent = t('err_valid_heater');
@@ -423,13 +427,15 @@ elSaveCalibrationBtn.addEventListener('click', async () => {
 
 // Analyze heaters — Step 4: full heat balance
 elAnalyzeBtn.addEventListener('click', async () => {
-  const tInside    = parseFloat(elTInsideTarget.value);
-  const tOutside   = parseFloat(elTOutsideAnalysis.value);
-  const qMin       = parseFloat(elQMinAnalysis?.value);
-  const numBirds   = parseInt(elNumBirdsAnalysis?.value, 10);
-  const birdWeight = parseFloat(elBirdWeightAnalysis?.value);
+  // parseInt("35 000") давал 35 голов, parseFloat("1,8") — 1 кг: анализ шёл молча неверный
+  if (!NumField.validate(['tInsideTarget', 'tOutsideAnalysis', 'qMinAnalysis', 'numBirdsAnalysis', 'birdWeightAnalysis'])) return;
+  const tInside    = NumField.value(elTInsideTarget);
+  const tOutside   = NumField.value(elTOutsideAnalysis);
+  const qMin       = NumField.value(elQMinAnalysis);
+  const numBirds   = NumField.value(elNumBirdsAnalysis);
+  const birdWeight = NumField.value(elBirdWeightAnalysis);
 
-  if (isNaN(tInside) || isNaN(tOutside) || isNaN(qMin) || isNaN(numBirds) || isNaN(birdWeight)) {
+  if ([tInside, tOutside, qMin, numBirds, birdWeight].some(v => v === null)) {
     elAnalysisResult.innerHTML = `<div class="danger">${t('err_enter_all_fields')}</div>`;
     return;
   }

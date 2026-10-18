@@ -88,8 +88,9 @@ function renderTabs() {
 
 // Синхронизирует поле "cap" из num_fans × fan_cap_m3h и показывает подсказку
 function syncCap() {
-  const n = parseInt(elNumFans ? elNumFans.value : '', 10);
-  const c = parseInt(elFanCapM3h ? elFanCapM3h.value : '', 10);
+  // parseInt("25 000") давал 25 — суммарная производительность занижалась в тысячу раз
+  const n = elNumFans   ? NumField.value(elNumFans)   : null;
+  const c = elFanCapM3h ? NumField.value(elFanCapM3h) : null;
   const note = document.getElementById('capAutoNote');
   if (n > 0 && c > 0) {
     elCap.value = n * c;
@@ -126,19 +127,25 @@ function readFormToTab() {
   const tab = tabs[active];
   const idVal = (elHouse.value || '').trim();
   tab.id       = idVal !== '' ? idVal : tab.id;
-  tab.birds    = Number(elBirds.value || tab.birds);
-  const capVal = elCap.value === '' ? null : Number(elCap.value);
-  tab.cap      = capVal;
+  // Число из поля для хранилища; пустое поле → ifEmpty. Неразобранное сюда не
+  // доходит: кнопка «Сохранить» сначала проверяет форму (NumField.validate).
+  // Раньше Number("12,5") = NaN уходил в localStorage как null — размер пропадал молча.
+  const read = (el, ifEmpty) => {
+    const v = el ? NumField.value(el) : null;
+    return v === null || Number.isNaN(v) ? ifEmpty : v;
+  };
+  tab.birds    = read(elBirds, tab.birds);   // поголовье пустым не бывает — прежнее
+  tab.cap      = read(elCap, null);          // пусто = «не знаю максимум»
   tab.heater_on = !!elHeater.checked;
-  // Building dimensions (used by audit / heat-loss calibration)
-  tab.length_m       = elHouseLen      && elHouseLen.value      !== '' ? Number(elHouseLen.value)      : (tab.length_m       ?? null);
-  tab.width_m        = elHouseWid      && elHouseWid.value      !== '' ? Number(elHouseWid.value)       : (tab.width_m        ?? null);
-  tab.height_wall_m  = elHouseHgtWall  && elHouseHgtWall.value  !== '' ? Number(elHouseHgtWall.value)  : (tab.height_wall_m  ?? null);
-  tab.height_ridge_m = elHouseHgtRidge && elHouseHgtRidge.value !== '' ? Number(elHouseHgtRidge.value) : (tab.height_ridge_m ?? null);
-  tab.num_fans        = elNumFans      && elNumFans.value      !== '' ? Number(elNumFans.value)      : (tab.num_fans        ?? null);
-  tab.fan_cap_m3h     = elFanCapM3h    && elFanCapM3h.value    !== '' ? Number(elFanCapM3h.value)    : (tab.fan_cap_m3h     ?? null);
-  tab.num_min_fans    = elNumMinFans   && elNumMinFans.value   !== '' ? Number(elNumMinFans.value)   : (tab.num_min_fans    ?? null);
-  tab.min_fan_cap_m3h = elMinFanCapM3h && elMinFanCapM3h.value !== '' ? Number(elMinFanCapM3h.value) : (tab.min_fan_cap_m3h ?? null);
+  // Building dimensions (used by audit / heat-loss calibration); пусто → прежнее
+  tab.length_m        = read(elHouseLen,      tab.length_m       ?? null);
+  tab.width_m         = read(elHouseWid,      tab.width_m        ?? null);
+  tab.height_wall_m   = read(elHouseHgtWall,  tab.height_wall_m  ?? null);
+  tab.height_ridge_m  = read(elHouseHgtRidge, tab.height_ridge_m ?? null);
+  tab.num_fans        = read(elNumFans,       tab.num_fans        ?? null);
+  tab.fan_cap_m3h     = read(elFanCapM3h,     tab.fan_cap_m3h     ?? null);
+  tab.num_min_fans    = read(elNumMinFans,    tab.num_min_fans    ?? null);
+  tab.min_fan_cap_m3h = read(elMinFanCapM3h,  tab.min_fan_cap_m3h ?? null);
   saveTabs(tabs);
 }
 
@@ -203,6 +210,9 @@ if (elModalCancel) elModalCancel.addEventListener('click', () => {
 
 // Кнопка "Сохранить данные" — записывает форму в localStorage и показывает подтверждение
 elSum.onclick = () => {
+  // Неверное поле — фокус и подсказка у него, а не «Сохранено» с потерянным значением
+  if (!NumField.validate(['birds', 'cap', 'houseLength', 'houseWidth', 'houseHeightWall',
+                          'houseHeightRidge', 'numFans', 'fanCapM3h', 'numMinFans', 'minFanCapM3h'])) return;
   readFormToTab();
   const orig = elSum.textContent;
   elSum.textContent = t('status_saved');

@@ -13,6 +13,7 @@
   <script src="./i18n/fr.js"></script>
   <script src="./i18n.js"></script>
   <script src="./ui.js"></script>
+  <script src="./numfield.js"></script>
   <script src="./write-token.js"></script>
 </head>
 <body data-page-title="index_title">
@@ -45,7 +46,7 @@
           </label>
           <label>
             <span data-i18n="label_bird_count">Bird count</span>
-            <input id="birds" type="number" min="1" max="60000" />
+            <input id="birds" type="text" data-num data-int inputmode="numeric" data-min="1" data-max="60000" />
           </label>
 
           <!-- Heater checkbox with explanation -->
@@ -63,19 +64,19 @@
           <div class="d-grid cols-2 gap-8">
             <label>
               <span data-i18n="label_length_idx">Length, m</span>
-              <input id="houseLength" type="number" step="0.5" min="10" max="500" placeholder="96" />
+              <input id="houseLength" type="text" data-num inputmode="decimal" data-min="10" data-max="500" placeholder="96" />
             </label>
             <label>
               <span data-i18n="label_width_idx">Width, m</span>
-              <input id="houseWidth" type="number" step="0.5" min="5" max="100" placeholder="18" />
+              <input id="houseWidth" type="text" data-num inputmode="decimal" data-min="5" data-max="100" placeholder="18" />
             </label>
             <label>
               <span data-i18n="label_height_wall_idx">Wall height, m</span>
-              <input id="houseHeightWall" type="number" step="0.1" min="1" max="10" placeholder="2.5" />
+              <input id="houseHeightWall" type="text" data-num inputmode="decimal" data-min="1" data-max="10" placeholder="2.5" />
             </label>
             <label>
               <span data-i18n="label_height_ridge_idx">Ridge height, m</span>
-              <input id="houseHeightRidge" type="number" step="0.1" min="1" max="20" placeholder="4.5" />
+              <input id="houseHeightRidge" type="text" data-num inputmode="decimal" data-min="1" data-max="20" placeholder="4.5" />
             </label>
           </div>
 
@@ -85,11 +86,11 @@
           <div class="d-grid cols-2 gap-8">
             <label>
               <span data-i18n="label_num_fans">Tunnel fans, qty</span>
-              <input id="numFans" type="number" min="1" max="50" placeholder="8" />
+              <input id="numFans" type="text" data-num data-int inputmode="numeric" data-min="1" data-max="50" placeholder="8" />
             </label>
             <label>
               <span data-i18n="label_fan_cap_m3h">Fan capacity, m³/h</span>
-              <input id="fanCapM3h" type="number" min="1000" step="1000" placeholder="25000" />
+              <input id="fanCapM3h" type="text" data-num inputmode="decimal" data-min="1000" placeholder="25000" />
             </label>
           </div>
 
@@ -97,11 +98,11 @@
           <div class="d-grid cols-2 gap-8">
             <label>
               <span data-i18n="label_num_min_fans">Min-vent fans, qty</span>
-              <input id="numMinFans" type="number" min="1" max="50" placeholder="2" />
+              <input id="numMinFans" type="text" data-num data-int inputmode="numeric" data-min="1" data-max="50" placeholder="2" />
             </label>
             <label>
               <span data-i18n="label_min_fan_cap_m3h">Min-vent fan capacity, m³/h</span>
-              <input id="minFanCapM3h" type="number" min="100" step="100" placeholder="5000" />
+              <input id="minFanCapM3h" type="text" data-num inputmode="decimal" data-min="100" placeholder="5000" />
             </label>
           </div>
 
@@ -110,7 +111,7 @@
               <span data-i18n="label_sys_max">System max capacity (m³/h)</span>
               <span id="capAutoNote" class="muted fs-11"></span>
             </span>
-            <input id="cap" type="number" min="0"
+            <input id="cap" type="text" data-num inputmode="decimal" data-min="0"
                    data-i18n-placeholder="placeholder_cap"
                    placeholder="leave blank if unknown" />
           </label>
