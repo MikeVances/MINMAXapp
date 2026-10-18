@@ -40,7 +40,7 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 
-from .evap_cooling_calc import _wet_bulb_stull
+from .psychro import moist_air_density, wet_bulb_c
 from .building_thermal import air_temperature_rise_c
 
 # ─────────────────────────────────────────────────
@@ -77,8 +77,6 @@ _T_KEYS  = sorted({t for t, _ in _EFF_TEMP_TABLE})     # [21.1, 23.9, 26.6, 29.4
 _RH_KEYS = sorted({r for _, r in _EFF_TEMP_TABLE})     # [50, 70]
 _V_KEYS  = [0.0, 0.5, 1.0, 1.5, 2.0, 2.5]
 
-# Плотность воздуха при +25°C, кг/м³
-RHO_AIR_KG_M3 = 1.184
 
 # Пороги THVI (Tao & Xin 2003, экспозиция 90 мин), °C. < threshold → категория
 # Коды, не текст: переводит клиент (i18n: thvi_<code>)
@@ -290,7 +288,7 @@ def _effective_temperature(t_db: float, rh: float, v_ms: float) -> float:
 
 def _calc_thvi(t_db: float, rh: float, v_ms: float) -> tuple[float, str]:
     """THVI = (0.85·T_db + 0.15·T_wb) · V^−0.058 (Tao & Xin 2003), V в пределах исследования."""
-    t_wb = _wet_bulb_stull(t_db, rh)
+    t_wb = wet_bulb_c(t_db, rh)
     v = min(max(v_ms, _THVI_V_RANGE[0]), _THVI_V_RANGE[1])
     thvi = (0.85 * t_db + 0.15 * t_wb) * v ** -0.058
     for threshold, label in _THVI_THRESHOLDS:
@@ -391,9 +389,13 @@ def calculate_tunnel_speed(inp: TunnelSpeedInput) -> TunnelSpeedResult:
     # Шторные/панельные клапаны: Cd=0.62
     cd = CD_INLET_OPEN if is_open_end else CD_INLET
 
+    # Плотность наружного воздуха, который тянут вентиляторы: при 35 °C она на 4–6 %
+    # ниже прежней константы 1.184 — и давления (сечение, впуск) столько же ниже
+    rho = moist_air_density(inp.t_outdoor_db_c, inp.rh_outdoor_pct)
+
     # Сопротивление системы P = c·Q² [Па при Q в м³/с]: динамическое давление в
     # сечении + потеря на впуске (модель UGA)
-    resistance = RHO_AIR_KG_M3 / 2.0 * (
+    resistance = rho / 2.0 * (
         (1.0 / cross_section ** 2 if cross_section > 0 else 0.0) + 1.0 / (inlet_area * cd) ** 2
     )
 
@@ -425,10 +427,10 @@ def calculate_tunnel_speed(inp: TunnelSpeedInput) -> TunnelSpeedResult:
     thi_val, thi_status = _calc_thvi(t_fan_end, inp.rh_outdoor_pct, v_ms)
 
     # Динамическое давление в туннеле
-    p_dynamic = 0.5 * RHO_AIR_KG_M3 * v_ms ** 2
+    p_dynamic = 0.5 * rho * v_ms ** 2
 
     inlet_v    = total_m3s / inlet_area
-    inlet_sp   = RHO_AIR_KG_M3 * (inlet_v / cd) ** 2 / 2
+    inlet_sp   = rho * (inlet_v / cd) ** 2 / 2
 
     # Пороги UGA: 400/600/800 FPM → 2.0/3.0/4.0 м/с
     if inlet_v < 2.0:

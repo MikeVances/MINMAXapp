@@ -6,10 +6,11 @@ from __future__ import annotations
 
 import pytest
 
-from backend.app.core.evap_cooling_calc import _wet_bulb_stull
-from backend.app.core.tunnel_speed_calc import (
-    RHO_AIR_KG_M3, TunnelSpeedInput, calculate_tunnel_speed,
-)
+from backend.app.core.tunnel_speed_calc import TunnelSpeedInput, calculate_tunnel_speed
+
+# Независимые значения для 32 °C / 60 % (psychrolib 2.5 = ASHRAE Fundamentals 2017)
+RHO_32_60 = 1.1445     # плотность влажного воздуха, кг/м³
+T_WB_32_60 = 25.555    # мокрый термометр, °C
 
 HOUSE = dict(house_width_m=18, tunnel_height_m=3.0, num_fans=10, fan_capacity_m3h=40_000,
              t_outdoor_db_c=32, rh_outdoor_pct=60, bird_age_days=35,
@@ -26,7 +27,7 @@ def test_operating_point_lies_on_fan_curve_and_system_curve():
 
     q = r.fan_operating_m3h
     Q = 10 * q / 3600.0
-    p_system = RHO_AIR_KG_M3 / 2 * (1 / 54 ** 2 + 1 / (60 * 0.62) ** 2) * Q ** 2
+    p_system = RHO_32_60 / 2 * (1 / 54 ** 2 + 1 / (60 * 0.62) ** 2) * Q ** 2
     q_on_fan_curve = 40_000 - (40_000 - 36_000) / 25 * p_system
 
     assert r.velocity_basis == "operating_point"
@@ -59,8 +60,7 @@ def test_thvi_for_broilers_tao_xin_2003():
     (за пределами исследования эффект скорости не экстраполируется).
     """
     r = calculate_tunnel_speed(TunnelSpeedInput(**HOUSE))
-    t_wb = _wet_bulb_stull(32, 60)
-    expected = (0.85 * 32 + 0.15 * t_wb) * 1.2 ** -0.058
+    expected = (0.85 * 32 + 0.15 * T_WB_32_60) * 1.2 ** -0.058
 
     assert r.thi_value == pytest.approx(expected, abs=0.05)
     assert r.thi_status == "normal"       # < 35 °C

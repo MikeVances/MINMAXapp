@@ -7,7 +7,7 @@ from __future__ import annotations
 import pytest
 
 from backend.app.core.building_thermal import heater_co2_dilution_m3h
-from backend.app.core.evap_cooling_calc import _wet_bulb_stull
+from backend.app.core.psychro import wet_bulb_c
 from backend.app.core.leakage_calc import _fan_correction
 from backend.app.core.ventilation_calc import calc_q_min_per_bird
 
@@ -34,9 +34,9 @@ def test_electric_heater_adds_no_co2():
     assert heater_co2_dilution_m3h(100.0, 1.0, "electric") == 0.0
 
 
-def test_wet_bulb_matches_stull_2011_reference_point():
-    """Контрольная точка из статьи Stull (2011): 20 °C, 50 % RH → T_wb ≈ 13.7 °C."""
-    assert _wet_bulb_stull(20.0, 50.0) == pytest.approx(13.7, abs=0.05)
+def test_wet_bulb_reference_point_20c_50pct():
+    """20 °C, 50 % RH → T_wb = 13.78 °C (psychrolib/ASHRAE; у Stull 2011 — 13.7)."""
+    assert wet_bulb_c(20.0, 50.0) == pytest.approx(13.783, abs=0.02)
 
 
 def test_fan_correction_is_unity_at_rating_pressure():

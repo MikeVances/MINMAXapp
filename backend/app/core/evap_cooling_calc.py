@@ -22,18 +22,17 @@
 
 Водопотребление (ПСИХРОМЕТРИЧЕСКИЙ МАССОВЫЙ БАЛАНС, как в UGA):
   p_ws(T) = 611.2 × exp(17.67T / (T+243.5))  (Magnus-Tetens, Па)
-  W = 0.622 × p_w / (P_atm − p_w)        [кг воды / кг сухого воздуха]
-  ΔW = η × (W_sat(T_wb) − W_outside)     [кг/кг]
-  Q_water = (Q_air/3600) × ρ × ΔW × 60  [л/мин]
+  ΔW = η × (W_sat(T_wb) − W_outside)          [кг воды / кг сухого воздуха]
+  Q_water = (Q_air/3600) × m_da × ΔW × 60     [л/мин]
+  m_da — масса сухого воздуха в кубометре НА ВЫХОДЕ панели: вентиляторы качают
+  уже охлаждённый увлажнённый воздух, и их паспортный расход — объём этого воздуха.
 
-  Точность: ±2% vs UGA Excel (подтверждено: расчёт 32.6 л/мин, UGA 33.2 л/мин)
+  Сверка: карта расхода воды UGA (Czarick) — 90 °F, 60 % RH, 100 000 cfm, панель 6"
+  → ≈ 1.75 gpm; здесь при КПД 0.75 (FSA-1068 для панели 6") — 1.76 gpm
+  (test_psychro.py). Прежний расчёт (Стулл + ρ = 1.184) давал 2.03 gpm, +16 %.
 
-Расчёт T_wb — формула Стулла (Stull, 2011), точность ±0.3°C:
-  T_wb = T × atan(0.151977 × (RH+8.313659)^0.5)
-       + atan(T + RH)
-       - atan(RH - 1.676331)
-       + 0.00391838 × RH^1.5 × atan(0.023101 × RH)
-       - 4.686035
+Психрометрия — core/psychro.py (ASHRAE Fundamentals 2017): мокрый термометр
+итерацией, а не формулой Стулла, — та в сухую жару ошибалась до +1 °C.
 """
 
 from __future__ import annotations
@@ -43,12 +42,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from .building_thermal import air_temperature_rise_c
-
-# Плотность воздуха при +25°C, кг/м³
-RHO_AIR_KG_M3 = 1.184
-
-# Стандартное атмосферное давление, Па
-P_ATM_PA = 101325.0
+from .psychro import dew_point_c, dry_air_kg_per_m3, humidity_ratio, wet_bulb_c
 
 # Проектная скорость через панель для расчёта рекомендуемой площади, м/с, по толщине
 # (UGA, Czarick: 350 fpm ≈ 1.78 м/с для 150 мм и 225 fpm ≈ 1.14 м/с для 100 мм —
@@ -245,46 +239,6 @@ def _interp_linear(x_vals: list[float], y_vals: list[float], x: float) -> float:
     return y_vals[-1]
 
 
-def _sat_pressure_pa(t_c: float) -> float:
-    """
-    Давление насыщенных паров воды по формуле Magnus-Tetens, Па.
-
-    Источник: Murray (1967); диапазон 0–50°C, точность <0.1%.
-    """
-    return 611.2 * math.exp(17.67 * t_c / (t_c + 243.5))
-
-
-def _humidity_ratio(t_c: float, rh_pct: float) -> float:
-    """
-    Влагосодержание воздуха W, кг воды / кг сухого воздуха.
-
-    W = 0.622 × p_w / (P_atm − p_w)
-    """
-    p_ws = _sat_pressure_pa(t_c)
-    p_w  = rh_pct / 100.0 * p_ws
-    return 0.622 * p_w / (P_ATM_PA - p_w)
-
-
-def _wet_bulb_stull(t_db: float, rh: float) -> float:
-    """
-    Расчёт температуры мокрого термометра по формуле Стулла (2011).
-
-    Источник: Stull R. (2011). Wet-Bulb Temperature from Relative Humidity and Air Temperature.
-    J. Appl. Meteor. Climatol.
-    Точность: ±0.3°C в диапазоне 5–40°C, 5–99% RH.
-    """
-    t = t_db
-    r = rh
-    t_wb = (
-        t * math.atan(0.151977 * (r + 8.313659) ** 0.5)
-        + math.atan(t + r)
-        - math.atan(r - 1.676331)
-        + 0.00391838 * r ** 1.5 * math.atan(0.023101 * r)
-        - 4.686035
-    )
-    return t_wb
-
-
 def _water_flow_lpm(
     fan_m3h: float,
     t_db: float,
@@ -302,37 +256,21 @@ def _water_flow_lpm(
       ΔW = η × (W_sat(T_wb) − W_outside)   [кг воды / кг сух. воздуха]
       Q_water = (Q / 3600) × ρ × ΔW × 60   [л/мин]
 
-    Точность: ±2% vs UGA Excel (против ±21% при тепловом балансе).
     """
-    w_outside = _humidity_ratio(t_db, rh_pct)
-    w_sat_wb  = _humidity_ratio(t_wb, 100.0)   # влагосодержание при T_wb, RH=100%
+    w_outside = humidity_ratio(t_db, rh_pct)
+    w_sat_wb  = humidity_ratio(t_wb, 100.0)   # влагосодержание при T_wb, RH=100%
 
     dw = efficiency * (w_sat_wb - w_outside)
     if dw <= 0:
         return 0.0
 
+    # Паспортный расход вентиляторов — объём воздуха после панели (они стоят за ней)
+    t_out = t_db - efficiency * (t_db - t_wb)
     q_m3s = fan_m3h / 3600.0
-    # Масса испарённой воды = расход воздуха × плотность × ΔW
-    m_water_kg_s = q_m3s * RHO_AIR_KG_M3 * dw
+    # Масса испарённой воды = масса сухого воздуха × ΔW
+    m_water_kg_s = q_m3s * dry_air_kg_per_m3(t_out, w_outside + dw) * dw
     # Перевод в л/мин (плотность воды ≈ 1 кг/л)
     return m_water_kg_s * 60.0
-
-
-def _dew_point(t_db: float, rh_pct: float) -> float:
-    """
-    Точка росы входящего воздуха, °C.
-
-    Инверсия формулы Magnus-Tetens:
-      Pv = (RH/100) × Psat(T_db)
-      T_dp = 243.5 × ln(Pv/611.2) / (17.67 − ln(Pv/611.2))
-
-    Если T_вода < T_dp → поверхность панели холоднее точки росы →
-    водяной пар конденсируется на панели, выделяя скрытую теплоту →
-    эффективность насыщения панели снижается.
-    """
-    pv     = (rh_pct / 100.0) * _sat_pressure_pa(t_db)
-    ln_pv  = math.log(pv / 611.2)
-    return 243.5 * ln_pv / (17.67 - ln_pv)
 
 
 FAN_RATING_POINT_PA = 25.0   # вторая точка паспорта вентилятора (≈ 0.10" вод. ст.)
@@ -382,7 +320,7 @@ def calculate_evap_cooling(inp: EvapCoolingInput) -> EvapCoolingResult:
     v_max      = pad_data["v_max_ms"]
 
     # Температура мокрого термометра
-    t_wb = _wet_bulb_stull(inp.t_outdoor_db_c, inp.rh_outdoor_pct)
+    t_wb = wet_bulb_c(inp.t_outdoor_db_c, inp.rh_outdoor_pct)
 
     # Геометрия панели — прямые размеры: длина × высота
     pad_area_m2 = inp.pad_length_m * inp.pad_height_m
@@ -445,8 +383,9 @@ def calculate_evap_cooling(inp: EvapCoolingInput) -> EvapCoolingResult:
     else:
         status_code, status_level = "ok", "ok"
 
-    # Точка росы входящего воздуха (всегда)
-    t_dew = _dew_point(inp.t_outdoor_db_c, inp.rh_outdoor_pct)
+    # Точка росы входящего воздуха (всегда). Вода холоднее неё — пар конденсируется
+    # на панели, выделяя скрытую теплоту, и КПД насыщения падает
+    t_dew = dew_point_c(inp.t_outdoor_db_c, inp.rh_outdoor_pct)
 
     # Режим подачи воды (если задана температура)
     water_regime: Optional[str] = None

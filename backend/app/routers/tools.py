@@ -210,7 +210,7 @@ def calc_evap_cooling(req: EvapCoolingRequest) -> EvapCoolingResponse:
 
     **Водопотребление:** психрометрический массовый баланс ΔW = η × (W_sat(T_wb) − W_outside), точность ±2% vs UGA Excel.
 
-    **Формула мокрого термометра:** Stull (2011), точность ±0.3°C.
+    **Мокрый термометр:** психрометрическое уравнение ASHRAE (Fundamentals 2017, ур. 33), core/psychro.py.
     """
     inp = EvapCoolingInput(
         house_length_m    = req.house_length_m,

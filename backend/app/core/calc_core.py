@@ -8,6 +8,7 @@ from .errors import CalcError
 from .growth_profiles import load_profile
 from .apparent_temp import rh_temperature_shift
 from .survival import survival_fraction
+from .psychro import humidity_ratio
 from .bird_heat import house_heat_per_bird, house_sensible_fraction
 from .ventilation_calc import calc_q_min_per_bird
 from .app_config import load_app_config
@@ -25,18 +26,9 @@ from .building_thermal import (
 
 # ─── Психрометрические вспомогательные функции ───────────────────────────────
 
-def sat_pressure_pa(T_c: float) -> float:
-    """Давление насыщенного пара при T_c (°C). Формула Магнуса, ±0.1% в -40..+60°C."""
-    return 611.2 * math.exp(17.67 * T_c / (T_c + 243.5))
-
-
 def humidity_ratio_g_per_kg(T_c: float, rh_pct: float) -> float:
-    """Влагосодержание воздуха, г/кг с.в. при (T°C, RH%)."""
-    P_s = sat_pressure_pa(T_c)
-    P_v = P_s * max(rh_pct, 0.0) / 100.0
-    P_atm = 101_325.0
-    # Клапейрон–Клаузиус: W = 0.622 × Pv / (Patm − Pv)
-    return 0.622 * P_v / max(P_atm - P_v, 1.0) * 1000.0  # г/кг
+    """Влагосодержание воздуха, г/кг с.в. при (T°C, RH%) — psychro.humidity_ratio в г/кг."""
+    return humidity_ratio(T_c, rh_pct) * 1000.0
 
 
 def house_sensible_fraction_cigr2002(t_inside_c: float) -> float:
