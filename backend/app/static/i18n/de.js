@@ -114,7 +114,6 @@
     humidity_uncontrollable_note: 'Die Außenluft ist zu feucht, um die Zielfeuchte durch Lüften zu halten — Qmin in diesen Zeilen ist das Maximum der Betriebsart (4× CO₂-Minimum vor dem Tunnelalter, danach Tunnelvolumenstrom). Zuluft erwärmen oder entfeuchten.',
     heater_insufficient_note: 'In diesen Zeilen reichen die Heizer selbst bei 100 % nicht — einschließlich der Erwärmung der Luft, die zur Verdünnung ihres CO₂ nötig ist. Mehr Heizleistung oder geringere Wärmeverluste nötig.',
     label_target_rh: 'Ziel-RH im Stall, %',
-    target_rh_ignored: 'Ziel-RH außerhalb 40–70 % (Tabelle gefühlte Temperatur) — RH des Profils verwendet',
     gp_temp_ref: '(bei 60 % RH; Anpassung an Ziel-RH nach gefühlter Temperatur)',
     growth_profile_lbl: 'Wachstumsprofil:',
     gp_builtin: 'Züchter',

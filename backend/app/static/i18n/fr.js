@@ -114,7 +114,6 @@
     humidity_uncontrollable_note: "L'air extérieur est trop humide pour tenir l'humidité cible par la ventilation — le Qmin de ces lignes est le maximum du mode (4× le minimum CO₂ avant l'âge tunnel, débit tunnel ensuite). Il faut chauffer l'air entrant ou déshumidifier.",
     heater_insufficient_note: "Dans ces lignes, les chauffages sont insuffisants même à 100 % — y compris le chauffage de l'air nécessaire pour diluer leur CO₂. Il faut plus de puissance ou moins de pertes thermiques.",
     label_target_rh: 'HR cible du bâtiment, %',
-    target_rh_ignored: 'HR cible hors 40–70 % (table de température ressentie) — HR du profil utilisée',
     gp_temp_ref: '(à 60 % HR ; ajustée à la HR cible selon la température ressentie)',
     growth_profile_lbl: 'Profil de croissance :',
     gp_builtin: 'sélectionneur',

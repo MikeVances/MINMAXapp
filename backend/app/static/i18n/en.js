@@ -114,7 +114,6 @@
     humidity_uncontrollable_note: 'Outside air is too humid to hold the indoor target RH by ventilation — Qmin in these rows is the regime maximum (4× CO₂ minimum before tunnel age, tunnel flow after). Heat the incoming air or dehumidify.',
     heater_insufficient_note: 'Heaters are insufficient even at 100 % in these rows — including heating of the air needed to dilute their CO₂. Add heating capacity or reduce heat loss.',
     label_target_rh: 'Target house RH, %',
-    target_rh_ignored: 'Target RH outside 40–70% (apparent temperature table) — profile RH used',
     gp_temp_ref: '(at 60% RH; adjusted to the target RH by apparent temperature)',
     growth_profile_lbl: 'Growth profile:',
     gp_builtin: 'breeder',

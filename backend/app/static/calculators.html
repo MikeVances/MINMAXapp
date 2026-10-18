@@ -730,11 +730,6 @@ document.querySelectorAll('.tool-tab:not([disabled])').forEach(btn => {
       const profData = await r.json();
       renderProfileHtml(profData, tab, mode, outsideT, outsideRH);
       rerenderOnLang.profile = () => renderProfileHtml(profData, tab, mode, outsideT, outsideRH);
-      // Значение вне таблицы не применено — сказать об этом, а не молча считать по профилю
-      if (rhRaw !== '' && targetRH === null) {
-        profSummary.insertAdjacentHTML('afterbegin',
-          `<p class="warn fs-12 mt-0 mb-8">⚠ ${t('target_rh_ignored')}</p>`);
-      }
     } catch (e) {
       profSummary.innerHTML = `<div class="card"><div class="danger">${escapeHtml(t('err_prefix') + (e.message || e))}</div></div>`;
       profSummary.hidden = false;
