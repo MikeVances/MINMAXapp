@@ -103,6 +103,8 @@
     phys_volume:         'Kubatura kurnika',
     phys_cross_section:  'Przekrój poprzeczny (tunel)',
     phys_min_vent_check: 'Biologiczne Qmin/m² (dzień 1)',
+    phys_min_fans_check: 'Wentylatory wentylacji minimalnej/m²',
+    phys_min_fans_norm:  '≥18 klimat gorący · 37–46 zimny',
     phys_max_vent_check: 'Wydajność syst./m² (dzień 42, tunel)',
     phys_exchange_time:  'Wymiana powietrza przy maks. wydajności',
     phys_airspeed_tunnel:'Prędkość powietrza w tunelu przy maks. wydajności',

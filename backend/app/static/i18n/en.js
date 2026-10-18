@@ -103,6 +103,8 @@
     phys_volume:         'House volume',
     phys_cross_section:  'Cross-section (tunnel)',
     phys_min_vent_check: 'Biological Qmin/m² (day 1)',
+    phys_min_fans_check: 'Min-vent fans installed/m²',
+    phys_min_fans_norm:  '≥18 hot climate · 37–46 cold',
     phys_max_vent_check: 'System cap/m² (day 42 tunnel)',
     phys_exchange_time:  'Air exchange at sys. max',
     phys_airspeed_tunnel:'Tunnel airspeed at sys. max',

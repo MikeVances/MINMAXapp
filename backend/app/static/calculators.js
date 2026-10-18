@@ -320,13 +320,23 @@ document.addEventListener('DOMContentLoaded', () => {
       const v_tun  = (S_cross && q_sys && q_sys > 0) ? q_sys / 3600 / S_cross : null;
 
       const hasSysCap = !!d.user_max_m3h;
-      const cls_qmin  = '';
+      // Нормы — Cobb Broiler Management Guide 2021, гл. 9 (сверено с PDF 2026-10-19):
+      //   §9.1 (с. 69): вентиляторы минвентиляции по таймеру — не меньше 0.3 м³/мин на м²
+      //     (18 м³/ч·м²) в жарком климате, 0.61–0.77 (36.6–46.2) — в холодном. Это норма
+      //     УСТАНОВЛЕННОЙ мощности, а не потребности: раньше с ней сравнивался
+      //     биологический Qmin первого дня — другая величина (аудит 2026-10-18);
+      //   §9.7 (с. 77): мощность туннеля 165–200 м³/ч·м², смена воздуха 40–50 с.
+      const minFansCap = Number(tab.num_min_fans) > 0 && Number(tab.min_fan_cap_m3h) > 0
+        ? Number(tab.num_min_fans) * Number(tab.min_fan_cap_m3h) : null;
+      const minCapM2   = minFansCap ? minFansCap / S_floor : null;
+      const cls_mincap = minCapM2 != null ? (minCapM2 >= 18 ? 'ok' : 'warn') : '';
       // Цель скорости — с сервера, из той же таблицы по возрасту, что у вкладки
       // туннеля (на последний день цикла). Раньше здесь были зашиты «≥3.0 м/с»,
       // а туннель для того же корпуса и дня судил по 2.5–3.0.
       const vMin = d.tunnel_target_v_min_ms, vMax = d.tunnel_target_v_max_ms;
-      const cls_qmax  = hasSysCap && qMaxM2 != null ? (qMaxM2 >= 150 ? 'ok' : qMaxM2 >= 100 ? '' : 'warn') : '';
-      const cls_texch = hasSysCap && T_exch != null ? (T_exch <= 60 ? 'ok' : T_exch <= 90 ? '' : 'warn') : '';
+      // Цвет — по той же границе, что подписана в скобках (раньше «норма» горела с 150 и до 60 с)
+      const cls_qmax  = hasSysCap && qMaxM2 != null ? (qMaxM2 >= 165 ? 'ok' : qMaxM2 >= 0.8 * 165 ? '' : 'warn') : '';
+      const cls_texch = hasSysCap && T_exch != null ? (T_exch <= 50 ? 'ok' : T_exch <= 60 ? '' : 'warn') : '';
       // Пороги — как у вердикта вкладки туннеля: ≥ v_min — норма, ≥ 0.8·v_min — мало, ниже — плохо
       const cls_vtun  = hasSysCap && v_tun != null && vMin
         ? (v_tun >= vMin ? 'ok' : v_tun >= 0.8 * vMin ? '' : 'warn') : '';
@@ -339,9 +349,10 @@ document.addEventListener('DOMContentLoaded', () => {
           ${V_house ? `<div class="kv"><span>${t('phys_volume')}</span><span>${fmtNum(V_house, 0)} ${t('unit_m3')}</span></div>` : ''}
           ${S_cross  ? `<div class="kv"><span>${t('phys_cross_section')}</span><span>${fmtNum(S_cross, 1)} ${t('unit_m2')}</span></div>` : ''}
           <div class="mt-6">
-            ${qMinM2 != null ? `<div class="kv"><span>${t('phys_min_vent_check')}</span><span class="${cls_qmin}">${fmtNum(qMinM2, 1)} ${t('unit_m3h_m2')} <span class="muted">[≥18]</span></span></div>` : ''}
+            ${qMinM2 != null ? `<div class="kv"><span>${t('phys_min_vent_check')}</span><span>${fmtNum(qMinM2, 1)} ${t('unit_m3h_m2')}</span></div>` : ''}
+            ${minCapM2 != null ? `<div class="kv"><span>${t('phys_min_fans_check')}</span><span class="${cls_mincap}">${fmtNum(minCapM2, 1)} ${t('unit_m3h_m2')} <span class="muted">[${t('phys_min_fans_norm')}]</span></span></div>` : ''}
             ${qMaxM2 != null ? `<div class="kv"><span>${t('phys_max_vent_check')}</span><span class="${cls_qmax}">${fmtNum(qMaxM2, 1)} ${t('unit_m3h_m2')} <span class="muted">[165–200]</span></span></div>` : ''}
-            ${T_exch  != null ? `<div class="kv"><span>${t('phys_exchange_time')}</span><span class="${cls_texch}">${T_exch} ${t('unit_sec')} <span class="muted">[40–60]</span></span></div>` : ''}
+            ${T_exch  != null ? `<div class="kv"><span>${t('phys_exchange_time')}</span><span class="${cls_texch}">${T_exch} ${t('unit_sec')} <span class="muted">[40–50]</span></span></div>` : ''}
             ${v_tun   != null ? `<div class="kv"><span>${t('phys_airspeed_tunnel')}</span><span class="${cls_vtun}">${fmtNum(v_tun, 2)} ${t('unit_ms')} ${vTarget ? `<span class="muted">[${vTarget}]</span>` : ''}</span></div>` : ''}
           </div>
           <p class="muted fs-10 mt-8 mb-0">${t('phys_cobb_source')}${hasSysCap ? '' : ' · ' + t('phys_needs_sys_cap')}</p>

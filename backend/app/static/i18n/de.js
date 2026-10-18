@@ -103,6 +103,8 @@
     phys_volume:         'Stallvolumen',
     phys_cross_section:  'Querschnitt (Tunnel)',
     phys_min_vent_check: 'Biologisches Q_min/m² (Tag 1)',
+    phys_min_fans_check: 'Mindestlüftungs-Ventilatoren/m²',
+    phys_min_fans_norm:  '≥18 heißes Klima · 37–46 kaltes',
     phys_max_vent_check: 'Systemkapazität/m² (Tag 42 Tunnel)',
     phys_exchange_time:  'Luftwechsel bei Systemmax.',
     phys_airspeed_tunnel:'Tunnelluftgeschwindigkeit bei Systemmax.',

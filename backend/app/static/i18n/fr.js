@@ -103,6 +103,8 @@
     phys_volume:         'Volume du bâtiment',
     phys_cross_section:  'Section transversale (tunnel)',
     phys_min_vent_check: 'Qmin biologique/m² (jour 1)',
+    phys_min_fans_check: 'Ventilateurs de ventilation minimale/m²',
+    phys_min_fans_norm:  '≥18 climat chaud · 37–46 froid',
     phys_max_vent_check: 'Capacité système/m² (tunnel jour 42)',
     phys_exchange_time:  'Renouvellement d\'air à capacité max.',
     phys_airspeed_tunnel:'Vitesse d\'air tunnel à capacité max.',

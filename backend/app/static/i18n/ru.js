@@ -103,6 +103,8 @@
     phys_volume:         'Объём птичника',
     phys_cross_section:  'Поперечное сечение (тоннель)',
     phys_min_vent_check: 'Биол. Qmin/м² (день 1)',
+    phys_min_fans_check: 'Вентиляторы минвентиляции/м²',
+    phys_min_fans_norm:  '≥18 жаркий климат · 37–46 холодный',
     phys_max_vent_check: 'Мощность системы/м² (тоннель д.42)',
     phys_exchange_time:  'Воздухообмен при макс. мощности',
     phys_airspeed_tunnel:'Скорость тоннеля при макс. мощности',
