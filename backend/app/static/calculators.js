@@ -547,6 +547,10 @@ document.getElementById('tunnel-form').addEventListener('submit', async e => {
       fan_capacity_25pa_m3h: NumField.value('tn-fan-cap25') ?? 0,
       // Поголовье — для нагрева воздуха вдоль корпуса (оценка у вентиляторов)
       num_birds:        NumField.value('tn-birds') ?? 0,
+      // Панели во впуске (пусто — проёмы открыты): их ΔP входит в рабочую точку
+      pad_type:         document.getElementById('tn-pad-type').value || null,
+      pad_thickness_mm: document.getElementById('tn-pad-type').value
+                          ? Number(document.getElementById('tn-pad-thickness').value) : null,
     };
 
     const resp = await fetch('./calc/tools/tunnel_speed', {
@@ -634,6 +638,10 @@ function renderTunnel(d, t_real) {
     `<span class="c-grade-${inletVelGrade}">${fmtNum(d.inlet_velocity_ms, 2)} ${uMs}</span>`;
   document.getElementById('tn-r-inlet-sp').textContent =
     fmtNum(d.inlet_sp_pa, 1) + ' ' + uPa;
+  // Сопротивление панели во впуске — строка только когда панели заданы
+  document.getElementById('tn-r-pad-row').hidden = !(d.pad_pressure_pa > 0);
+  document.getElementById('tn-r-pad-dp').textContent =
+    `${fmtNum(d.pad_pressure_pa, 1)} ${uPa} · ${fmtNum(d.pad_velocity_ms, 2)} ${uMs}`;
   document.getElementById('tn-r-inlet-status').textContent =
     t('tn_inlet_' + d.inlet_status, { v: fmtNum(d.inlet_velocity_ms, 2) });
 
@@ -709,9 +717,12 @@ const SANHE_THICKNESSES = {
   '5090': [50, 75, 100, 150],
 };
 
-function updatePadThicknessOptions() {
-  const padType  = document.getElementById('ev-pad-type').value;
-  const thickSel = document.getElementById('ev-thickness');
+// Список толщин под выбранный тип панели; typeId/thickId — вкладка панелей или туннеля
+function updatePadThicknessOptions(typeId = 'ev-pad-type', thickId = 'ev-thickness') {
+  const padType  = document.getElementById(typeId).value;
+  const thickSel = document.getElementById(thickId);
+  // Туннель: «нет панелей» — толщины не выбрать
+  thickSel.disabled = !padType;
   const prev     = +thickSel.value;
   const opts     = SANHE_THICKNESSES[padType] || [75, 100, 150];
   thickSel.innerHTML = opts.map(mm =>
@@ -723,7 +734,9 @@ function updatePadThicknessOptions() {
 
 // Инициализация и обработчик изменения типа панели
 updatePadThicknessOptions();
-document.getElementById('ev-pad-type').addEventListener('change', updatePadThicknessOptions);
+document.getElementById('ev-pad-type').addEventListener('change', () => updatePadThicknessOptions());
+updatePadThicknessOptions('tn-pad-type', 'tn-pad-thickness');
+document.getElementById('tn-pad-type').addEventListener('change', () => updatePadThicknessOptions('tn-pad-type', 'tn-pad-thickness'));
 
 document.getElementById('evap-form').addEventListener('submit', async e => {
   e.preventDefault();

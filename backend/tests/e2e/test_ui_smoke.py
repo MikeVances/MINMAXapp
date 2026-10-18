@@ -162,6 +162,20 @@ def test_tunnel_calculation(page):
     assert page.errors == []
 
 
+def test_tunnel_with_pads_in_the_inlet(page):
+    """Панель во впуске: толщина открывается после выбора типа, в ответе — её ΔP."""
+    _open(page, "/calculators.html", "tunnel")
+    _fill(page, {"#tn-width": 16, "#tn-height": 3.5, "#tn-fans": 10, "#tn-fan-cap": 40000, "#tn-fan-cap25": 36000,
+                 "#tn-tdb": 32, "#tn-rh": 50, "#tn-age": 35, "#tn-birds": 30000})
+    assert page.is_disabled("#tn-pad-thickness")
+    page.select_option("#tn-pad-type", "7090")
+    page.select_option("#tn-pad-thickness", "150")
+    page.click("#tunnel-btn")
+    page.wait_for_selector("#tn-r-pad-row:not([hidden])", timeout=10_000)
+    assert "Pa" in page.text_content("#tn-r-pad-dp") or "Па" in page.text_content("#tn-r-pad-dp")
+    assert page.errors == []
+
+
 def test_cooling_test_start_mark_undo_cancel(page):
     _open(page, "/calculators.html", "calibration")
     _fill(page, {"#tStartInside": 28, "#tOutside": 5})

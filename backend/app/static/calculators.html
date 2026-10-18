@@ -476,6 +476,22 @@
               <input id="tn-inlet-h" type="text" data-num inputmode="decimal" data-min="0.5" data-max="5" placeholder="2.2" />
             </label>
           </div>
+          <!-- Панели во впуске: их сопротивление снижает расход вентиляторов (нужна точка 25 Па) -->
+          <div class="field-row mt-4">
+            <label>
+              <span data-i18n="label_tn_pad">Pads in the inlet</span>
+              <select id="tn-pad-type">
+                <option value="" data-i18n="opt_pad_none">None — openings are open</option>
+                <option value="7090" data-i18n="opt_pad_7090">7090 — max η, higher ΔP</option>
+                <option value="7060" data-i18n="opt_pad_7060">7060 — standard, low ΔP</option>
+                <option value="5090" data-i18n="opt_pad_5090">5090 — compact, high η</option>
+              </select>
+            </label>
+            <label>
+              <span data-i18n="label_pad_thick">Pad thickness, mm</span>
+              <select id="tn-pad-thickness" disabled></select>
+            </label>
+          </div>
 
           <button type="submit" id="tunnel-btn" class="btn mt-16" data-i18n="btn_calc_tunnel">Calculate</button>
         </form>
@@ -536,6 +552,8 @@
                 <td class="ta-right fw-700" id="tn-r-inlet-vel">—</td></tr>
             <tr><td class="muted py-4 px-0" data-i18n="lbl_inlet_sp">Inlet static pressure</td>
                 <td class="ta-right" id="tn-r-inlet-sp">—</td></tr>
+            <tr id="tn-r-pad-row" hidden><td class="muted py-4 px-0" data-i18n="lbl_pad_dp">Pad resistance</td>
+                <td class="ta-right" id="tn-r-pad-dp">—</td></tr>
           </table>
           <div class="info-block mt-8 fs-12" id="tn-r-inlet-status"></div>
         </div>

@@ -37,9 +37,12 @@ Transactions of the ASAE 46(2):491–497, doi:10.13031/2013.12971):
 
 from __future__ import annotations
 
+from typing import Optional
+
 import math
 from dataclasses import dataclass
 
+from .evap_cooling_calc import SANHE_PADS, _pad_pressure_pa
 from .psychro import moist_air_density, wet_bulb_c
 from .building_thermal import air_temperature_rise_c
 
@@ -145,6 +148,10 @@ class TunnelSpeedInput:
     # Поголовье и масса: для нагрева воздуха вдоль корпуса (0 = не учитывать)
     num_birds:      int   = 0
     bird_weight_kg: float = 0.0
+    # Панели испарительного охлаждения во впускных проёмах (None = проёмы открыты).
+    # Площадь панелей = площадь впуска: воздух входит только через них
+    pad_type:         Optional[str] = None
+    pad_thickness_mm: int = 0
 
 
 # Допустимая разница температур между торцами корпуса в тоннельном режиме, °C
@@ -168,7 +175,7 @@ class TunnelSpeedResult:
     inlet_velocity_ms:      float   # Скорость воздуха через впуск
     inlet_sp_pa:            float   # Статическое давление на впуске (из геометрии)
     inlet_status:           str     # good | normal | high | critical
-    total_pressure_pa:      float   # Суммарное давление = дин. + впуск
+    total_pressure_pa:      float   # Суммарное давление = дин. + впуск + панель
     target_v_min_ms:        float
     target_v_max_ms:        float
     velocity_status:        str     # too_low | below_target | ok | above_target | too_high
@@ -197,6 +204,8 @@ class TunnelSpeedResult:
     effective_temp_at_target_speed_c: float = 0.0
     # Что делать: ok | add_fans | add_fans_heat | add_fans_and_pads | pads
     tunnel_action:            str = "ok"
+    pad_pressure_pa:          float = 0.0   # сопротивление панели на впуске, Па
+    pad_velocity_ms:          float = 0.0   # скорость воздуха через панель, м/с
 
 
 # ─────────────────────────────────────────────────
@@ -319,6 +328,30 @@ def _fan_operating_flow_m3s(
     return (-1.0 + math.sqrt(1.0 + 4.0 * a * q0_m3s)) / (2.0 * a)
 
 
+def _operating_flow_with_pad_m3s(q0_m3s: float, q25_m3s: float, num_fans: int,
+                                 resistance_pa_per_m3s2: float, pad_area_m2: float,
+                                 velocities: list[float], dp_table: list[float]) -> float:
+    """
+    Расход СИСТЕМЫ вентиляторов в рабочей точке, когда на впуске стоят панели, м³/с.
+
+    Сопротивление P(Q) = c·Q² + ΔP_панели(Q / A_панели): у панели оно задано кривой
+    производителя (SANHE), не квадратом, — замкнутой формулы нет, поэтому бисекция,
+    как в инструменте панелей: g(Q) = N·(q₀ − s·P(Q)) − Q убывает, g(0) = N·q₀ > 0.
+    Раньше инструмент туннеля панель не видел: 150 мм при 1.8 м/с — ещё ~40 Па, и
+    скорость в корпусе с панелями была завышена (аудит 2026-10-18).
+    """
+    s = (q0_m3s - q25_m3s) / FAN_RATING_POINT_PA
+    lo, hi = 0.0, num_fans * q0_m3s
+    for _ in range(60):
+        mid = 0.5 * (lo + hi)
+        p = resistance_pa_per_m3s2 * mid ** 2 + _pad_pressure_pa(velocities, dp_table, mid / pad_area_m2)
+        if num_fans * (q0_m3s - s * p) - mid > 0:
+            lo = mid
+        else:
+            hi = mid
+    return lo
+
+
 def target_speed_range(age_days: int) -> tuple[float, float]:
     """
     Целевой диапазон скорости туннеля (v_min, v_max) для возраста, м/с.
@@ -406,10 +439,20 @@ def calculate_tunnel_speed(inp: TunnelSpeedInput) -> TunnelSpeedResult:
     # Расход вентиляторов: рабочая точка, если известна вторая точка паспорта
     q0_m3s = inp.fan_capacity_m3h / 3600.0
     q25_m3s = inp.fan_capacity_25pa_m3h / 3600.0
+    pad = SANHE_PADS.get(inp.pad_type) if inp.pad_type else None
+    if pad is not None:
+        pad_v_table = pad["velocities"]
+        pad_dp_table = pad["pressure_pa"][inp.pad_thickness_mm]
     if 0.0 < q25_m3s < q0_m3s:
-        q_fan_m3s = _fan_operating_flow_m3s(q0_m3s, q25_m3s, inp.num_fans, resistance)
+        if pad is not None:
+            q_fan_m3s = _operating_flow_with_pad_m3s(
+                q0_m3s, q25_m3s, inp.num_fans, resistance, inlet_area, pad_v_table, pad_dp_table) / inp.num_fans
+        else:
+            q_fan_m3s = _fan_operating_flow_m3s(q0_m3s, q25_m3s, inp.num_fans, resistance)
         velocity_basis = "operating_point"
     else:
+        # Без второй точки паспорта рабочую точку не найти — расход по 0 Па (завышен,
+        # тем сильнее, чем больше сопротивление панели; клиент об этом говорит)
         q_fan_m3s = q0_m3s
         velocity_basis = "rated_0pa"
 
@@ -446,7 +489,10 @@ def calculate_tunnel_speed(inp: TunnelSpeedInput) -> TunnelSpeedResult:
     else:
         inlet_status = "critical"
 
-    p_total = p_dynamic + inlet_sp
+    # Панель на впуске: скорость через неё и её сопротивление по кривой производителя
+    pad_velocity = total_m3s / inlet_area if pad is not None else 0.0
+    pad_dp = _pad_pressure_pa(pad_v_table, pad_dp_table, pad_velocity) if pad is not None else 0.0
+    p_total = p_dynamic + inlet_sp + pad_dp
 
     # Рекомендации по скорости
     v_min_t, v_max_t = target_speed_range(inp.bird_age_days)
@@ -529,6 +575,8 @@ def calculate_tunnel_speed(inp: TunnelSpeedInput) -> TunnelSpeedResult:
         inlet_sp_pa               = round(inlet_sp, 1),
         inlet_status              = inlet_status,
         total_pressure_pa         = round(p_total, 1),
+        pad_pressure_pa           = round(pad_dp, 1),
+        pad_velocity_ms           = round(pad_velocity, 2),
         target_v_min_ms           = v_min_t,
         target_v_max_ms           = v_max_t,
         velocity_status           = velocity_status,

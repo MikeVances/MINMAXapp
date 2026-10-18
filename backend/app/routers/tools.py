@@ -296,12 +296,27 @@ class TunnelSpeedRequest(BaseModel):
     # Поголовье — для нагрева воздуха вдоль корпуса; масса — из профиля роста по возрасту
     num_birds: int = Field(0, ge=0, le=200_000, description="Поголовье (0 = нагрев вдоль корпуса не учитывать)")
     growth_profile_id: Optional[str] = Field(None, description="Профиль роста для массы птицы (по умолчанию — из настроек)")
+    # Панели во впускных проёмах: их сопротивление входит в рабочую точку вентиляторов
+    pad_type: Optional[str] = Field(None, pattern="^(7090|7060|5090)$",
+                                    description="Тип панели SANHE во впуске (нет — проёмы открыты)")
+    pad_thickness_mm: Optional[int] = Field(None, ge=50, le=300, description="Толщина панели, мм")
 
     @model_validator(mode="after")
     def _rating_point_below_free_air(self):
         # При 25 Па вентилятор не может дать больше, чем при 0 Па
         if self.fan_capacity_25pa_m3h and self.fan_capacity_25pa_m3h >= self.fan_capacity_m3h:
             raise CalcError("fan_25pa_above_free_air")
+        return self
+
+    @model_validator(mode="after")
+    def _pad_thickness_exists(self):
+        # Та же проверка, что у инструмента панелей: пара тип/толщина — из таблицы SANHE
+        if self.pad_type is None:
+            return self
+        allowed = SANHE_PADS[self.pad_type]["thicknesses"]
+        if self.pad_thickness_mm not in allowed:
+            raise CalcError("pad_thickness_unavailable", thickness=self.pad_thickness_mm,
+                            pad_type=self.pad_type, allowed=", ".join(map(str, allowed)))
         return self
 
 
@@ -340,6 +355,8 @@ class TunnelSpeedResponse(BaseModel):
     effective_temp_at_target_speed_c: float = 0.0
     tunnel_action:            str = "ok"     # ok | add_fans | add_fans_heat | add_fans_and_pads | pads
     bird_weight_kg:           float = 0.0   # масса из профиля, по которой считан нагрев
+    pad_pressure_pa:          float = 0.0   # сопротивление панели на впуске, Па (0 — панелей нет)
+    pad_velocity_ms:          float = 0.0   # скорость воздуха через панель, м/с
 
 
 @router.post(
@@ -382,6 +399,8 @@ def calc_tunnel_speed(req: TunnelSpeedRequest) -> TunnelSpeedResponse:
         fan_capacity_25pa_m3h = req.fan_capacity_25pa_m3h,
         num_birds        = req.num_birds,
         bird_weight_kg   = weight_kg,
+        pad_type         = req.pad_type,
+        pad_thickness_mm = req.pad_thickness_mm or 0,
     )
     r: TunnelSpeedResult = calculate_tunnel_speed(inp)
     return TunnelSpeedResponse(
@@ -417,6 +436,8 @@ def calc_tunnel_speed(req: TunnelSpeedRequest) -> TunnelSpeedResponse:
         effective_temp_at_target_speed_c = r.effective_temp_at_target_speed_c,
         tunnel_action             = r.tunnel_action,
         bird_weight_kg            = round(weight_kg, 3),
+        pad_pressure_pa           = r.pad_pressure_pa,
+        pad_velocity_ms           = r.pad_velocity_ms,
         velocity_basis            = r.velocity_basis,
         fan_operating_m3h         = r.fan_operating_m3h,
     )

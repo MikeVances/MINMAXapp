@@ -181,3 +181,39 @@ def test_effective_temperature_at_target_speed_matches_a_house_that_has_it():
     assert at_target.air_velocity_ms == pytest.approx(2.0, abs=0.005)
     assert slow.air_temp_rise_c > at_target.air_temp_rise_c
     assert slow.effective_temp_at_target_speed_c == pytest.approx(at_target.effective_temp_c, abs=0.05)
+
+
+# ─── Панели во впуске (аудит 2026-10-18: инструмент туннеля их не видел) ─────
+
+def test_pad_in_the_inlet_lowers_the_operating_flow():
+    """
+    Рабочая точка с панелью лежит на обеих кривых: вентилятор q = q₀ − s·P и
+    система P = c·Q² + ΔP_панели(Q/A) по таблице SANHE. Без панели — прежний расчёт.
+    """
+    from backend.app.core.evap_cooling_calc import SANHE_PADS, _pad_pressure_pa
+    from backend.app.core.psychro import moist_air_density
+
+    base = dict(HOUSE, fan_capacity_25pa_m3h=36_000)
+    open_inlet = calculate_tunnel_speed(TunnelSpeedInput(**base))
+    padded = calculate_tunnel_speed(TunnelSpeedInput(**base, pad_type="7090", pad_thickness_mm=150))
+
+    assert padded.air_velocity_ms < open_inlet.air_velocity_ms
+    assert padded.pad_pressure_pa > 0 and open_inlet.pad_pressure_pa == 0
+
+    pad = SANHE_PADS["7090"]
+    Q = 10 * padded.fan_operating_m3h / 3600.0
+    c = moist_air_density(32, 60) / 2 * (1 / 54 ** 2 + 1 / (60 * 0.62) ** 2)
+    p_system = c * Q ** 2 + _pad_pressure_pa(pad["velocities"], pad["pressure_pa"][150], Q / 60)
+    assert padded.fan_operating_m3h == pytest.approx(40_000 - 4_000 / 25 * p_system, abs=2.0)
+
+
+def test_api_rejects_a_pad_thickness_the_type_does_not_have(client):
+    payload = {**HOUSE, "pad_type": "5090", "pad_thickness_mm": 200}
+    r = client.post("/calc/tools/tunnel_speed", json=payload)
+    assert r.status_code == 422
+
+
+def test_api_passes_the_pad_through(client):
+    payload = {**HOUSE, "fan_capacity_25pa_m3h": 36_000, "pad_type": "7060", "pad_thickness_mm": 150}
+    r = client.post("/calc/tools/tunnel_speed", json=payload)
+    assert r.status_code == 200 and r.json()["pad_pressure_pa"] > 0
