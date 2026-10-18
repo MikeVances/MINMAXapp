@@ -30,15 +30,16 @@ def _calc(age_days: int, outside_t: float, outside_rh: float, **kw):
 
 # ─── Qmin ─────────────────────────────────────────────────────────────────────
 
-def test_qmin_co2_norm_when_air_has_no_drying_capacity():
+def test_qmin_co2_norm_when_outside_air_is_dry():
     """
-    День 21, снаружи 25 °C / 60 % — ровно как уставка внутри (25 °C / 60 %).
-    ΔW = 0 → влагобаланс не применим → Qmin = норма CO₂ из живой массы (CIGR 1984):
+    День 21, снаружи 25 °C / 5 % (W = 0.98 г/кг), уставка 25 °C / 60 % (11.89 г/кг):
+    ΔW = 10.9 г/кг, влажностный расход 94 216 / (1.184 × 10.9) ≈ 7 300 м³/ч меньше
+    нормы CO₂ → Qmin = норма CO₂ из живой массы (CIGR 1984):
       H    = 10.62 × 1.012^0.75 = 10.715 Вт;  VCO₂ = 10.715 × 0.153 = 1.6395 л/ч
       q    = 1.6395 / 2.6 × 1.5 (запас) = 0.9458 → 0.946 м³/ч·гол
       Qmin = 10 000 гол × 0.946 м³/ч = 9 460 м³/ч
     """
-    r = _calc(age_days=21, outside_t=25.0, outside_rh=60.0)
+    r = _calc(age_days=21, outside_t=25.0, outside_rh=5.0)
 
     assert r.q_min_m3h == pytest.approx(9_460.0, rel=1e-9)
     assert r.qmin_basis == "co2"
@@ -56,7 +57,7 @@ def test_qmin_moisture_dominates_with_humid_outside_air():
       Qmin  = G / (ρ × ΔW) = 84 592 м³/ч   > 9 460 по CO₂ → основание «moisture»
     До учёта подстилки (ревью 2026-10-16) — только дыхание 3.72·W^0.75: 49 926 м³/ч.
     """
-    r = _calc(age_days=21, outside_t=20.0, outside_rh=75.0)
+    r = _calc(age_days=21, outside_t=20.0, outside_rh=75.0, **HOUSE)   # потолок — туннель 324 000
 
     assert r.q_min_m3h == pytest.approx(84_592.3, rel=1e-4)
     assert r.qmin_basis == "moisture"
@@ -65,13 +66,45 @@ def test_qmin_moisture_dominates_with_humid_outside_air():
 def test_humid_outside_air_flags_uncontrollable_humidity():
     """
     День 21, внутри 25 °C / 60 % (W = 11.89 г/кг), снаружи 25 °C / 80 % (W ≈ 15.9 г/кг):
-    наружный воздух ВЛАЖНЕЕ целевого, вентиляцией RH не удержать. Qmin показан
-    по CO₂, но это должно быть видно флагом, а не тихой подменой (ревью 2026-10-16).
+    наружный воздух ВЛАЖНЕЕ целевого, вентиляцией RH не удержать — флаг.
+
+    Qmin — потолок режима, а не CO₂-норма (аудит 2026-10-18): W_вн = W_нар + G/(ρQ)
+    убывает с ростом Q, поэтому лучшее достижимое — максимум. Размеров корпуса нет,
+    а возраст туннельный → потолок оценён как 4 × Qmin(CO₂) = 4 × 9 460, и UI
+    должен попросить размеры.
     """
     r = _calc(age_days=21, outside_t=25.0, outside_rh=80.0)
 
     assert r.humidity_uncontrollable is True
-    assert r.qmin_basis == "co2"
+    assert r.qmin_basis == "moisture"
+    assert r.q_min_m3h == pytest.approx(4 * 9_460.0, rel=1e-9)
+    assert r.house_geometry_missing is True
+
+
+def test_moisture_qmin_is_continuous_in_outside_humidity():
+    """
+    Аудит 2026-10-18: суточные цыплята, 30 °C снаружи. Было: RH 58 % → 57 521,
+    60 % → 223 162 (сингулярность ΔW → 0), 62 % → 4 060 (обрыв на CO₂).
+    Влажнее снаружи — вентиляции нужно НЕ меньше, и не больше потолка режима
+    (до туннельного возраста 4 × Qmin по CO₂).
+    """
+    q_co2 = _calc(age_days=1, outside_t=30.0, outside_rh=10.0).q_min_m3h   # сухо → норма CO₂
+    series = [_calc(age_days=1, outside_t=30.0, outside_rh=rh).q_min_m3h for rh in range(40, 91)]
+
+    assert all(b >= a - 1e-6 for a, b in zip(series, series[1:])), series
+    assert max(series) == pytest.approx(4 * q_co2, rel=1e-9)
+
+
+def test_moisture_qmin_never_exceeds_tunnel_capacity():
+    """
+    Аудит 2026-10-18: 42 дня, 15 °C / 80 % снаружи, 35 000 голов давали 772 587 м³/ч —
+    больше полного туннеля корпуса. Потолок взрослой птицы — туннельный расход.
+    """
+    r = compute(CalcInput(birds=35_000, age_days=42, outside_t=15.0, outside_rh=80.0, **HOUSE))
+
+    assert r.q_min_m3h == pytest.approx(TUNNEL_M3H, rel=1e-9)
+    assert r.humidity_uncontrollable is True
+    assert r.house_geometry_missing is False
 
 
 def test_house_sensible_fraction_matches_cigr_2002_figure():
@@ -83,7 +116,7 @@ def test_house_sensible_fraction_matches_cigr_2002_figure():
 
 
 def test_dry_outside_air_does_not_flag_humidity():
-    r = _calc(age_days=21, outside_t=20.0, outside_rh=75.0)
+    r = _calc(age_days=21, outside_t=20.0, outside_rh=75.0, **HOUSE)
 
     assert r.humidity_uncontrollable is False
 
@@ -190,7 +223,7 @@ def test_survival_on_day_42_equals_configured_cycle_mortality(monkeypatch):
       daily = 1 − 0.96^(1/41),  survival(42) = (1 − daily)^41 = 0.96
     Qmin по CO₂ (W = 2.998 кг): 10.62 × 2.998^0.75 × 0.153 / 2.6 × 1.5 = 2.1358 → 2.136 м³/ч·гол
       Qmin = 2.136 × 10 000 × 0.96 = 20 505.6 м³/ч
-    (снаружи 25 °C / 60 % влажнее уставки 19 °C / 60 % → влагобаланс не применим)
+    (снаружи 25 °C / 5 %: W = 0.98 г/кг, ΔW = 7.3 г/кг → влажностный расход меньше нормы CO₂)
     """
     from backend.app.core import calc_core
     from backend.app.core.app_config import AppConfig
@@ -198,7 +231,7 @@ def test_survival_on_day_42_equals_configured_cycle_mortality(monkeypatch):
     monkeypatch.setattr(
         calc_core, "load_app_config", lambda: AppConfig(total_mortality_pct=4.0, default_growth_profile="test-breed")
     )
-    r = _calc(age_days=42, outside_t=25.0, outside_rh=60.0)
+    r = _calc(age_days=42, outside_t=25.0, outside_rh=5.0)
 
     assert r.q_min_m3h == pytest.approx(20_505.6, rel=1e-9)
     assert r.qmin_basis == "co2"
@@ -209,7 +242,7 @@ def test_survival_on_day_42_equals_configured_cycle_mortality(monkeypatch):
 def test_api_minmax_caps_qmax_by_user_capacity(client):
     payload = dict(
         house="1", birds=N_BIRDS, age_days=21,
-        outside_t=25.0, outside_rh=60.0, user_max_m3h=100_000, **HOUSE,
+        outside_t=25.0, outside_rh=5.0, user_max_m3h=100_000, **HOUSE,
     )
     r = client.post("/calc/minmax", json=payload)
 
@@ -222,10 +255,10 @@ def test_api_minmax_caps_qmax_by_user_capacity(client):
     assert body["capacity_insufficient"] is False
 
 
-# Qmin по CO₂ = 9 460 м³/ч (день 21), установлено только 5 000 м³/ч
+# Qmin по CO₂ = 9 460 м³/ч (день 21, сухой воздух снаружи), установлено только 5 000 м³/ч
 _UNDERSIZED = dict(
     house="1", birds=N_BIRDS,
-    outside_t=25.0, outside_rh=60.0, user_max_m3h=5_000,
+    outside_t=25.0, outside_rh=5.0, user_max_m3h=5_000,
 )
 
 

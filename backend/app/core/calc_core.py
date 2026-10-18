@@ -56,6 +56,48 @@ def house_sensible_fraction_cigr2002(t_inside_c: float) -> float:
     return min(max(fraction, 0.0), 1.0)
 
 
+def regime_ceiling_m3h(age: int, tunnel_min_day: int, q_min_co2: float,
+                       tunnel_requirement: Optional[float]) -> tuple[float, bool]:
+    """
+    Наибольший расход, который корпус разумно даст в этом возрасте, м³/ч.
+
+      моложе tunnel_min_day — 4 × Qmin по CO₂ (Aviagen: переходная вентиляция
+                              3–5× минимума; больше — сквозняк по молодой птице);
+      старше                — туннельный расход корпуса v × S × 3600.
+
+    Второе значение — True, если туннельный расход нужен, но размеров корпуса нет
+    и потолок оценён как 4 × Qmin: тогда UI просит ввести размеры.
+    """
+    if age < tunnel_min_day:
+        return 4.0 * q_min_co2, False
+    if tunnel_requirement:
+        return tunnel_requirement, False
+    return 4.0 * q_min_co2, True
+
+
+def moisture_qmin_m3h(vapour_g_per_h: float, rho_in: float, delta_w_g_per_kg: float,
+                      ceiling_m3h: float) -> tuple[float, bool]:
+    """
+    Расход, выносящий пар: Q = G / (ρ · ΔW), ограниченный потолком режима.
+
+    Почему потолок, а не «вернуться на CO₂»: влагосодержание в корпусе
+    W_вн = W_нар + G / (ρ · Q) убывает с ростом Q при ЛЮБОМ ΔW. Когда наружный
+    воздух почти так же влажен, как целевой (ΔW → 0), нужный расход уходит в
+    бесконечность, но лучшее достижимое — максимум режима, а не минимум по CO₂.
+    Раньше здесь был разрыв: 223 тыс. м³/ч у суточных цыплят при 30 °C / 60 %
+    и 4 тыс. при 62 % (аудит 2026-10-18).
+
+    Второе значение — True, если цель по влажности вентиляцией не достигается
+    (упёрлись в потолок): нужен подогрев приточного воздуха или осушение.
+    """
+    if delta_w_g_per_kg <= 0.0:
+        return ceiling_m3h, True
+    q = vapour_g_per_h / (rho_in * delta_w_g_per_kg)
+    if q > ceiling_m3h:
+        return ceiling_m3h, True
+    return q, False
+
+
 # ─── Модели данных ────────────────────────────────────────────────────────────
 
 @dataclass
@@ -156,6 +198,7 @@ def compute(ci: CalcInput) -> CalcResult:
     safety = float(getattr(cfg, "safety_factor_qmin", 1.5))
     per_bird_min = calc_q_min_per_bird(weight_kg, safety)
     q_min = birds_eff * per_bird_min
+    q_min_co2 = q_min
 
     # --- Туннель: требуемый расход — свойство КОРПУСА, а не поголовья ---
     # Q_tunnel = v × S_сечения × 3600. Раньше мощность туннеля хранилась на голову
@@ -208,6 +251,7 @@ def compute(ci: CalcInput) -> CalcResult:
         ceiling = 4.0 * q_min if age < tunnel_min_day else tunnel_requirement
 
         candidates = [q for q in (q_heat_balance, ceiling) if q is not None]
+        # (влажностный Qmin ниже берёт тот же потолок через regime_ceiling_m3h)
         q_max_need = min(candidates) if candidates else None
 
     if q_max_need is None:
@@ -231,28 +275,29 @@ def compute(ci: CalcInput) -> CalcResult:
     _delta_w: Optional[float] = None   # сохраняем для шага 2 (с паром горелок)
     _G_birds_gph: float = 0.0
 
+    # Потолок режима для влажностного Qmin — тот же, что ограничивает Qmax
+    moisture_ceiling, ceiling_needs_geometry = regime_ceiling_m3h(
+        age, tunnel_min_day, q_min_co2, tunnel_requirement)
+    _rho_in = 353.05 / (t_target_inside + 273.15)
+
     if rv_percent is not None:
         W_inside_max = humidity_ratio_g_per_kg(t_target_inside, rv_percent)
         W_outside    = humidity_ratio_g_per_kg(ci.outside_t, ci.outside_rh)
         _delta_w     = W_inside_max - W_outside
 
-        # ΔW ≤ 0.1: снаружи воздух не суше целевого — сколько ни вентилируй, пар не
-        # вынести. Раньше это место молча переходило на CO₂-норму, и чем влажнее было
-        # снаружи, тем МЕНЬШЕ получался Qmin (135 тыс. → 28 тыс. м³/ч при 60 → 80 % RH)
-        humidity_uncontrollable = _delta_w <= 0.1
-        if _delta_w > 0.1:
-            # Скрытое тепло корпуса = полное − явное на уровне корпуса (CIGR 2002):
-            # дыхание птицы + испарение с подстилки. Раньше бралось только дыхание
-            # 3.72·W^0.75 (животный уровень), и влажностный Qmin был занижен
-            q_total_w    = 10.62 * (weight_kg ** 0.75)
-            q_latent_w   = q_total_w * (1.0 - house_sensible_fraction_cigr2002(t_target_inside))
-            _G_birds_gph = q_latent_w * 3600.0 / 2430.0 * birds_eff
-            rho_in       = 353.05 / (t_target_inside + 273.15)
-            q_min_moisture_birds = _G_birds_gph / (rho_in * _delta_w)
+        # Скрытое тепло корпуса = полное − явное на уровне корпуса (CIGR 2002):
+        # дыхание птицы + испарение с подстилки. Раньше бралось только дыхание
+        # 3.72·W^0.75 (животный уровень), и влажностный Qmin был занижен
+        q_total_w    = 10.62 * (weight_kg ** 0.75)
+        q_latent_w   = q_total_w * (1.0 - house_sensible_fraction_cigr2002(t_target_inside))
+        _G_birds_gph = q_latent_w * 3600.0 / 2430.0 * birds_eff
 
-            if q_min_moisture_birds > q_min:
-                q_min      = q_min_moisture_birds
-                qmin_basis = "moisture"
+        q_min_moisture_birds, humidity_uncontrollable = moisture_qmin_m3h(
+            _G_birds_gph, _rho_in, _delta_w, moisture_ceiling)
+
+        if q_min_moisture_birds > q_min:
+            q_min      = q_min_moisture_birds
+            qmin_basis = "moisture"
 
     # --- Горелки: duty_cycle + CO₂ от открытого горения ---
     # duty_cycle учитывает ТРИ слагаемых теплового баланса:
@@ -296,17 +341,22 @@ def compute(ci: CalcInput) -> CalcResult:
     # --- Влагобаланс (ШАГ 2): добавляем пар газовых горелок ---
     # Горелки открытого горения выбрасывают H₂O в птичник (1 м³ газа → 1.607 кг H₂O).
     # Уточняем G_total и пересчитываем Qmin_moisture если duty_cycle известен.
-    if (_delta_w is not None and _delta_w > 0.1
+    if (_delta_w is not None
             and ci.heater_on and duty_cycle is not None
             and _thermal_cfg is not None and _thermal_cfg.heater
             and _thermal_cfg.heater.heater_type == "gas_open"):
         _gas         = (_thermal_cfg.heater.total_power_kw / 100.0) * 10.0 * duty_cycle
         G_heater_gph = _gas * 1607.0
-        rho_in       = 353.05 / (t_target_inside + 273.15)
-        q_min_moisture_total = (_G_birds_gph + G_heater_gph) / (rho_in * _delta_w)
+        q_min_moisture_total, uncontrollable_with_heater = moisture_qmin_m3h(
+            _G_birds_gph + G_heater_gph, _rho_in, _delta_w, moisture_ceiling)
+        humidity_uncontrollable = humidity_uncontrollable or uncontrollable_with_heater
         if q_min_moisture_total > q_min:
             q_min      = q_min_moisture_total
             qmin_basis = "moisture"
+
+    # Влажность упёрлась в потолок, а потолок без размеров корпуса только оценён
+    if humidity_uncontrollable and ceiling_needs_geometry:
+        house_geometry_missing = True
 
     # Влагобаланс и воздух горелок могли поднять Qmin уже ПОСЛЕ расчёта Qmax:
     # максимум по определению не ниже минимума
