@@ -8,6 +8,7 @@ from .errors import CalcError
 from .growth_profiles import load_profile
 from .apparent_temp import rh_temperature_shift
 from .survival import survival_fraction
+from .bird_heat import house_heat_per_bird, house_sensible_fraction
 from .ventilation_calc import calc_q_min_per_bird
 from .app_config import load_app_config
 from .building_thermal import (
@@ -39,23 +40,8 @@ def humidity_ratio_g_per_kg(T_c: float, rh_pct: float) -> float:
 
 
 def house_sensible_fraction_cigr2002(t_inside_c: float) -> float:
-    """
-    Доля явного тепла на уровне КОРПУСА для бройлеров (CIGR 2002, «Heat and moisture
-    production at animal and house levels»; уравнение в изложении Aarnink, CIGR Journal,
-    ур. 13):
-
-        Q_s = [0.61 · (1000 + 20 · (20 − T)) − 0.228 · T²] · Q_total / 1000
-
-    «Уровень корпуса» — уже с испарением с подстилки и мокрых поверхностей: часть
-    явного тепла птицы уходит на испарение и превращается в скрытое. Доля
-    0.54 при 19 °C и 0.20 при 33 °C (сходится с рис. 5 статьи). Против животного
-    уровня (6.90/10.62 = 0.65) влаги в воздух поступает больше — особенно на брудинге.
-
-    Оговорка Aarnink: формула не учитывает массу птицы и в первые недели, вероятно,
-    завышает скрытую долю — для влагобаланса это ошибка в безопасную сторону.
-    """
-    fraction = (0.61 * (1000.0 + 20.0 * (20.0 - t_inside_c)) - 0.228 * t_inside_c ** 2) / 1000.0
-    return min(max(fraction, 0.0), 1.0)
+    """Совместимость: доля явного тепла корпуса — см. bird_heat.house_sensible_fraction."""
+    return house_sensible_fraction(t_inside_c)
 
 
 def regime_ceiling_m3h(age: int, tunnel_min_day: int, q_min_co2: float,
@@ -203,6 +189,9 @@ def compute(ci: CalcInput) -> CalcResult:
     # --- Effective birds with mortality ---
     birds_eff = ci.birds * survival_fraction(age, cfg.total_mortality_pct, cfg.cycle_days)
 
+    # Тепло одной птицы на уровне корпуса при уставке — одна модель для Qmax, горелок и влаги
+    bird_heat = house_heat_per_bird(weight_kg, t_target_inside)
+
     # --- Qmin: биологический минимум по CO₂ (CIGR 1984) из живой массы ---
     # Норма считается из веса профиля роста, а не хранится в нём: профиль — это
     # данные кросса (вес, температура, RH), а вентиляция — следствие физики.
@@ -233,16 +222,17 @@ def compute(ci: CalcInput) -> CalcResult:
         #
         # Тепло, которое должна унести вентиляция:
         #   Q_vent = H_birds - Q_walls
-        #   H_birds = 6.90 × W^0.75 × N  [Вт]  (CIGR, только ЯВНОЕ тепло)
+        #   H_birds = явное тепло КОРПУСА × N  [Вт]  (CIGR 2002, bird_heat)
         #   Q_walls = UA × (T_in - T_out)  [Вт]  (> 0 = тепло уходит через стены)
         #
         # В мороз Q_walls > 0: стены помогают охлаждению, нагрузка на вентиляцию ниже.
         # Без данных калибровки UA = 0 (консервативно: не занижаем Qmax).
         #
-        # Почему 6.90, а не полное тепло 10.62: баланс ниже — по нагреву воздуха
-        # (ρ·Cp·ΔT). Скрытое тепло (3.72·W^0.75) уходит с паром дыхания и
-        # температуру воздуха не поднимает; с ним Qmax завышался на 54 %.
-        h_birds_sensible_w = 6.90 * (weight_kg ** 0.75) * birds_eff
+        # Баланс — по нагреву воздуха (ρ·Cp·ΔT), поэтому только явное тепло, и на
+        # уровне КОРПУСА: часть тепла птицы уходит на испарение влаги из подстилки
+        # и воздух не греет. Раньше бралось 6.90·W^0.75 (уровень птицы, 65 % полного),
+        # а влагобаланс — долю корпуса: в сумме выходило больше 100 % (аудит 2026-10-18)
+        h_birds_sensible_w = bird_heat.sensible_w * birds_eff
         q_wall_loss_w      = (_ua_coeff * (t_target_inside - ci.outside_t)
                               if _ua_coeff is not None else 0.0)
         q_vent_needed_w    = max(0.0, h_birds_sensible_w - q_wall_loss_w)
@@ -296,12 +286,10 @@ def compute(ci: CalcInput) -> CalcResult:
         W_outside    = humidity_ratio_g_per_kg(ci.outside_t, ci.outside_rh)
         _delta_w     = W_inside_max - W_outside
 
-        # Скрытое тепло корпуса = полное − явное на уровне корпуса (CIGR 2002):
-        # дыхание птицы + испарение с подстилки. Раньше бралось только дыхание
-        # 3.72·W^0.75 (животный уровень), и влажностный Qmin был занижен
-        q_total_w    = 10.62 * (weight_kg ** 0.75)
-        q_latent_w   = q_total_w * (1.0 - house_sensible_fraction_cigr2002(t_target_inside))
-        _G_birds_gph = q_latent_w * 3600.0 / 2430.0 * birds_eff
+        # Пар корпуса = скрытое тепло на уровне корпуса (CIGR 2002, bird_heat): дыхание
+        # птицы + испарение с подстилки, полное тепло — С температурной поправкой
+        # (без неё скрытое при 32 °C было завышено в 1.45 раза)
+        _G_birds_gph = bird_heat.vapour_g_per_h * birds_eff
 
         q_min_moisture_birds, humidity_uncontrollable = moisture_qmin_m3h(
             _G_birds_gph, _rho_in, _delta_w, moisture_ceiling)
@@ -342,7 +330,7 @@ def compute(ci: CalcInput) -> CalcResult:
             ua_w_per_k       = _ua_coeff,
             t_inside_c       = t_target_inside,
             t_outside_c      = ci.outside_t,
-            birds_sensible_w = 6.90 * (weight_kg ** 0.75) * birds_eff,
+            birds_sensible_w = bird_heat.sensible_w * birds_eff,
             heater_power_w   = heater_kw * 1000.0,
         )
         duty_cycle          = sol.duty_cycle

@@ -12,14 +12,12 @@
   Q_vent   — теплопотери с вентиляционным воздухом               [Вт]
            = Q_min [м³/с] × ρ × cp × (T_in − T_out)
 
-Метаболическое тепло птицы (CIGR Handbook Vol. II):
-  q_total [Вт/гол] = 10.62 × W^0.75   (W — живая масса, кг)
-  Разделение: ~65% чувствительное тепло (sensible), ~35% скрытое (latent)
-  q_sensible [Вт/гол] = 6.90 × W^0.75
+Метаболическое тепло птицы — явное тепло на уровне КОРПУСА (CIGR 2002), модуль bird_heat:
+  при 20 °C ≈ 52 % от 10.62·W^0.75, при 25 °C ≈ 41 %: часть тепла уходит на испарение
+  влаги из подстилки. Раньше здесь было 6.90·W^0.75 (уровень птицы, 65 %).
 
 Порядок масштаба:
-  30 000 бройлеров в 2 кг → 6.90 × 1.68 × 30 000 ≈ 348 кВт
-  Это часто полностью покрывает теплопотери без обогревателей (с ≈3 нед.)
+  30 000 бройлеров в 2 кг при 20 °C → 10.62 × 1.68 × 0.519 × 30 000 ≈ 278 кВт
 
 Калибровочный тест UA (метод охлаждения):
   Выполнять в ПУСТОМ птичнике: тепловая масса птиц и помёта полностью
@@ -33,6 +31,8 @@ import math
 import os
 from dataclasses import dataclass, asdict, field, fields
 from typing import Callable, Optional
+
+from .bird_heat import house_heat_per_bird
 
 from .errors import CalcError
 from .json_store import atomic_write_json
@@ -354,19 +354,11 @@ class HeatBalance:
     heater_deficit_kw:    float     # нехватка мощности при insufficient, иначе 0
 
 
-def bird_sensible_heat_w(bird_weight_kg: float) -> float:
-    """
-    Чувствительное тепло одной птицы, Вт.
-
-    Формула CIGR Handbook Vol. II (Livestock Housing):
-      Q_total = 10.62 × W^0.75  [Вт/гол]
-      Q_sensible ≈ 65% от Q_total при температурах 18–30°C
-
-    Где W — живая масса, кг. Показатель 0.75 отражает закон площади поверхности тела.
-    """
+def bird_sensible_heat_w(bird_weight_kg: float, t_inside_c: float) -> float:
+    """Явное тепло одной птицы на уровне корпуса при температуре T, Вт (CIGR 2002, bird_heat)."""
     if bird_weight_kg <= 0:
         return 0.0
-    return 6.90 * (bird_weight_kg ** 0.75)
+    return house_heat_per_bird(bird_weight_kg, t_inside_c).sensible_w
 
 
 def calculate_heat_balance(
@@ -389,7 +381,7 @@ def calculate_heat_balance(
     dt = max(t_inside_target - t_outside, 0.0)   # разница температур
 
     # Метаболическое тепло птицы
-    q_per_bird_w = bird_sensible_heat_w(bird_weight_kg)
+    q_per_bird_w = bird_sensible_heat_w(bird_weight_kg, t_inside_target)
     q_birds_w = num_birds * q_per_bird_w
 
     # q_min_m3h — минимум ПТИЦЫ; открытое пламя добавляет свой воздух разбавления,

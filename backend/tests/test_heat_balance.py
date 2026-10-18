@@ -89,7 +89,9 @@ def _heat_need_w(r, outside_t: float, birds: int) -> float:
     dt = t_in - outside_t
     walls = UA * dt
     vent = r.q_min_m3h / 3600.0 * rho_in * 1006.0 * dt
-    birds_w = 6.90 * (r.weight_used_g / 1000.0) ** 0.75 * birds_eff
+    # явное тепло корпуса CIGR 2002 (ур. 13) при уставке
+    f_s = (0.61 * (1000 + 20 * (20 - t_in)) - 0.228 * t_in ** 2) / 1000
+    birds_w = 10.62 * (r.weight_used_g / 1000.0) ** 0.75 * f_s * birds_eff
     return walls + vent - birds_w
 
 
