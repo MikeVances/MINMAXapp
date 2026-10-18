@@ -183,6 +183,8 @@
     btn_finish_test: '✔ Beenden (≥4 Markierungen)',
     tap_btn: '🌡 Thermometer zeigt {t} °C',
     marks_count: 'Markierungen: {n}',
+    undo_mark: '↶ Markierung zurücknehmen',
+    timer_restored: 'Test nach dem Neuladen wiederhergestellt — die Zeit läuft ab dem Start weiter.',
     err_enter_temps_first: 'Innen- und Außentemperatur eingeben',
     err_start_temp: 'Innen muss mindestens {dt} °C wärmer sein als außen',
     err_need_dims: 'Zuerst die Stallabmessungen speichern (Schritt 1)',

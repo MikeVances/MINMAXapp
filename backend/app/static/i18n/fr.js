@@ -183,6 +183,8 @@
     btn_finish_test: '✔ Terminer (≥4 marques)',
     tap_btn: '🌡 Le thermomètre indique {t} °C',
     marks_count: 'marques : {n}',
+    undo_mark: '↶ Annuler le relevé',
+    timer_restored: 'Test restauré après rechargement — le chrono continue depuis le départ.',
     err_enter_temps_first: 'Saisissez les températures intérieure et extérieure',
     err_start_temp: "L'intérieur doit être plus chaud d'au moins {dt} °C",
     err_need_dims: "Enregistrez d'abord les dimensions du bâtiment (étape 1)",

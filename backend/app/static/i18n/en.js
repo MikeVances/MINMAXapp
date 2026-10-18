@@ -183,6 +183,8 @@
     btn_finish_test: '✔ Finish (≥4 marks)',
     tap_btn: '🌡 Thermometer shows {t} °C',
     marks_count: 'marks: {n}',
+    undo_mark: '↶ Undo mark',
+    timer_restored: 'Test restored after reload — the clock kept running from the start.',
     err_enter_temps_first: 'Enter indoor and outdoor temperature',
     err_start_temp: 'Indoor must be at least {dt} °C warmer than outdoor',
     err_need_dims: 'Save the house dimensions first (step 1)',

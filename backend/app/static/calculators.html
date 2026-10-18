@@ -1473,7 +1473,8 @@ function renderEvap(d) {
     </div>
     <div class="mt-20 py-20 px-16 bg-bg r-10 ta-center">
       <div id="timerDisplay" class="timer-display">00:00</div>
-      <div id="timerStatus" class="muted mt-10 mb-18 fs-13" data-i18n="timer_ready"></div>
+      <!-- Текст ставит calibration.js (setStatus): у статуса нет постоянного ключа -->
+      <div id="timerStatus" class="muted mt-10 mb-18 fs-13" role="status"></div>
       <button id="timerBtn" class="btn" data-i18n="btn_start_test">▶ Start test</button>
       <button id="finishTestBtn" class="btn btn-secondary" hidden disabled data-i18n="btn_finish_test">✔ Finish</button>
     </div>

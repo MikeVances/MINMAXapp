@@ -183,6 +183,8 @@
     btn_finish_test: '✔ Zakończ (≥4 znaczniki)',
     tap_btn: '🌡 Termometr pokazuje {t} °C',
     marks_count: 'znaczniki: {n}',
+    undo_mark: '↶ Cofnij znacznik',
+    timer_restored: 'Test przywrócony po przeładowaniu — czas liczy się od startu.',
     err_enter_temps_first: 'Wpisz temperaturę wewnątrz i na zewnątrz',
     err_start_temp: 'Wewnątrz musi być cieplej o co najmniej {dt} °C',
     err_need_dims: 'Najpierw zapisz wymiary budynku (krok 1)',

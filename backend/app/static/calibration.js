@@ -58,8 +58,49 @@ const MIN_DROPS    = 4;   // меньше — параметры модели н
 const TARGET_DROPS = 6;   // после стольких отметок во всех зонах тест завершается сам
 const MIN_DELTA_T  = 10;  // °C: меньшая разница с улицей — тест бессмыслен
 
-// test = null | { startMs, tStart, tOut, zones: [[[сек, °C], …], …], interval }
+// test = null | { startMs, tStart, tOut, houseId, zones: [[[сек, °C], …], …], interval }
 let test = null;
+
+// ── Тест переживает перезагрузку ─────────────────────────────────────────────
+// Тест длится 20–60 минут с телефоном в руке: случайное обновление страницы,
+// звонок или выгруженная браузером вкладка стирали все отметки. Состояние пишется
+// в localStorage после каждого действия; время считается от startMs по часам,
+// поэтому после перезагрузки таймер продолжает с верного места.
+const TEST_STORE_KEY  = 'cooling_test_v1';
+const TEST_MAX_AGE_MS = 6 * 3600 * 1000;   // старше — тест брошен, не восстанавливаем
+
+function persistTest() {
+  try {
+    if (test) {
+      const { startMs, tStart, tOut, houseId, zones } = test;
+      localStorage.setItem(TEST_STORE_KEY, JSON.stringify({ startMs, tStart, tOut, houseId, zones }));
+    } else {
+      localStorage.removeItem(TEST_STORE_KEY);
+    }
+  } catch (e) { /* хранилище недоступно — тест идёт, но перезагрузку не переживёт */ }
+}
+
+// ── Экран не гаснет во время теста ───────────────────────────────────────────
+// Погасший экран на телефоне — пропущенная отметка градуса. Wake Lock браузер
+// снимает сам, когда вкладка уходит в фон, — при возврате берём заново.
+let wakeLock = null;
+
+async function keepScreenOn() {
+  if (!navigator.wakeLock || wakeLock) return;
+  try {
+    wakeLock = await navigator.wakeLock.request('screen');
+    wakeLock.addEventListener('release', () => { wakeLock = null; });
+  } catch (e) { /* нет разрешения или режим энергосбережения — тест идёт и так */ }
+}
+
+function releaseScreen() {
+  if (wakeLock) wakeLock.release().catch(() => {});
+  wakeLock = null;
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (test && document.visibilityState === 'visible') keepScreenOn();
+});
 let lastResult = null;    // { zones, uaTotal, points (однозонный), tOut }
 let lastAnalysis = null;  // последний ответ /thermal/analyze-heaters — для перерисовки
 
@@ -101,26 +142,61 @@ function renderTapPanel() {
         <button class="btn${n === 1 ? ' tap-btn-solo' : ''}" data-zone="${i}">
           ${t('tap_btn', { t: nextTemp(i) })}</button>
         <span class="muted fs-12">${t('marks_count', { n: drops })}</span>
+        ${drops > 0 ? `<button class="btn btn-secondary" data-undo="${i}">${t('undo_mark')}</button>` : ''}
         <div class="muted basis-full fs-11">${list}</div>
       </div>`;
   }).join('');
   elTapPanel.querySelectorAll('button[data-zone]').forEach(btn =>
     btn.addEventListener('click', () => recordMark(Number(btn.dataset.zone))));
+  elTapPanel.querySelectorAll('button[data-undo]').forEach(btn =>
+    btn.addEventListener('click', () => undoMark(Number(btn.dataset.undo))));
 }
+
+function updateFinishBtn() {
+  elFinishBtn.disabled = !test.zones.every(m => m.length - 1 >= MIN_DROPS);
+}
+
+// Двойное касание давало две отметки в одну секунду — сервер отклонял весь тест
+// («время отметок должно возрастать») уже после завершения, когда его не вернуть.
+// Градус за пару секунд воздух корпуса не теряет: такое касание — случайное
+const MIN_MARK_GAP_S = 2;
 
 function recordMark(zone) {
   if (!test) return;
-  test.zones[zone].push([elapsedSec(), nextTemp(zone)]);
-  const allDone = test.zones.every(m => m.length - 1 >= TARGET_DROPS);
-  const enough  = test.zones.every(m => m.length - 1 >= MIN_DROPS);
-  elFinishBtn.disabled = !enough;
-  if (allDone) { finishTest(); return; }
+  const marks = test.zones[zone];
+  const now = elapsedSec();
+  if (marks.length > 1 && now - marks[marks.length - 1][0] < MIN_MARK_GAP_S) return;
+  marks.push([now, nextTemp(zone)]);
+  persistTest();
+  updateFinishBtn();
+  if (test.zones.every(m => m.length - 1 >= TARGET_DROPS)) { finishTest(); return; }
   renderTapPanel();
+}
+
+// Нажал раньше, чем градусник дошёл, или не та зона: без отмены ошибочная
+// отметка уходила в подгонку и искажала UA — оставалось только начать заново.
+// Снимается последняя отметка; следующая ожидаемая температура вернётся сама
+// (nextTemp считает по числу отметок). Точку старта [0, tStart] не трогаем.
+function undoMark(zone) {
+  if (!test || test.zones[zone].length <= 1) return;
+  test.zones[zone].pop();
+  persistTest();
+  updateFinishBtn();
+  renderTapPanel();
+}
+
+// Надпись кнопки — через её data-i18n, а не textContent: applyDOM (смена языка,
+// инициализация feedback.js после восстановления теста) переписывает текст по
+// атрибуту, и идущий тест показывал «Старт», нажатие на который тест отменяло
+function setTimerBtn(key) {
+  elTimerBtn.dataset.i18n = key;
+  elTimerBtn.textContent  = t(key);
 }
 
 function stopTimer() {
   if (test && test.interval) clearInterval(test.interval);
-  elTimerBtn.textContent      = t('btn_start_test');
+  releaseScreen();
+  setTimerBtn('btn_start_test');
   elTimerDisplay.classList.remove('is-running');
   elFinishBtn.hidden = true;
 }
@@ -131,40 +207,75 @@ function startTest() {
   const tOut   = NumField.value(elTOutside);
   const tStart = NumField.value(elTStartInside);
   if (tOut === null || tStart === null) {
-    elTimerStatus.textContent = t('err_enter_temps_first');
-    setTone(elTimerStatus, 'danger');
+    setStatus(elTimerStatus, () => t('err_enter_temps_first'), 'danger');
     return;
   }
   if (tStart - tOut < MIN_DELTA_T) {
-    elTimerStatus.textContent = t('err_start_temp', { dt: MIN_DELTA_T });
-    setTone(elTimerStatus, 'danger');
+    setStatus(elTimerStatus, () => t('err_start_temp', { dt: MIN_DELTA_T }), 'danger');
     return;
   }
   // Отметки — целые градусы ниже старта: стартовую температуру округляем до 0.1
   const start = Math.round(tStart * 10) / 10;
-  test = {
-    startMs: Date.now(), tStart: start, tOut,
+  beginRunning({
+    startMs: Date.now(), tStart: start, tOut, houseId: getSelectedHouseId(),
     zones: Array.from({ length: zoneCount() }, () => [[0, start]]),
+  });
+}
+
+// Общая часть старта и восстановления после перезагрузки: состояние — снаружи,
+// здесь только таймер, экран и вид страницы
+function beginRunning(state, restored) {
+  test = Object.assign({}, state, {
     interval: setInterval(() => { elTimerDisplay.textContent = timerFormat(elapsedSec()); }, 500),
-  };
+  });
+  elTimerDisplay.textContent = timerFormat(elapsedSec());
+  persistTest();
+  keepScreenOn();
   lastResult = null;
   elSaveCalibrationBtn.disabled = true;
   elCalibrationResult.innerHTML = '';
   setStatus(elSaveCalStatus, null);   // «Сохранено» относилось к прошлому тесту
   elTimerDisplay.classList.add('is-running');
-  setTone(elTimerStatus, null);
-  elTimerStatus.textContent   = t(zoneCount() > 1 ? 'mz_timer_running' : 'timer_running', { n: zoneCount() });
-  elTimerBtn.textContent      = t('btn_cancel_test');
+  const n = test.zones.length;
+  setStatus(elTimerStatus, () => (restored ? t('timer_restored') + ' ' : '')
+                                 + t(n > 1 ? 'mz_timer_running' : 'timer_running', { n }));
+  setTimerBtn('btn_cancel_test');
   elFinishBtn.hidden = false;
-  elFinishBtn.disabled        = true;
+  updateFinishBtn();
   renderTapPanel();
 }
+
+// Восстановление незавершённого теста при открытии страницы. После сборки
+// списка корпусов (DOMContentLoaded): тест возвращается к своему корпусу —
+// по выбранному корпусу сохраняется калибровка
+function restoreTest() {
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem(TEST_STORE_KEY) || 'null'); } catch (e) { /* битая запись */ }
+  if (!saved) return;
+  const fresh = typeof saved.startMs === 'number' && Date.now() - saved.startMs < TEST_MAX_AGE_MS
+             && Array.isArray(saved.zones) && saved.zones.length > 0;
+  if (!fresh) { persistTest(); return; }   // test === null → запись удаляется
+
+  elTStartInside.value = saved.tStart;
+  elTOutside.value     = saved.tOut;
+  const zc = document.getElementById('zoneCount');
+  if (zc) zc.value = saved.zones.length;
+  const sel = document.getElementById('dimHouseSelect');
+  const opt = sel && [...sel.options].find(o => o.dataset.houseId && o.dataset.houseId === saved.houseId);
+  if (opt && sel.value !== opt.value) { sel.value = opt.value; sel.dispatchEvent(new Event('change')); }
+
+  beginRunning(saved, true);
+  // Идущий тест не должен прятаться за другой вкладкой инструментов
+  document.querySelector('.tool-tab[data-tool="calibration"]')?.click();
+}
+document.addEventListener('DOMContentLoaded', restoreTest);
 
 function cancelTest() {
   stopTimer();
   test = null;
+  persistTest();
   elTimerDisplay.textContent = '00:00';
-  elTimerStatus.textContent  = t('timer_ready');
+  setStatus(elTimerStatus, () => t('timer_ready'));
   renderTapPanel();
 }
 
@@ -172,9 +283,10 @@ async function finishTest() {
   const done = test;
   stopTimer();
   test = null;
+  persistTest();   // отметки уже в done; расчёт упадёт — тест всё равно завершён
   renderTapPanel();
-  setTone(elTimerStatus, 'ok');
-  elTimerStatus.textContent = t('timer_done', { min: fmtNum((Math.max(...done.zones.map(m => m[m.length - 1][0])) / 60), 1) });
+  const doneMin = Math.max(...done.zones.map(m => m[m.length - 1][0])) / 60;
+  setStatus(elTimerStatus, () => t('timer_done', { min: fmtNum(doneMin, 1) }), 'ok');
   try {
     lastResult = await computeCurveResult(done);
     renderCurveResult(lastResult);
@@ -676,6 +788,8 @@ async function fillFormFromConfig() {
 // Initialize
 updateDimensionsDisplay();
 updateGasInfoVisibility();
+// Начальная подсказка; restoreTest (DOMContentLoaded) заменит её, если тест идёт
+setStatus(elTimerStatus, () => t('timer_ready'));
 fillFormFromConfig();
 loadAndDisplayConfig();
 
@@ -684,11 +798,7 @@ loadAndDisplayConfig();
 document.addEventListener('i18n:change', () => {
   updateDimensionsDisplay();
   renderTapPanel();
-  if (test) {
-    // applyDOM вернул кнопке надпись «Старт» по data-i18n — во время теста она «Отменить»
-    elTimerBtn.textContent    = t('btn_cancel_test');
-    elTimerStatus.textContent = t(test.zones.length > 1 ? 'mz_timer_running' : 'timer_running', { n: test.zones.length });
-  }
+  // Кнопку теста переводит applyDOM по её data-i18n (setTimerBtn), строку статуса — setStatus
   if (lastResult)   renderCurveResult(lastResult);
   if (lastAnalysis) renderAnalysis(lastAnalysis);
   loadAndDisplayConfig();
