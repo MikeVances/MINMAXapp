@@ -1,8 +1,4 @@
-async function fetchJSON(url, opts) {
-  const r = await fetch(url, opts);
-  if (!r.ok) throw await apiError(r, opts && opts.body);   // код ошибки сервера → текст на языке интерфейса
-  return r.json();
-}
+// fetchJSON — общий, из ui.js (ошибка сервера → текст на языке интерфейса)
 
 const elConfigSection = document.getElementById('configSection');
 

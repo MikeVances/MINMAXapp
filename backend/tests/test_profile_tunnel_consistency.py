@@ -22,8 +22,10 @@ from backend.app.core.tunnel_speed_calc import (
     TunnelSpeedInput, calculate_tunnel_speed, target_speed_range,
 )
 
+from static_source import page_source
+
 STATIC = Path(__file__).resolve().parents[1] / "app" / "static"
-CALC_HTML = (STATIC / "calculators.html").read_text(encoding="utf-8")
+CALC_HTML = page_source("calculators.html")
 
 
 # ── Цель скорости: одна таблица ────────────────────────────────────────────

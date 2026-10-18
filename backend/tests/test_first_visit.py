@@ -9,6 +9,8 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+from static_source import page_source
+
 STATIC = Path(__file__).resolve().parents[1] / "app" / "static"
 
 
@@ -18,7 +20,7 @@ def test_home_page_saves_the_houses_it_shows_on_first_visit():
 
 
 def test_profile_button_says_why_it_is_disabled_without_a_house():
-    html = (STATIC / "calculators.html").read_text(encoding="utf-8")
+    html = page_source("calculators.html")
     body = html[html.index("function fillHouseOptions"):]
     body = body[:body.index("profileTabs.forEach")]
     assert "profBtn.disabled = !profileTabs.length" in body

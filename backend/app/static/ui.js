@@ -24,6 +24,25 @@
   window.setBg   = (el, tone) => swapTone(el, 'bg-', tone);     // фон
   window.setEdge = (el, tone) => swapTone(el, 'edge-', tone);   // цвет левой кромки
 
+  // ── Общие помощники страниц ────────────────────────────────────────────────
+  // Были в трёх копиях (calibration.js, settings.js, редактор профиля) — копии
+  // расходились: одна выводила null как «null», другая как пустую строку.
+
+  // Экранирование для innerHTML: имена корпусов и профилей пишет пользователь,
+  // а приходят они с сервера — от любого клиента (без этого — stored XSS)
+  window.escapeHtml = value => String(value ?? '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
+  // fetch → JSON; ошибка сервера → Error с текстом на языке интерфейса (apiError
+  // из i18n.js). Тело запроса передаётся, чтобы «points.8.body_weight_g» стало
+  // «День 14 · Масса, г»
+  window.fetchJSON = async (url, opts) => {
+    const r = await fetch(url, opts);
+    if (!r.ok) throw await apiError(r, opts && opts.body);
+    return r.json();
+  };
+
   // Строка статуса вместо alert(). alert блокирует страницу и пропадает после
   // нажатия «OK» — на телефоне его закрывают не читая, и что случилось, уже не
   // узнать. Статус остаётся рядом с кнопкой, которая его вызвала.

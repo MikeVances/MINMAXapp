@@ -12,6 +12,8 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+from static_source import page_source
+
 STATIC = Path(__file__).resolve().parents[1] / "app" / "static"
 ROOT = Path(__file__).resolve().parents[2]
 CSS = (STATIC / "styles.css").read_text(encoding="utf-8")
@@ -107,7 +109,7 @@ def test_feedback_button_is_pinned_only_when_the_margin_fits_it():
 
 def test_profile_table_header_has_no_long_footnote():
     """Сноска в заголовке температуры забирала ширину: колонка ОВ сжималась до 31 px."""
-    html = (STATIC / "calculators.html").read_text(encoding="utf-8")
+    html = page_source("calculators.html")
     headers = re.findall(r"<th>(.*?)</th>", html, re.S)
     assert any("col_min_temp" in h for h in headers)
     assert not any("gp_temp_ref" in h for h in headers)

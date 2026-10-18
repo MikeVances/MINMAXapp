@@ -1,16 +1,7 @@
 // Calibration page logic
 
-// Экранирование для вставки в innerHTML: house_id приходит с сервера, а туда —
-// от любого клиента. Без экранирования имя корпуса вида <img onerror=…>
-// выполнялось бы у каждого, кто откроет страницу калибровки (stored XSS).
-function escapeHtml(value) {
-  return String(value)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
+// escapeHtml и fetchJSON — общие, из ui.js. house_id в innerHTML — только через
+// escapeHtml: он приходит с сервера от любого клиента (иначе stored XSS)
 
 const elLength      = document.getElementById('length');
 const elWidth       = document.getElementById('width');

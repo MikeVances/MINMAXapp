@@ -17,6 +17,8 @@ from pathlib import Path
 
 import pytest
 
+from static_source import page_source
+
 STATIC = Path(__file__).resolve().parents[1] / "app" / "static"
 
 _NODE = """
@@ -93,12 +95,13 @@ def _code_lines(path: Path):
 
 
 def test_calculators_do_not_use_alert():
-    offenders = [n for n, line in _code_lines(STATIC / "calculators.html") if re.search(r"\balert\(", line)]
+    offenders = [n for page in ("calculators.html", "calculators.js", "growth-profiles.js", "calibration-house.js")
+                 for n, line in _code_lines(STATIC / page) if re.search(r"\balert\(", line)]
     assert not offenders, f"alert() в calculators.html, строки {offenders}"
 
 
 def test_failed_calculation_hides_the_previous_result():
-    html = (STATIC / "calculators.html").read_text(encoding="utf-8")
+    html = page_source("calculators.html")
     fn = html[html.index("function showToolError"):html.index("function clearToolError")]
     assert "results.hidden = true" in fn
     for tool, results in (("leakage", "l-results"), ("tunnel", "tn-results"), ("evap", "ev-results")):
@@ -126,7 +129,7 @@ def test_bird_count_is_required():
 
 
 def test_profile_editor_asks_before_discarding_edits():
-    html = (STATIC / "calculators.html").read_text(encoding="utf-8")
+    html = page_source("calculators.html")
     guard = html[html.index("function mayDiscardEdits"):html.index("document.addEventListener('DOMContentLoaded', loadProfile)")]
     assert guard.count("mayDiscardEdits()") >= 2          # смена профиля и смена корпуса
     assert "beforeunload" in guard

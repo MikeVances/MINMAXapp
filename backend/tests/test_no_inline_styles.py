@@ -38,10 +38,11 @@ def test_tone_classes_used_by_scripts_exist_in_css():
     css = (STATIC / "styles.css").read_text(encoding="utf-8")
     defined = set(re.findall(r"^\.([a-z0-9_-]+)\s*\{", css, re.M))
     used = set()
+    # Только литерал целиком ('ok'), не составной тон ('grade-' + q.grade)
     for path in STATIC.rglob("*.js"):
         src = path.read_text(encoding="utf-8")
-        used |= {"c-" + t for t in re.findall(r"setTone\([^,]+,\s*'([a-z0-9-]+)'", src)}
-        used |= {"bg-" + t for t in re.findall(r"setBg\([^,]+,\s*'([a-z0-9-]+)'", src)}
-        used |= {"edge-" + t for t in re.findall(r"setEdge\([^,]+,\s*'([a-z0-9-]+)'", src)}
+        used |= {"c-" + t for t in re.findall(r"setTone\([^,]+,\s*'([a-z0-9-]+)'\s*[),]", src)}
+        used |= {"bg-" + t for t in re.findall(r"setBg\([^,]+,\s*'([a-z0-9-]+)'\s*[),]", src)}
+        used |= {"edge-" + t for t in re.findall(r"setEdge\([^,]+,\s*'([a-z0-9-]+)'\s*[),]", src)}
     assert used, "вызовы setTone/setBg/setEdge не найдены"
     assert not used - defined, sorted(used - defined)
