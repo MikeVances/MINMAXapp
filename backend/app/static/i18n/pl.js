@@ -195,7 +195,6 @@
     cfg_method_curve: 'krzywa stygnięcia (powietrze + podłoga i ściany)',
     cfg_method_air_only: 'jeden punkt, tylko powietrze (warunkowe)',
     cfg_curve_val: '{n} znaczników, {time} min, na zewnątrz {tout} °C',
-    cfg_air_only_recalibrate: 'Stara kalibracja jednopunktowa może się mylić kilkukrotnie — przeprowadź test krzywej stygnięcia.',
     step3_proc_html: '<strong>Jak przeprowadzić test (tylko pusty budynek):</strong><ol class="mt-8 mb-0 mx-0 pl-20 lh-1_8"><li>Zamknij drzwi, bramy i wloty, wyłącz <strong>wszystkie wentylatory</strong>.</li><li>Nagrzej budynek i <strong>utrzymuj temperaturę 2–3 godziny</strong>, aby podłoga i ściany osiągnęły temperaturę powietrza. Start zaraz po nagrzaniu zawyża UA 1,5–2-krotnie — i nie widać tego w wyniku.</li><li>Najlepiej nocą (bez słońca na dachu), bez wiatru; różnica z zewnątrz <strong>co najmniej 15 °C</strong>.</li><li>Termometr na środku budynku na wysokości ptaków, z dala od nagrzewnic, ścian i bram.</li><li>Wyłącz ogrzewanie, wpisz temperaturę wewnątrz i na zewnątrz, naciśnij <strong>Start</strong>.</li><li>Za każdym razem, gdy termometr pokaże <strong>o 1 °C mniej</strong>, naciśnij przycisk. Potrzeba 4–6 znaczników; przy ciężkiej betonowej podłodze test może trwać 1–2 godziny. Resztę policzy aplikacja.</li><li>Kilka stref: termometr w każdej strefie, znaczniki własnym przyciskiem.</li></ol>',
     timer_ready: 'Wpisz temperaturę wewnątrz i na zewnątrz, wyłącz ogrzewanie i naciśnij Start.',
     timer_running: 'Test trwa — naciskaj przycisk przy każdym stopniu spadku.',
@@ -542,4 +541,11 @@
     srv_feedback_empty:            'Wiadomość jest pusta',
     srv_feedback_rate_limited:     'Zbyt wiele wiadomości — spróbuj ponownie za 10 minut',
     srv_feedback_delivery_failed:  'Nie udało się wysłać. Spróbuj ponownie.',
+
+    // ── Calibration plausibility (audit 2026-10-18) ──
+    srv_calibration_method_obsolete: 'metoda jednego punktu pomija ciepło zgromadzone w posadzce i ścianach i zawyża UA kilkukrotnie — wykonaj nowy test krzywej stygnięcia',
+    srv_calibration_too_short:       'test trwał {minutes} min; aby oddzielić powietrze od posadzki i ścian, potrzeba co najmniej {min} min',
+    srv_calibration_implausible:     'średnie U przegród {u} W/(m²·K) poza zakresem fizycznym {min}–{max} — sprawdź test i wymiary kurnika',
+    srv_calibration_other_house:     'kalibracja dotyczy kurnika \'{house_id}\'',
+    cal_ignored_note:                'Kalibracja strat ciepła nie jest używana w obliczeniach: {reason}.',
 };

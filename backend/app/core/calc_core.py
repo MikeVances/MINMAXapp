@@ -18,6 +18,7 @@ from .building_thermal import (
     heater_air_demand,
     heater_co2_dilution_m3h,
     solve_heater_duty,
+    usable_ua,
 )
 
 
@@ -117,6 +118,8 @@ class CalcInput:
     # Целевая RH в корпусе, % (40–70). None → RH из профиля роста.
     # Сдвигает уставку температуры (ощущаемая температура) и служит потолком влагобаланса
     target_rh: Optional[float] = None
+    # Корпус расчёта: калибровка UA применяется только к тому корпусу, где измерена
+    house_id: Optional[str] = None
 
 
 @dataclass
@@ -144,6 +147,8 @@ class CalcResult:
     humidity_uncontrollable: bool = False
     # Горелок не хватает даже на 100 % (с учётом подогрева их же воздуха разбавления)
     heater_insufficient: bool = False
+    # Почему калибровка UA не применена: {code, params} или None
+    calibration_ignored: Optional[dict] = None
     # Профиль роста, по которому шёл расчёт (видно, какие данные кросса использованы)
     growth_profile_id: Optional[str] = None
 
@@ -162,11 +167,14 @@ def compute(ci: CalcInput) -> CalcResult:
 
     # Загружаем thermal_cfg один раз — используется в Qmax (UA), duty_cycle и влагобалансе
     _thermal_cfg = None
+    # UA — только проверенной калибровки СВОЕГО корпуса (usable_ua): калибровка
+    # чужого корпуса, тест короче 10 мин или неправдоподобный U оболочки в расчёт
+    # не идут, а причина уходит в ответ, чтобы UI предупредил
     _ua_coeff: Optional[float] = None
+    calibration_ignored: Optional[dict] = None
     try:
         _thermal_cfg = load_thermal_config()
-        if _thermal_cfg.calibration:
-            _ua_coeff = _thermal_cfg.calibration.ua_coefficient
+        _ua_coeff, calibration_ignored = usable_ua(_thermal_cfg, ci.house_id)
     except Exception:
         _thermal_cfg = None
 
@@ -312,7 +320,7 @@ def compute(ci: CalcInput) -> CalcResult:
     duty_cycle = None
     heater_insufficient = False
 
-    if _thermal_cfg is not None and _thermal_cfg.heater and _thermal_cfg.calibration:
+    if _thermal_cfg is not None and _thermal_cfg.heater and _ua_coeff is not None:
         heater_kw   = _thermal_cfg.heater.total_power_kw
         heater_type = _thermal_cfg.heater.heater_type
         q_min_birds = q_min                     # без горелок: max(CO₂, влага) птицы
@@ -331,7 +339,7 @@ def compute(ci: CalcInput) -> CalcResult:
 
         sol = solve_heater_duty(
             qmin_for_duty,
-            ua_w_per_k       = _thermal_cfg.calibration.ua_coefficient,
+            ua_w_per_k       = _ua_coeff,
             t_inside_c       = t_target_inside,
             t_outside_c      = ci.outside_t,
             birds_sensible_w = 6.90 * (weight_kg ** 0.75) * birds_eff,
@@ -391,4 +399,5 @@ def compute(ci: CalcInput) -> CalcResult:
         growth_profile_id=profile_id,
         humidity_uncontrollable=humidity_uncontrollable,
         heater_insufficient=heater_insufficient,
+        calibration_ignored=calibration_ignored,
     )

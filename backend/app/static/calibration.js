@@ -325,14 +325,16 @@ elSaveBuildingBtn.addEventListener('click', async () => {
       config.calibration = null;
       config.heater      = null;
     } else if (config.calibration) {
-      if (config.calibration.points || config.calibration.method !== 'cooling_curve') {
+      if (config.calibration.points) {
         // Тот же корпус, но размеры могли измениться: UA пересчитает сервер
-        // по сохранённым отметкам (или старому тесту) и новому объёму
+        // по сохранённым отметкам и новому объёму
         delete config.calibration.ua_coefficient;
-      } else {
+      } else if (config.calibration.method === 'cooling_curve') {
         // Многозонная калибровка хранит только итог — пересчитать нельзя, нужен новый тест
         config.calibration = null;
       }
+      // Старая запись по одной точке уходит обратно как есть: сервер её больше не
+      // пересчитывает и в расчёт не берёт (calibration_problem), но и не теряет
     }
     config.house_id  = houseId;
     // Backend принимает height_m — передаём эффективную высоту (среднее стены и конька)
@@ -590,8 +592,11 @@ async function loadAndDisplayConfig() {
         ${c.method === 'cooling_curve' && c.points
           ? `<div class="kv"><span>${t('cfg_test_cond')}</span><span>${t('cfg_curve_val', { n: c.points.length - 1, time: Math.round(c.time_minutes), tout: c.t_outside_c })}</span></div>`
           : c.method === 'cooling_curve' ? ''
-          : `<div class="kv"><span>${t('cfg_test_cond')}</span><span>${t('cfg_test_val', { t0: c.t_initial_c, t1: c.t_final_c, time: c.time_minutes, tout: c.t_outside_c })}</span></div>
-             <p class="warn mt-6 mb-0 fs-12">⚠️ ${t('cfg_air_only_recalibrate')}</p>`}
+          : `<div class="kv"><span>${t('cfg_test_cond')}</span><span>${t('cfg_test_val', { t0: c.t_initial_c, t1: c.t_final_c, time: c.time_minutes, tout: c.t_outside_c })}</span></div>`}
+        ${config.calibration_problem
+          // Сервер не применяет эту калибровку в расчётах — объясняем почему
+          ? `<p class="danger mt-6 mb-0 fs-12">⚠️ ${t('cal_ignored_note', { reason: apiErrorText({ detail: config.calibration_problem }, 400) })}</p>`
+          : ''}
       </div>
     `;
   } else {

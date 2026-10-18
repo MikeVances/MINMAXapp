@@ -94,6 +94,65 @@ class ThermalConfig:
     calibration: Optional[CalibrationTest] = None
 
 
+
+# ─── Правдоподобие калибровки UA (аудит 2026-10-18) ─────────────────────────────
+# В рабочем конфиге нашёлся UA 21 090 Вт/К по «тесту» длиной 1 минута старым методом
+# по одной точке — и он применялся ко всем корпусам. Калибровка, которая не проходит
+# эти проверки, в расчётах не используется и не сохраняется.
+
+# Меньше 10 минут остывание воздуха не отделить от отдачи тепла полом и стенами
+MIN_CALIBRATION_MINUTES = 10.0
+
+# Средний U оболочки (стены + кровля + торцы, без пола), Вт/(м²·К). Физический
+# диапазон по теплопроводности: сэндвич PIR 100 мм ≈ 0.21 … одинарная штора ≈ 5.9
+# (ASHRAE Fundamentals, гл. 26: R = Σ d/λ + R_si + R_se). Коридор шире — тест
+# в закрытом корпусе захватывает и инфильтрацию через щели.
+U_ENVELOPE_MIN_W_M2K = 0.1
+U_ENVELOPE_MAX_W_M2K = 8.0
+
+
+def envelope_area_m2(b: "BuildingDimensions") -> float:
+    """Стены, кровля и торцы, м². Пол не входит: теплообмен с ним идёт через грунт и массу."""
+    return b.length_m * b.width_m + 2.0 * (b.length_m + b.width_m) * b.height_m
+
+
+def calibration_problem(cal: "CalibrationTest", building: Optional["BuildingDimensions"]) -> Optional[dict]:
+    """
+    None — калибровке можно верить; иначе {"code", "params"} — почему нельзя
+    (тот же формат, что у ошибок API: клиент переводит srv_<code>).
+    """
+    if cal.method != "cooling_curve":
+        # Метод по одной точке и теплоёмкости воздуха игнорирует массу пола и стен
+        # и завышает UA в разы — нужен новый тест по кривой остывания
+        return {"code": "calibration_method_obsolete", "params": {}}
+    if cal.time_minutes < MIN_CALIBRATION_MINUTES:
+        return {"code": "calibration_too_short",
+                "params": {"minutes": round(cal.time_minutes, 1), "min": MIN_CALIBRATION_MINUTES}}
+    if building is not None:
+        u = cal.ua_coefficient / envelope_area_m2(building)
+        if not (U_ENVELOPE_MIN_W_M2K <= u <= U_ENVELOPE_MAX_W_M2K):
+            return {"code": "calibration_implausible",
+                    "params": {"u": round(u, 2), "min": U_ENVELOPE_MIN_W_M2K, "max": U_ENVELOPE_MAX_W_M2K}}
+    return None
+
+
+def usable_ua(config: "ThermalConfig", house_id: Optional[str]) -> tuple[Optional[float], Optional[dict]]:
+    """
+    UA для расчёта корпуса house_id и причина, если калибровку применить нельзя.
+
+    Калибровка измеряется на конкретном корпусе: раньше её UA подставлялся в расчёт
+    любого корпуса фермы. Теперь — только своему (house_id совпадает).
+    """
+    cal = config.calibration
+    if cal is None:
+        return None, None
+    if house_id is not None and config.house_id != house_id:
+        return None, {"code": "calibration_other_house", "params": {"house_id": config.house_id}}
+    problem = calibration_problem(cal, config.building)
+    if problem:
+        return None, problem
+    return cal.ua_coefficient, None
+
 AIR_CP_J_PER_KG_K = 1006.0   # удельная теплоёмкость сухого воздуха
 
 

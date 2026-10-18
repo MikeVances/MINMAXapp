@@ -788,6 +788,11 @@ document.querySelectorAll('.tool-tab:not([disabled])').forEach(btn => {
     const humWarn = d.rows.some(r => r.humidity_uncontrollable)
       ? `<p class="warn fs-12 mt-8 mb-0">⚠ ${t('humidity_uncontrollable_note')}</p>`
       : '';
+    // Калибровка UA не применена (чужой корпус, короткий тест, неправдоподобный U)
+    const calIgnored = (d.rows.find(r => r.calibration_ignored) || {}).calibration_ignored;
+    const calWarn = calIgnored && calIgnored.code !== 'calibration_other_house'
+      ? `<p class="warn fs-12 mt-8 mb-0">⚠ ${t('cal_ignored_note', { reason: apiErrorText({ detail: calIgnored }, 400) })}</p>`
+      : '';
     // Горелок не хватает даже на 100 % (с подогревом их же воздуха разбавления CO₂)
     const heatWarn = d.rows.some(r => r.heater_insufficient)
       ? `<p class="danger fs-12 mt-8 mb-0">⚠ ${t('heater_insufficient_note')}</p>`
@@ -844,6 +849,7 @@ document.querySelectorAll('.tool-tab:not([disabled])').forEach(btn => {
       ${capWarn}
       ${humWarn}
       ${heatWarn}
+      ${calWarn}
       ${geomWarn}
       ${physBlock}
     </div>`;

@@ -195,7 +195,6 @@
     cfg_method_curve: 'courbe de refroidissement (air + sol et murs)',
     cfg_method_air_only: 'un point, air seul (indicatif)',
     cfg_curve_val: '{n} marques, {time} min, extérieur {tout} °C',
-    cfg_air_only_recalibrate: "L'ancien calibrage à un point peut se tromper de plusieurs fois — faites le test par courbe de refroidissement.",
     step3_proc_html: "<strong>Déroulement du test (bâtiment vide uniquement) :</strong><ol style=\"margin:8px 0 0 0;padding-left:20px;line-height:1.8;\"><li>Fermez portes, portails et entrées d'air, arrêtez <strong>tous les ventilateurs</strong>.</li><li>Chauffez le bâtiment et <strong>maintenez la température 2–3 heures</strong> : le sol et les murs doivent atteindre la température de l'air. Juste après la montée en température, UA est surestimé de 1,5–2× — sans que le résultat le montre.</li><li>De préférence la nuit (pas de soleil sur la toiture), sans vent ; écart avec l'extérieur <strong>au moins 15 °C</strong>.</li><li>Thermomètre au centre du bâtiment à hauteur des animaux, loin des chauffages, murs et portes.</li><li>Coupez le chauffage, saisissez les températures intérieure et extérieure, appuyez sur <strong>Démarrer</strong>.</li><li>Chaque fois que le thermomètre affiche <strong>1 °C de moins</strong>, appuyez sur le bouton. Il faut 4–6 marques ; avec un sol béton lourd le test peut durer 1–2 heures. L'application calcule le reste.</li><li>Plusieurs zones : un thermomètre par zone, marques avec son propre bouton.</li></ol>",
     timer_ready: 'Saisissez les températures intérieure et extérieure, coupez le chauffage et appuyez sur Démarrer.',
     timer_running: 'Test en cours — appuyez sur le bouton à chaque degré de baisse.',
@@ -542,4 +541,11 @@
     srv_feedback_empty:            'Le message est vide',
     srv_feedback_rate_limited:     'Trop de messages — réessayez dans 10 minutes',
     srv_feedback_delivery_failed:  'Échec de l\'envoi. Veuillez réessayer.',
+
+    // ── Calibration plausibility (audit 2026-10-18) ──
+    srv_calibration_method_obsolete: 'la méthode à un point ignore la chaleur stockée dans le sol et les murs et surestime UA de plusieurs fois — refaites un test de courbe de refroidissement',
+    srv_calibration_too_short:       'le test a duré {minutes} min ; il faut au moins {min} min pour séparer l’air du sol et des murs',
+    srv_calibration_implausible:     'U moyen de l’enveloppe {u} W/(m²·K) hors de la plage physique {min}–{max} — vérifiez le test et les dimensions du bâtiment',
+    srv_calibration_other_house:     'la calibration concerne le bâtiment \'{house_id}\'',
+    cal_ignored_note:                'La calibration des pertes thermiques n’est pas utilisée dans les calculs : {reason}.',
 };

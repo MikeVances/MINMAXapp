@@ -46,6 +46,7 @@ class CalcOut(BaseModel):
     # Снаружи воздух не суше целевого: вентиляцией RH не удержать (Qmin — по CO₂)
     humidity_uncontrollable: bool = False
     heater_insufficient: bool = False   # горелок не хватает даже на 100 %
+    calibration_ignored: dict | None = None   # почему UA калибровки не применён: {code, params}
     # Qmin больше заданной мощности установки: вентиляторов не хватает даже на минимум
     capacity_insufficient: bool = False
     # Требуемый туннельный расход корпуса v × S × 3600 (None — размеры не заданы)
@@ -66,6 +67,7 @@ def minmax(payload: CalcIn):
         house_height_m=payload.house_height_m,
         growth_profile_id=payload.growth_profile_id,
         target_rh=payload.target_rh,
+        house_id=payload.house,
     )
     cr = _compute_or_http_error(ci)
 
@@ -114,6 +116,7 @@ def minmax(payload: CalcIn):
         growth_profile_id=cr.growth_profile_id,
         humidity_uncontrollable=cr.humidity_uncontrollable,
         heater_insufficient=cr.heater_insufficient,
+        calibration_ignored=cr.calibration_ignored,
     )
 
 
@@ -159,6 +162,7 @@ class SummaryRow(BaseModel):
     house_geometry_missing: bool = False
     humidity_uncontrollable: bool = False
     heater_insufficient: bool = False   # горелок не хватает даже на 100 %
+    calibration_ignored: dict | None = None   # почему UA калибровки не применён: {code, params}
 
 
 class SummaryOut(BaseModel):
@@ -187,6 +191,7 @@ def summary7(payload: SummaryIn):
             outside_rh=payload.outside_rh,
             heater_on=payload.heater_on,
             house_width_m=payload.house_width_m,
+            house_id=payload.house,
             house_height_m=payload.house_height_m,
             growth_profile_id=payload.growth_profile_id,
             target_rh=payload.target_rh,
@@ -222,6 +227,7 @@ def summary7(payload: SummaryIn):
                 house_geometry_missing=cr.house_geometry_missing,
                 humidity_uncontrollable=cr.humidity_uncontrollable,
                 heater_insufficient=cr.heater_insufficient,
+                calibration_ignored=cr.calibration_ignored,
             )
         )
 

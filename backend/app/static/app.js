@@ -11,7 +11,8 @@ async function updateUaBadge(tabId) {
     if (!r.ok) { el.hidden = true; return; }
     const cfg = await r.json();
     const ua  = cfg.calibration?.ua_coefficient;
-    if (!ua || cfg.house_id !== String(tabId)) {
+    // Неправдоподобная калибровка в расчёт не идёт — и бейдж её не показывает
+    if (!ua || cfg.house_id !== String(tabId) || cfg.calibration_problem) {
       el.hidden = true; return;
     }
     // Корпус совпадает — показываем UA

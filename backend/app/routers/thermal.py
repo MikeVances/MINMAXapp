@@ -21,7 +21,7 @@ from ..core.building_thermal import (
     HeatBalance,
     load_thermal_config,
     save_thermal_config,
-    calculate_ua_coefficient,
+    calibration_problem,
     calculate_heat_balance,
     heater_air_demand,
 )
@@ -102,6 +102,9 @@ class ThermalConfigModel(BaseModel):
     building: BuildingDimensionsModel | None = None
     heater: HeaterConfigModel | None = None
     calibration: CalibrationTestModel | None = None
+    # Только в ответе GET: почему калибровку нельзя применять ({code, params}) —
+    # см. building_thermal.calibration_problem. В PUT игнорируется
+    calibration_problem: dict | None = None
 
 
 class HeaterAnalysisRequest(BaseModel):
@@ -160,6 +163,8 @@ def get_thermal_config():
             points=([CurvePointModel(t_s=p[0], temp_c=p[1]) for p in config.calibration.points]
                     if config.calibration.points else None),
         ) if config.calibration else None,
+        calibration_problem=(calibration_problem(config.calibration, config.building)
+                             if config.calibration else None),
     )
 
     return result
@@ -211,26 +216,17 @@ def update_thermal_config(payload: ThermalConfigModel):
                 method="cooling_curve", points=points,
             )
         else:
-            # UA не задан — рассчитать из данных теста охлаждения
-            if not config.building:
-                raise api_error(400, "dimensions_missing")
-            try:
-                ua = calculate_ua_coefficient(
-                    volume_m3=config.building.volume_m3,
-                    t_initial=payload.calibration.t_initial_c,
-                    t_final=payload.calibration.t_final_c,
-                    t_outside=payload.calibration.t_outside_c,
-                    time_minutes=payload.calibration.time_minutes,
-                )
-                config.calibration = CalibrationTest(
-                    t_initial_c=payload.calibration.t_initial_c,
-                    t_final_c=payload.calibration.t_final_c,
-                    t_outside_c=payload.calibration.t_outside_c,
-                    time_minutes=payload.calibration.time_minutes,
-                    ua_coefficient=ua,
-                )
-            except ValueError as e:
-                raise from_calc_error(e)
+            # Новый расчёт UA по одной точке и теплоёмкости воздуха больше не делаем:
+            # метод игнорирует массу пола и стен и завышает UA в разы (аудит 2026-10-18)
+            raise api_error(422, "calibration_method_obsolete")
+
+        # Новая калибровка по кривой должна быть правдоподобной. Старая запись другим
+        # методом, возвращённая клиентом как есть, не проверяется: в расчёт она не
+        # идёт (usable_ua), а отказ заблокировал бы сохранение размеров и горелок
+        if config.calibration.method == "cooling_curve":
+            problem = calibration_problem(config.calibration, config.building)
+            if problem:
+                raise api_error(422, problem["code"], **problem["params"])
 
     save_thermal_config(config)
 
@@ -291,6 +287,9 @@ def analyze_heaters(req: HeaterAnalysisRequest):
 
     if not config.calibration:
         raise api_error(400, "calibration_missing")
+    problem = calibration_problem(config.calibration, config.building)
+    if problem:
+        raise api_error(400, problem["code"], **problem["params"])
 
     if not config.heater:
         raise api_error(400, "heater_config_missing")

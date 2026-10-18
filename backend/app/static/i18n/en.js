@@ -195,7 +195,6 @@
     cfg_method_curve: 'cooling curve (air + floor and walls)',
     cfg_method_air_only: 'single point, air only (conditional)',
     cfg_curve_val: '{n} marks, {time} min, outdoor {tout} °C',
-    cfg_air_only_recalibrate: 'The old single-point calibration can be off by several times — run the cooling-curve test.',
     step3_proc_html: '<strong>How to run the test (empty house only):</strong><ol class="mt-8 mb-0 mx-0 pl-20 lh-1_8"><li>Close doors, gates and inlets, switch off <strong>all fans</strong>.</li><li>Heat the house and <strong>hold the temperature for 2–3 hours</strong> so floor and walls warm up to air temperature. Starting right after heat-up overstates UA by 1.5–2× — and the result will not show it.</li><li>Preferably at night (no sun on the roof), with no wind; indoor–outdoor difference <strong>at least 15 °C</strong>.</li><li>Thermometer in the middle of the house at bird height, away from heaters, walls and doors.</li><li>Switch the heating off, enter indoor and outdoor temperature, press <strong>Start</strong>.</li><li>Each time the thermometer shows <strong>1 °C less</strong>, press the button. 4–6 marks are needed; with a heavy concrete floor the test may take 1–2 hours. The app calculates the rest.</li><li>Several zones: a thermometer in each zone, marks with its own button.</li></ol>',
     timer_ready: 'Enter indoor and outdoor temperatures, switch the heating off and press Start.',
     timer_running: 'Test running — press the button at every degree of drop.',
@@ -543,4 +542,11 @@
     srv_feedback_empty:            'The message is empty',
     srv_feedback_rate_limited:     'Too many messages — try again in 10 minutes',
     srv_feedback_delivery_failed:  'Failed to send. Please try again.',
+
+    // ── Calibration plausibility (audit 2026-10-18) ──
+    srv_calibration_method_obsolete: 'the single-point method ignores the heat stored in floor and walls and overstates UA several times — run a new cooling-curve test',
+    srv_calibration_too_short:       'the test lasted {minutes} min; at least {min} min are needed to separate air from floor and walls',
+    srv_calibration_implausible:     'mean envelope U = {u} W/(m²·K) is outside the physical range {min}–{max} — check the test and house dimensions',
+    srv_calibration_other_house:     'the calibration belongs to house \'{house_id}\'',
+    cal_ignored_note:                'Heat-loss calibration is not used in calculations: {reason}.',
 };

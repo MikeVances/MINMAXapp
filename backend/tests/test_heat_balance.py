@@ -23,8 +23,9 @@ def _write_thermal_config(heater_type: str) -> Path:
     path = Path(THERMAL_CONFIG_PATH)
     path.write_text(json.dumps({
         "heater": {"heater_type": heater_type, "total_power_kw": HEATER_KW},
+        # Валидная калибровка: метод по кривой, тест 30 мин (см. calibration_problem)
         "calibration": {"t_initial_c": 20, "t_final_c": 18, "t_outside_c": 0,
-                        "time_minutes": 30, "ua_coefficient": UA},
+                        "time_minutes": 30, "ua_coefficient": UA, "method": "cooling_curve"},
     }), encoding="utf-8")
     return path
 
@@ -115,8 +116,9 @@ def test_undersized_burners_are_flagged(monkeypatch, tmp_path):
     path = tmp_path / "thermal.json"
     path.write_text(json.dumps({
         "heater": {"heater_type": "gas_open", "total_power_kw": 50.0},
+        # Валидная калибровка: метод по кривой, тест 30 мин (см. calibration_problem)
         "calibration": {"t_initial_c": 20, "t_final_c": 18, "t_outside_c": 0,
-                        "time_minutes": 30, "ua_coefficient": UA},
+                        "time_minutes": 30, "ua_coefficient": UA, "method": "cooling_curve"},
     }), encoding="utf-8")
     monkeypatch.setattr(building_thermal, "THERMAL_CONFIG_PATH", str(path))
     from backend.app.core import calc_core

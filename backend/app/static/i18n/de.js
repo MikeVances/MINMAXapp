@@ -195,7 +195,6 @@
     cfg_method_curve: 'Abkühlkurve (Luft + Boden und Wände)',
     cfg_method_air_only: 'ein Punkt, nur Luft (bedingt)',
     cfg_curve_val: '{n} Markierungen, {time} min, außen {tout} °C',
-    cfg_air_only_recalibrate: 'Die alte Ein-Punkt-Kalibrierung kann um ein Mehrfaches abweichen — Abkühlkurventest durchführen.',
     step3_proc_html: '<strong>Testablauf (nur leerer Stall):</strong><ol class="mt-8 mb-0 mx-0 pl-20 lh-1_8"><li>Türen, Tore und Zuluftklappen schließen, <strong>alle Ventilatoren</strong> ausschalten.</li><li>Stall heizen und die Temperatur <strong>2–3 Stunden halten</strong>, damit Boden und Wände die Lufttemperatur annehmen. Direkt nach dem Aufheizen wird UA um das 1,5–2-fache überschätzt — am Ergebnis ist das nicht erkennbar.</li><li>Am besten nachts (keine Sonne auf dem Dach), windstill; Differenz zu außen <strong>mindestens 15 °C</strong>.</li><li>Thermometer in Stallmitte auf Tierhöhe, fern von Heizungen, Wänden und Toren.</li><li>Heizung ausschalten, Innen- und Außentemperatur eingeben, <strong>Start</strong> drücken.</li><li>Jedes Mal, wenn das Thermometer <strong>1 °C weniger</strong> zeigt, die Taste drücken. 4–6 Markierungen nötig; bei schwerem Betonboden kann der Test 1–2 Stunden dauern. Den Rest berechnet die App.</li><li>Mehrere Zonen: ein Thermometer je Zone, Markierungen mit der jeweiligen Taste.</li></ol>',
     timer_ready: 'Innen- und Außentemperatur eingeben, Heizung ausschalten und Start drücken.',
     timer_running: 'Test läuft — bei jedem Grad Abfall die Taste drücken.',
@@ -542,4 +541,11 @@
     srv_feedback_empty:            'Die Nachricht ist leer',
     srv_feedback_rate_limited:     'Zu viele Nachrichten — in 10 Minuten erneut versuchen',
     srv_feedback_delivery_failed:  'Senden fehlgeschlagen. Bitte erneut versuchen.',
+
+    // ── Calibration plausibility (audit 2026-10-18) ──
+    srv_calibration_method_obsolete: 'die Einpunktmethode ignoriert die in Boden und Wänden gespeicherte Wärme und überschätzt UA um ein Mehrfaches — neuen Abkühlkurventest durchführen',
+    srv_calibration_too_short:       'der Test dauerte {minutes} min; um Luft von Boden und Wänden zu trennen, sind mindestens {min} min nötig',
+    srv_calibration_implausible:     'mittlerer Hüllen-U-Wert {u} W/(m²·K) außerhalb des physikalischen Bereichs {min}–{max} — Test und Stallmaße prüfen',
+    srv_calibration_other_house:     'die Kalibrierung gehört zu Stall \'{house_id}\'',
+    cal_ignored_note:                'Die Wärmeverlust-Kalibrierung wird in Berechnungen nicht verwendet: {reason}.',
 };
