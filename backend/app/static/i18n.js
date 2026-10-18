@@ -22,9 +22,36 @@
     let str = locale[key] !== undefined ? locale[key] : fallback[key];
     if (str === undefined) str = key; // last resort: echo the key
     if (vars && typeof str === 'string') {
-      str = str.replace(/\{(\w+)\}/g, (_, k) => vars[k] !== undefined ? vars[k] : '{' + k + '}');
+      // Число в параметре — в формате языка: «не больше 0,5», а не «0.5».
+      // Параметры ошибок сервера (pydantic ctx, {code, params}) приходят числами.
+      str = str.replace(/\{(\w+)\}/g, (_, k) => {
+        const v = vars[k];
+        if (v === undefined) return '{' + k + '}';
+        return typeof v === 'number' ? window.fmtNum(v) : v;
+      });
     }
     return str;
+  };
+
+  // ── Числа для человека ────────────────────────────────────────────────────
+  // toFixed всегда пишет точку, а ru/de/fr/pl ставят десятичную запятую и делят
+  // тысячи («34 000 м³/ч», «1.250,5» у de). Только для ТЕКСТА: координатам SVG и
+  // value полей ввода нужна точка — там остаётся toFixed.
+  // digits не задан — до 3 знаков без хвостовых нулей; задан — ровно столько.
+  const numberFormats = {};
+  window.fmtNum = function (value, digits) {
+    if (value === null || value === undefined || value === '') return '—';
+    let n = Number(value);
+    if (!Number.isFinite(n)) return '—';
+    // −0,04 с одним знаком — это «0,0», а не «-0,0»
+    if (digits !== undefined && Number(n.toFixed(digits)) === 0) n = 0;
+    const key = currentLang + '|' + digits;
+    if (!numberFormats[key]) {
+      numberFormats[key] = new Intl.NumberFormat(currentLang, digits === undefined
+        ? { maximumFractionDigits: 3 }
+        : { minimumFractionDigits: digits, maximumFractionDigits: digits });
+    }
+    return numberFormats[key].format(n);
   };
 
   function hasKey(key) {

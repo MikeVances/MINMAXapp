@@ -609,7 +609,7 @@ function initHouseSelector(selId, onSelect) {
       const opt = document.createElement('option');
       opt.value = i;
       const name = tab.id ? houseLabel(tab.id) : `#${i + 1}`;
-      opt.textContent = name + (tab.birds ? ` — ${Number(tab.birds).toLocaleString(I18N.lang)}` : '');
+      opt.textContent = name + (tab.birds ? ` — ${fmtNum(tab.birds)}` : '');
       sel.appendChild(opt);
     });
     sel.value = chosen;
@@ -659,7 +659,7 @@ document.querySelectorAll('.tool-tab:not([disabled])').forEach(btn => {
       const opt = document.createElement('option');
       opt.value = idx;
       const name = tab.id ? houseLabel(tab.id) : `#${idx + 1}`;
-      const extra = tab.birds ? ` — ${tab.birds.toLocaleString(I18N.lang)}` : '';
+      const extra = tab.birds ? ` — ${fmtNum(tab.birds)}` : '';
       opt.textContent = name + extra;
       selEl.appendChild(opt);
     });
@@ -754,7 +754,7 @@ document.querySelectorAll('.tool-tab:not([disabled])').forEach(btn => {
 
     const head = `
       <div class="kv"><span>${t('sum_outdoor')}</span><span>${outsideT} °C / ${outsideRH ?? 60} %</span></div>
-      <div class="kv"><span>${t('sum_house_birds')}</span><span>${d.house} / ${d.birds}</span></div>
+      <div class="kv"><span>${t('sum_house_birds')}</span><span>${d.house} / ${fmtNum(d.birds)}</span></div>
       <div class="kv"><span>${t('sum_sys_max')}</span><span>${d.user_max_m3h ?? '—'} ${t('unit_m3h_plain')}</span></div>`;
 
     const headerByMode = {
@@ -769,27 +769,27 @@ document.querySelectorAll('.tool-tab:not([disabled])').forEach(btn => {
     const rows = d.rows.map(r => {
       let c1 = '—', c2 = '—';
       if (mode === 'total') {
-        c1 = Math.round(r.q_min_m3h).toString();
-        c2 = Math.round(r.q_max_m3h).toString();
+        c1 = fmtNum(r.q_min_m3h, 0);
+        c2 = fmtNum(r.q_max_m3h, 0);
       } else if (mode === 'percent') {
-        c1 = r.q_min_pct != null ? (r.q_min_pct.toFixed(1) + '%') : '—';
-        c2 = r.q_max_pct != null ? (r.q_max_pct.toFixed(1) + '%') : '—';
+        c1 = r.q_min_pct != null ? (fmtNum(r.q_min_pct, 1) + '%') : '—';
+        c2 = r.q_max_pct != null ? (fmtNum(r.q_max_pct, 1) + '%') : '—';
       } else if (mode === 'per_bird') {
         const be = r.birds_eff || d.birds;
-        if (be > 0) { c1 = (r.q_min_m3h / be).toFixed(4); c2 = (r.q_max_m3h / be).toFixed(4); }
+        if (be > 0) { c1 = fmtNum((r.q_min_m3h / be), 4); c2 = fmtNum((r.q_max_m3h / be), 4); }
       } else if (mode === 'per_kg') {
         const be = r.birds_eff || d.birds;
         const wkg = (r.weight_g || 0) / 1000.0;
         const totalKg = be * wkg;
-        if (totalKg > 0) { c1 = (r.q_min_m3h / totalKg).toFixed(4); c2 = (r.q_max_m3h / totalKg).toFixed(4); }
+        if (totalKg > 0) { c1 = fmtNum((r.q_min_m3h / totalKg), 4); c2 = fmtNum((r.q_max_m3h / totalKg), 4); }
       } else if (mode === 'per_m2' && S_floor) {
-        c1 = (r.q_min_m3h / S_floor).toFixed(1);
-        c2 = (r.q_max_m3h / S_floor).toFixed(1);
+        c1 = fmtNum((r.q_min_m3h / S_floor), 1);
+        c2 = fmtNum((r.q_max_m3h / S_floor), 1);
       }
       // Qmin больше мощности установки — подсветить: минимум сервер не обрезает
       const c1Cell = r.capacity_insufficient ? `<span class="danger">${c1} ⚠</span>` : c1;
       return `<tr>
-        <td>${r.day}</td><td>${r.min_temp_c != null ? Number(r.min_temp_c).toFixed(1) : '—'}</td>
+        <td>${r.day}</td><td>${r.min_temp_c != null ? fmtNum(Number(r.min_temp_c), 1) : '—'}</td>
         <td>${r.weight_g != null ? Math.round(r.weight_g) : '—'}</td>
         <td>${c1Cell}</td><td>${c2}</td>
       </tr>`;
@@ -837,14 +837,14 @@ document.querySelectorAll('.tool-tab:not([disabled])').forEach(btn => {
       physBlock = `
         <div class="mt-14 pt-12 bt-1">
           <div class="muted fs-12 mb-6 fw-500">${t('phys_title')}</div>
-          <div class="kv"><span>${t('phys_floor_area')}</span><span>${S_floor.toFixed(0)} ${t('unit_m2')}</span></div>
-          ${V_house ? `<div class="kv"><span>${t('phys_volume')}</span><span>${V_house.toFixed(0)} ${t('unit_m3')}</span></div>` : ''}
-          ${S_cross  ? `<div class="kv"><span>${t('phys_cross_section')}</span><span>${S_cross.toFixed(1)} ${t('unit_m2')}</span></div>` : ''}
+          <div class="kv"><span>${t('phys_floor_area')}</span><span>${fmtNum(S_floor, 0)} ${t('unit_m2')}</span></div>
+          ${V_house ? `<div class="kv"><span>${t('phys_volume')}</span><span>${fmtNum(V_house, 0)} ${t('unit_m3')}</span></div>` : ''}
+          ${S_cross  ? `<div class="kv"><span>${t('phys_cross_section')}</span><span>${fmtNum(S_cross, 1)} ${t('unit_m2')}</span></div>` : ''}
           <div class="mt-6">
-            ${qMinM2 != null ? `<div class="kv"><span>${t('phys_min_vent_check')}</span><span class="${cls_qmin}">${qMinM2.toFixed(1)} ${t('unit_m3h_m2')} <span class="muted">[≥18]</span></span></div>` : ''}
-            ${qMaxM2 != null ? `<div class="kv"><span>${t('phys_max_vent_check')}</span><span class="${cls_qmax}">${qMaxM2.toFixed(1)} ${t('unit_m3h_m2')} <span class="muted">[165–200]</span></span></div>` : ''}
+            ${qMinM2 != null ? `<div class="kv"><span>${t('phys_min_vent_check')}</span><span class="${cls_qmin}">${fmtNum(qMinM2, 1)} ${t('unit_m3h_m2')} <span class="muted">[≥18]</span></span></div>` : ''}
+            ${qMaxM2 != null ? `<div class="kv"><span>${t('phys_max_vent_check')}</span><span class="${cls_qmax}">${fmtNum(qMaxM2, 1)} ${t('unit_m3h_m2')} <span class="muted">[165–200]</span></span></div>` : ''}
             ${T_exch  != null ? `<div class="kv"><span>${t('phys_exchange_time')}</span><span class="${cls_texch}">${T_exch} ${t('unit_sec')} <span class="muted">[40–60]</span></span></div>` : ''}
-            ${v_tun   != null ? `<div class="kv"><span>${t('phys_airspeed_tunnel')}</span><span class="${cls_vtun}">${v_tun.toFixed(2)} ${t('unit_ms')} <span class="muted">[${t('phys_airspeed_target')}]</span></span></div>` : ''}
+            ${v_tun   != null ? `<div class="kv"><span>${t('phys_airspeed_tunnel')}</span><span class="${cls_vtun}">${fmtNum(v_tun, 2)} ${t('unit_ms')} <span class="muted">[${t('phys_airspeed_target')}]</span></span></div>` : ''}
           </div>
           <p class="muted fs-10 mt-8 mb-0">${t('phys_cobb_source')}</p>
         </div>`;
@@ -1002,11 +1002,11 @@ function renderLeakage(d) {
   badge.className   = 'result-badge ' + tc.css;
 
   document.getElementById('l-ela').innerHTML =
-    `<span class="${relClass}">${d.ela_m2.toFixed(3)} ${u}</span>`;
+    `<span class="${relClass}">${fmtNum(d.ela_m2, 3)} ${u}</span>`;
   document.getElementById('l-rel').innerHTML =
-    `<span class="${relClass}">${d.relative_leakage.toFixed(3)} ${u}/1000${u}</span>`;
-  document.getElementById('l-area').textContent     = `${d.house_area_m2.toFixed(0)} ${u}`;
-  document.getElementById('l-fan-corr').textContent = `${d.fan_corrected_m3h.toFixed(0)} ${t('unit_m3h')}`;
+    `<span class="${relClass}">${fmtNum(d.relative_leakage, 3)} ${u}/1000${u}</span>`;
+  document.getElementById('l-area').textContent     = `${fmtNum(d.house_area_m2, 0)} ${u}`;
+  document.getElementById('l-fan-corr').textContent = `${fmtNum(d.fan_corrected_m3h, 0)} ${t('unit_m3h')}`;
   document.getElementById('l-class-tip').textContent = t(tc.tipKey);
 
   document.getElementById('l-results').hidden = false;
@@ -1074,64 +1074,64 @@ function renderTunnel(d, t_real) {
   statusEl.className = badgeClass(d.status_level);
 
   // Air flow
-  document.getElementById('tn-r-section').textContent = d.cross_section_m2.toFixed(2) + ' ' + uM2;
+  document.getElementById('tn-r-section').textContent = fmtNum(d.cross_section_m2, 2) + ' ' + uM2;
   document.getElementById('tn-r-total').textContent   =
-    d.total_airflow_m3h.toLocaleString(I18N.lang) + ' ' + uM3h;
+    fmtNum(d.total_airflow_m3h, 0) + ' ' + uM3h;
 
   const vOk   = d.air_velocity_ms >= d.target_v_min_ms && d.air_velocity_ms <= d.target_v_max_ms;
   const vHigh = d.air_velocity_ms > d.target_v_max_ms;
   document.getElementById('tn-r-vel').innerHTML =
-    `<span class="${vOk ? 'ok' : vHigh ? 'warn' : 'danger'}">${d.air_velocity_ms.toFixed(2)} ${uMs}</span>`;
+    `<span class="${vOk ? 'ok' : vHigh ? 'warn' : 'danger'}">${fmtNum(d.air_velocity_ms, 2)} ${uMs}</span>`;
   // Расход по паспорту «0 Па» завышен — сказать об этом рядом со скоростью
   const velText = t('tn_vel_' + d.velocity_status, {
-    v: d.air_velocity_ms.toFixed(1), v_min: d.target_v_min_ms.toFixed(1), v_max: d.target_v_max_ms.toFixed(1),
+    v: fmtNum(d.air_velocity_ms, 1), v_min: fmtNum(d.target_v_min_ms, 1), v_max: fmtNum(d.target_v_max_ms, 1),
   });
   document.getElementById('tn-r-vel-status').textContent = velText +
     (d.velocity_basis === 'rated_0pa' ? ' · ' + t('tn_basis_rated_note') : '');
 
   // Wind cooling
-  document.getElementById('tn-r-treal').textContent     = t_real.toFixed(1) + ' °C';
+  document.getElementById('tn-r-treal').textContent     = fmtNum(t_real, 1) + ' °C';
   // Воздух у вентиляторов теплее входного на тепло птицы — по нему ощущаемая T и THVI
   const riseRow = document.getElementById('tn-row-rise');
   riseRow.hidden = !(d.air_temp_rise_c > 0);
   if (!riseRow.hidden) {
     const riseEl = document.getElementById('tn-r-rise');
-    riseEl.textContent = t('tn_rise_val', { t: d.t_fan_end_c.toFixed(1), rise: d.air_temp_rise_c.toFixed(1) });
+    riseEl.textContent = t('tn_rise_val', { t: fmtNum(d.t_fan_end_c, 1), rise: fmtNum(d.air_temp_rise_c, 1) });
     setTone(riseEl, d.end_to_end_rise_excessive ? 'danger' : null);
     riseEl.title = d.end_to_end_rise_excessive ? t('tn_rise_excessive') : '';
   }
   // Знак явный: при влажном воздухе и слабом потоке «охлаждение» отрицательное (ощущается жарче)
   const wc = d.wind_chill_c;
-  document.getElementById('tn-r-windchill').textContent = (wc >= 0 ? '−' : '+') + Math.abs(wc).toFixed(1) + ' °C';
-  document.getElementById('tn-r-efftemp').textContent   = d.effective_temp_c.toFixed(1) + ' °C';
+  document.getElementById('tn-r-windchill').textContent = (wc >= 0 ? '−' : '+') + fmtNum(Math.abs(wc), 1) + ' °C';
+  document.getElementById('tn-r-efftemp').textContent   = fmtNum(d.effective_temp_c, 1) + ' °C';
 
   // THVI
   const thiEl = document.getElementById('tn-r-thi');
-  thiEl.textContent = d.thi_value.toFixed(1);
+  thiEl.textContent = fmtNum(d.thi_value, 1);
   // Пороги THVI (Tao & Xin 2003): 35 / 38 / 40 °C → ступень шкалы 1…4
   setTone(thiEl, 'grade-' + (d.thi_value < 35 ? 1 : d.thi_value < 38 ? 2 : d.thi_value < 40 ? 3 : 4));
   document.getElementById('tn-r-thi-status').textContent = t('thvi_' + d.thi_status);
 
   // Inlet system
   document.getElementById('tn-r-inlet-area').textContent =
-    d.inlet_area_m2.toFixed(1) + ' ' + uM2;
+    fmtNum(d.inlet_area_m2, 1) + ' ' + uM2;
   // Скорость в приточных: 2 / 3 / 4 м/с → ступень шкалы 1…4
   const inletVelGrade = d.inlet_velocity_ms < 2.0 ? 1
                       : d.inlet_velocity_ms < 3.0 ? 2
                       : d.inlet_velocity_ms < 4.0 ? 3
                       : 4;
   document.getElementById('tn-r-inlet-vel').innerHTML =
-    `<span class="c-grade-${inletVelGrade}">${d.inlet_velocity_ms.toFixed(2)} ${uMs}</span>`;
+    `<span class="c-grade-${inletVelGrade}">${fmtNum(d.inlet_velocity_ms, 2)} ${uMs}</span>`;
   document.getElementById('tn-r-inlet-sp').textContent =
-    d.inlet_sp_pa.toFixed(1) + ' ' + uPa;
+    fmtNum(d.inlet_sp_pa, 1) + ' ' + uPa;
   document.getElementById('tn-r-inlet-status').textContent =
-    t('tn_inlet_' + d.inlet_status, { v: d.inlet_velocity_ms.toFixed(2) });
+    t('tn_inlet_' + d.inlet_status, { v: fmtNum(d.inlet_velocity_ms, 2) });
 
   // Pressure & recommendations
-  document.getElementById('tn-r-dyn-pa').textContent  = d.dynamic_pressure_pa.toFixed(1) + ' ' + uPa;
-  document.getElementById('tn-r-tot-pa').textContent  = d.total_pressure_pa.toFixed(1)   + ' ' + uPa;
+  document.getElementById('tn-r-dyn-pa').textContent  = fmtNum(d.dynamic_pressure_pa, 1) + ' ' + uPa;
+  document.getElementById('tn-r-tot-pa').textContent  = fmtNum(d.total_pressure_pa, 1)   + ' ' + uPa;
   document.getElementById('tn-r-target').textContent  =
-    `${d.target_v_min_ms}–${d.target_v_max_ms} ${uMs}`;
+    `${fmtNum(d.target_v_min_ms)}–${fmtNum(d.target_v_max_ms)} ${uMs}`;
   document.getElementById('tn-r-fans-need').textContent =
     t('fans_needed_fmt', { n: d.fans_needed_for_target, v_min: d.target_v_min_ms });
 
@@ -1146,22 +1146,22 @@ function renderTunnel(d, t_real) {
   decCard.hidden = false;
 
   document.getElementById('tn-r-comfort-target').textContent =
-    d.bird_comfort_target_c.toFixed(1) + ' °C';
+    fmtNum(d.bird_comfort_target_c, 1) + ' °C';
 
-  const marginAbs  = Math.abs(d.temp_margin_c).toFixed(1);
+  const marginAbs  = fmtNum(Math.abs(d.temp_margin_c), 1);
   const marginSign = d.temp_margin_c >= 0 ? '−' : '+';
   document.getElementById('tn-r-margin').innerHTML =
-    `${d.effective_temp_c.toFixed(1)} °C &nbsp;` +
+    `${fmtNum(d.effective_temp_c, 1)} °C &nbsp;` +
     `<span class="c-${limitTone}">(${marginSign}${marginAbs} °C)</span>`;
 
   const atCap = d.t_outdoor_tunnel_limit_c >= 42;
   document.getElementById('tn-r-tunnel-limit').textContent =
-    atCap ? t('tunnel_limit_no_limit') : d.t_outdoor_tunnel_limit_c.toFixed(1) + ' °C';
+    atCap ? t('tunnel_limit_no_limit') : fmtNum(d.t_outdoor_tunnel_limit_c, 1) + ' °C';
   setTone(document.getElementById('tn-r-tunnel-limit'),
     atCap || d.t_outdoor_tunnel_limit_c > t_real ? 'ok' : 'danger');
 
   if (limitOk) {
-    noteEl.textContent = t('tn_note_ok', { limit: d.t_outdoor_tunnel_limit_c.toFixed(1) });
+    noteEl.textContent = t('tn_note_ok', { limit: fmtNum(d.t_outdoor_tunnel_limit_c, 1) });
     evapBtn.hidden = true;
   } else {
     noteEl.textContent = t('tn_note_need_evap');
@@ -1269,64 +1269,64 @@ function renderEvap(d) {
   statusEl.className = badgeClass(d.status_level);
 
   // Psychrometrics
-  document.getElementById('ev-r-twb').textContent     = d.t_wb_c.toFixed(1) + ' °C';
-  document.getElementById('ev-r-tdew').textContent    = d.t_dew_c.toFixed(1) + ' °C';
-  document.getElementById('ev-r-tpad').textContent    = d.t_pad_out_c.toFixed(1) + ' °C';
+  document.getElementById('ev-r-twb').textContent     = fmtNum(d.t_wb_c, 1) + ' °C';
+  document.getElementById('ev-r-tdew').textContent    = fmtNum(d.t_dew_c, 1) + ' °C';
+  document.getElementById('ev-r-tpad').textContent    = fmtNum(d.t_pad_out_c, 1) + ' °C';
   // Запас и достаточность считаются у вентиляторов — показываем, откуда разница
   document.getElementById('ev-row-rise').hidden = !(d.air_temp_rise_c > 0);
-  document.getElementById('ev-r-rise').textContent = t('tn_rise_val', { t: d.t_fan_end_c.toFixed(1), rise: d.air_temp_rise_c.toFixed(1) });
-  document.getElementById('ev-r-cool').textContent    = d.cooling_achieved_c.toFixed(1) + ' °C';
+  document.getElementById('ev-r-rise').textContent = t('tn_rise_val', { t: fmtNum(d.t_fan_end_c, 1), rise: fmtNum(d.air_temp_rise_c, 1) });
+  document.getElementById('ev-r-cool').textContent    = fmtNum(d.cooling_achieved_c, 1) + ' °C';
   // Максимально достижимое охлаждение (предел T_wb) и % реализации потенциала
   // t_outdoor_db_c не возвращается API — восстанавливаем из cooling_achieved + t_pad_out
   const t_db_rec = d.t_pad_out_c + d.cooling_achieved_c;
   const maxCool  = +(t_db_rec - d.t_wb_c).toFixed(1);
   const potPct  = maxCool > 0 ? Math.round(d.cooling_achieved_c / maxCool * 100) : 100;
   document.getElementById('ev-r-max-cool').textContent =
-    maxCool.toFixed(1) + ' °C  (' + potPct + '% ' + t('lbl_of_potential') + ')';
+    fmtNum(maxCool, 1) + ' °C  (' + potPct + '% ' + t('lbl_of_potential') + ')';
   document.getElementById('ev-r-eta').textContent     = Math.round(d.pad_efficiency * 100) + ' %';
   document.getElementById('ev-r-margin').innerHTML    = (() => {
     const cls = d.temp_margin_c >= 2 ? 'ok' : d.temp_margin_c >= 0 ? 'warn' : 'danger';
-    return `<span class="${cls}">${d.temp_margin_c.toFixed(1)} °C</span>`;
+    return `<span class="${cls}">${fmtNum(d.temp_margin_c, 1)} °C</span>`;
   })();
 
   // Pad geometry
-  document.getElementById('ev-r-area').textContent    = d.pad_area_m2.toFixed(2) + ' ' + uM2;
+  document.getElementById('ev-r-area').textContent    = fmtNum(d.pad_area_m2, 2) + ' ' + uM2;
   document.getElementById('ev-r-vel').innerHTML       = (() => {
     const cls = d.velocity_ok ? 'ok' : 'danger';
-    return `<span class="${cls}">${d.air_velocity_ms.toFixed(2)} ${uMs}</span>`;
+    return `<span class="${cls}">${fmtNum(d.air_velocity_ms, 2)} ${uMs}</span>`;
   })();
   document.getElementById('ev-r-velstatus').textContent = t('ev_vel_' + d.velocity_status, {
-    v: d.air_velocity_ms.toFixed(2), v_min: d.pad_v_min_ms, v_max: d.pad_v_max_ms,
-    eta: Math.round(d.pad_efficiency * 100), dp: d.pad_pressure_drop_pa.toFixed(0),
+    v: fmtNum(d.air_velocity_ms, 2), v_min: d.pad_v_min_ms, v_max: d.pad_v_max_ms,
+    eta: Math.round(d.pad_efficiency * 100), dp: fmtNum(d.pad_pressure_drop_pa, 0),
   });
   // Откуда расход: рабочая точка с сопротивлением панели или паспорт 0 Па (завышен)
   document.getElementById('ev-r-velstatus').textContent += ' · ' + (d.airflow_basis === 'operating_point'
-    ? t('ev_basis_operating', { q: Math.round(d.airflow_m3h).toLocaleString() })
+    ? t('ev_basis_operating', { q: fmtNum(d.airflow_m3h, 0) })
     : t('ev_basis_rated_note'));
-  document.getElementById('ev-r-rec-area').textContent  = d.recommended_pad_area_m2.toFixed(2) + ' ' + uM2;
+  document.getElementById('ev-r-rec-area').textContent  = fmtNum(d.recommended_pad_area_m2, 2) + ' ' + uM2;
   if (d.pad_pressure_drop_pa != null)
-    document.getElementById('ev-r-dp').textContent      = d.pad_pressure_drop_pa.toFixed(0) + ' ' + t('unit_pa');
+    document.getElementById('ev-r-dp').textContent      = fmtNum(d.pad_pressure_drop_pa, 0) + ' ' + t('unit_pa');
 
   // Water consumption
-  document.getElementById('ev-r-water-lpm').textContent = d.water_flow_lpm.toFixed(1) + ' ' + uLpm;
-  document.getElementById('ev-r-water-h').textContent   = d.water_per_hour_l.toFixed(0) + ' ' + uLh;
+  document.getElementById('ev-r-water-lpm').textContent = fmtNum(d.water_flow_lpm, 1) + ' ' + uLpm;
+  document.getElementById('ev-r-water-h').textContent   = fmtNum(d.water_per_hour_l, 0) + ' ' + uLh;
 
   // Water supply check card
   const waterCard = document.getElementById('ev-water-card');
   if (d.water_regime !== null && d.water_regime !== undefined) {
-    document.getElementById('ev-r-water-t').textContent   = d.water_supply_t_c.toFixed(1) + ' °C';
-    document.getElementById('ev-r-water-min').textContent = d.t_dew_c.toFixed(1) + ' °C';
+    document.getElementById('ev-r-water-t').textContent   = fmtNum(d.water_supply_t_c, 1) + ' °C';
+    document.getElementById('ev-r-water-min').textContent = fmtNum(d.t_dew_c, 1) + ' °C';
 
     const noteEl = document.getElementById('ev-water-note');
-    const minT   = d.t_dew_c.toFixed(1);
+    const minT   = fmtNum(d.t_dew_c, 1);
     if (d.water_regime === 'safe') {
       setEdge(waterCard, 'ok');
       setBg(noteEl, 'ok-bg');
-      noteEl.textContent = t('ev_water_safe', { t_water: d.water_supply_t_c.toFixed(1), t_dew: minT });
+      noteEl.textContent = t('ev_water_safe', { t_water: fmtNum(d.water_supply_t_c, 1), t_dew: minT });
     } else {
       setEdge(waterCard, 'danger');
       setBg(noteEl, 'danger-bg');
-      noteEl.textContent = t('ev_water_cold', { t_water: d.water_supply_t_c.toFixed(1), t_dew: minT });
+      noteEl.textContent = t('ev_water_cold', { t_water: fmtNum(d.water_supply_t_c, 1), t_dew: minT });
     }
 
     waterCard.hidden = false;
@@ -1455,7 +1455,7 @@ function renderEvap(d) {
   </div>
 </div><!-- /panel-help -->
 
-<script src="./calibration.js?v=5"></script>
+<script src="./calibration.js?v=6"></script>
 <script>
 // ── House selector for Step 1 (loads dims from main-page localStorage) ──────
 (function () {
@@ -1508,8 +1508,8 @@ function renderEvap(d) {
         const l = tab.length_m, w = tab.width_m;
         const hw = tab.height_wall_m, hr = tab.height_ridge_m;
         let dimStr = '';
-        if (l && w) dimStr = `${l}×${w}`;
-        if (hw && hr) dimStr += ` h${hw}/${hr}`;
+        if (l && w) dimStr = `${fmtNum(l)}×${fmtNum(w)}`;
+        if (hw && hr) dimStr += ` h${fmtNum(hw)}/${fmtNum(hr)}`;
         opt.textContent = dimStr ? `${name} (${dimStr})` : name;
         selEl.appendChild(opt);
       });
@@ -1571,7 +1571,7 @@ function renderEvap(d) {
       const cy = ty(y);
       if (cy < P.t - 2 || cy > P.t + CH + 2) continue;
       o += `<line x1="${P.l}" y1="${cy.toFixed(1)}" x2="${P.l + CW}" y2="${cy.toFixed(1)}" stroke="var(--border)"/>`;
-      const lbl = y >= 1000 ? (Math.round(y / 100) / 10) + 'k' : (y >= 10 ? Math.round(y) : y.toFixed(1));
+      const lbl = y >= 1000 ? fmtNum(Math.round(y / 100) / 10) + 'k' : (y >= 10 ? Math.round(y) : fmtNum(y, 1));
       o += `<text x="${P.l - 4}" y="${(cy + 3.5).toFixed(1)}" fill="var(--muted)" font-size="9" text-anchor="end" font-family="system-ui,Arial">${lbl}</text>`;
     }
 

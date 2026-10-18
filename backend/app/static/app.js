@@ -16,7 +16,7 @@ async function updateUaBadge(tabId) {
       el.hidden = true; return;
     }
     // Корпус совпадает — показываем UA
-    el.innerHTML = `🌡️ UA = <strong>${ua.toFixed(0)} ${t('cfg_ua_unit')}</strong> &nbsp;—&nbsp;
+    el.innerHTML = `🌡️ UA = <strong>${fmtNum(ua, 0)} ${t('cfg_ua_unit')}</strong> &nbsp;—&nbsp;
       <span class="muted">${t('ua_calibrated_lbl')}</span>
       &nbsp;<a href="./calculators.html" class="fs-11 op-70">${t('ua_recal_link')}</a>`;
     el.hidden = false;
@@ -94,7 +94,7 @@ function syncCap() {
   const note = document.getElementById('capAutoNote');
   if (n > 0 && c > 0) {
     elCap.value = n * c;
-    if (note) note.textContent = `= ${n} × ${c.toLocaleString(I18N.lang)} ${t('unit_m3h')}`;
+    if (note) note.textContent = `= ${fmtNum(n)} × ${fmtNum(c)} ${t('unit_m3h')}`;
   } else {
     if (note) note.textContent = '';
   }

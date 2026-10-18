@@ -172,7 +172,7 @@ async function finishTest() {
   test = null;
   renderTapPanel();
   setTone(elTimerStatus, 'ok');
-  elTimerStatus.textContent = t('timer_done', { min: (Math.max(...done.zones.map(m => m[m.length - 1][0])) / 60).toFixed(1) });
+  elTimerStatus.textContent = t('timer_done', { min: fmtNum((Math.max(...done.zones.map(m => m[m.length - 1][0])) / 60), 1) });
   try {
     lastResult = await computeCurveResult(done);
     renderCurveResult(lastResult);
@@ -232,7 +232,7 @@ function renderCurveResult(res) {
   const zoneRows = res.n > 1 ? res.zones.map((z, i) => {
     const zq = uaQuality(z.ua_coefficient / zoneArea);
     return `<div class="kv"><span>${t('zone_lbl', { n: i + 1 })}</span>
-      <span class="c-grade-${zq.grade} fw-700">${(z.ua_coefficient / zoneArea).toFixed(2)} ${uaUnit}/${t('unit_m2')}</span></div>`;
+      <span class="c-grade-${zq.grade} fw-700">${fmtNum((z.ua_coefficient / zoneArea), 2)} ${uaUnit}/${t('unit_m2')}</span></div>`;
   }).join('') : '';
 
   const warnHtml = warnings.map(w =>
@@ -242,11 +242,11 @@ function renderCurveResult(res) {
     <div class="note-ok p-12">
       <strong>${t('cal_curve_complete')}</strong>
       <div class="mt-8 d-grid gap-6">
-        <div class="kv"><span>${t('ua_coeff_lbl')}</span><span><strong>${res.uaTotal.toFixed(0)} ${uaUnit}</strong></span></div>
-        <div class="kv"><span>${t('ua_per_m2_lbl')}</span><span>${uaM2.toFixed(2)} ${uaUnit}/${t('unit_m2')}
+        <div class="kv"><span>${t('ua_coeff_lbl')}</span><span><strong>${fmtNum(res.uaTotal, 0)} ${uaUnit}</strong></span></div>
+        <div class="kv"><span>${t('ua_per_m2_lbl')}</span><span>${fmtNum(uaM2, 2)} ${uaUnit}/${t('unit_m2')}
           <span class="grade-pill bg-grade-${q.grade} c-grade-${q.grade}">${q.label}</span></span></div>
-        <div class="kv"><span>${t('c_struct_lbl')}</span><span>${t('c_struct_ratio', { x: (cStruct / cAir).toFixed(1) })}</span></div>
-        <div class="kv"><span>${t('duration_lbl')}</span><span>${res.durationMin.toFixed(0)} ${t('unit_min')}</span></div>
+        <div class="kv"><span>${t('c_struct_lbl')}</span><span>${t('c_struct_ratio', { x: fmtNum((cStruct / cAir), 1) })}</span></div>
+        <div class="kv"><span>${t('duration_lbl')}</span><span>${fmtNum(res.durationMin, 0)} ${t('unit_min')}</span></div>
         ${zoneRows}
       </div>
       ${warnHtml}
@@ -287,8 +287,8 @@ function updateDimensionsDisplay() {
   if (l > 0 && w > 0 && hEff > 0) {
     const volume = l * w * hEff;
     const area   = l * w;
-    elVolumeDisplay.textContent = `${volume.toFixed(1)} ${t('unit_m3')}`;
-    elAreaDisplay.textContent   = `${area.toFixed(1)} ${t('unit_m2')}`;
+    elVolumeDisplay.textContent = `${fmtNum(volume, 1)} ${t('unit_m3')}`;
+    elAreaDisplay.textContent   = `${fmtNum(area, 1)} ${t('unit_m2')}`;
   } else {
     elVolumeDisplay.textContent = t('vol_default');
     elAreaDisplay.textContent   = t('area_default');
@@ -465,15 +465,15 @@ elAnalyzeBtn.addEventListener('click', async () => {
 
 // Результат анализа обогрева — по последнему ответу сервера; вызывается и при смене языка
 function renderAnalysis(data) {
-  const dutyCyclePct = data.duty_cycle_percent.toFixed(1);
-  const qWalls       = data.q_walls_kw.toFixed(1);
-  const qVent        = data.q_ventilation_kw.toFixed(1);
-  const qBirds       = data.q_birds_kw.toFixed(1);
-  const qHeater      = data.q_heater_required_kw.toFixed(1);
-  const birdFrac     = (data.bird_heat_fraction * 100).toFixed(0);
+  const dutyCyclePct = fmtNum(data.duty_cycle_percent, 1);
+  const qWalls       = fmtNum(data.q_walls_kw, 1);
+  const qVent        = fmtNum(data.q_ventilation_kw, 1);
+  const qBirds       = fmtNum(data.q_birds_kw, 1);
+  const qHeater      = fmtNum(data.q_heater_required_kw, 1);
+  const birdFrac     = fmtNum((data.bird_heat_fraction * 100), 0);
   // К Qmin добавляется воздух РАЗБАВЛЕНИЯ CO₂ (~58 м³/ч на кВт), а не стехиометрический
   // воздух горения — он в ~40 раз меньше и раньше показывался здесь по ошибке
-  const dilutionAir  = (data.dilution_air_m3h || 0).toFixed(0);
+  const dilutionAir  = fmtNum((data.dilution_air_m3h || 0), 0);
 
   // Тон duty cycle: ок → внимание → перегрузка
   const dutyTone = data.duty_cycle >= 0.95 ? 'danger'
@@ -518,7 +518,7 @@ function renderAnalysis(data) {
         </div>
         <div class="py-6 px-8 bg-bg r-4 fs-13">
           ${t('ht_status_' + data.status_code, {
-            birds_kw: qBirds, deficit_kw: data.heater_deficit_kw.toFixed(1), duty_pct: data.duty_cycle_percent.toFixed(0),
+            birds_kw: qBirds, deficit_kw: fmtNum(data.heater_deficit_kw, 1), duty_pct: fmtNum(data.duty_cycle_percent, 0),
           })}
         </div>
 
@@ -551,8 +551,8 @@ async function loadAndDisplayConfig() {
 
   if (config.building) {
     const b      = config.building;
-    const volume = (b.length_m * b.width_m * b.height_m).toFixed(1);
-    const area   = (b.length_m * b.width_m).toFixed(1);
+    const volume = fmtNum((b.length_m * b.width_m * b.height_m), 1);
+    const area   = fmtNum((b.length_m * b.width_m), 1);
     const uM  = t('unit_m');
     const uM3 = t('unit_m3');
     const uM2 = t('unit_m2');
@@ -560,8 +560,8 @@ async function loadAndDisplayConfig() {
     html += `
       <div class="mb-12">
         <strong>${t('cfg_bldg_h')}</strong>
-        <div class="kv"><span>${t('cfg_lwh')}</span><span>${b.length_m} × ${b.width_m} ${uM}</span></div>
-        <div class="kv"><span>${t('label_height_eff')}</span><span>${b.height_m} ${uM}</span></div>
+        <div class="kv"><span>${t('cfg_lwh')}</span><span>${fmtNum(b.length_m)} × ${fmtNum(b.width_m)} ${uM}</span></div>
+        <div class="kv"><span>${t('label_height_eff')}</span><span>${fmtNum(b.height_m)} ${uM}</span></div>
         <div class="kv"><span>${t('cfg_volume')}</span><span>${volume} ${uM3}</span></div>
         <div class="kv"><span>${t('cfg_floor')}</span><span>${area} ${uM2}</span></div>
       </div>
@@ -578,7 +578,7 @@ async function loadAndDisplayConfig() {
       <div class="mb-12">
         <strong>${t('cfg_heater_h')}</strong>
         <div class="kv"><span>${t('cfg_heater_type')}</span><span>${typeLabel}</span></div>
-        <div class="kv"><span>${t('cfg_heater_cap')}</span><span>${h.total_power_kw} ${t('cfg_kw_unit')}</span></div>
+        <div class="kv"><span>${t('cfg_heater_cap')}</span><span>${fmtNum(h.total_power_kw)} ${t('cfg_kw_unit')}</span></div>
       </div>
     `;
   } else {
@@ -588,7 +588,7 @@ async function loadAndDisplayConfig() {
   if (config.calibration) {
     const c = config.calibration;
     const uaStr = c.ua_coefficient != null
-      ? `${c.ua_coefficient.toFixed(1)} ${t('cfg_ua_unit')}`
+      ? `${fmtNum(c.ua_coefficient, 1)} ${t('cfg_ua_unit')}`
       : '—';
     html += `
       <div>
