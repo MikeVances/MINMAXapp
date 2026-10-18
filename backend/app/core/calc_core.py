@@ -44,6 +44,23 @@ def house_sensible_fraction_cigr2002(t_inside_c: float) -> float:
     return house_sensible_fraction(t_inside_c)
 
 
+# Переходная вентиляция (боковые клапаны) — 40–50 % мощности туннеля (Ross 2025, с. 79):
+# пока тепловой баланс требует меньше половины туннельного расхода, туннель не нужен
+TRANSITIONAL_SHARE_OF_TUNNEL = 0.5
+
+# Предельная скорость воздуха у птицы по возрасту, м/с (Cobb Broiler Guide 2021, §9.7:
+# 0–5 сут — до 0.3; 5–14 — 0.3–0.5; 14–21 — 0.5–1.8; старше — без ограничения)
+_TUNNEL_SPEED_BY_AGE = [(5, 0.3), (14, 0.5), (21, 1.8)]
+
+
+def tunnel_speed_limit_ms(age_days: int, v_design_ms: float) -> float:
+    """Наибольшая допустимая скорость в туннеле для возраста; старше 21 дня — проектная."""
+    for max_age, v in _TUNNEL_SPEED_BY_AGE:
+        if age_days < max_age:
+            return v
+    return v_design_ms
+
+
 def regime_ceiling_m3h(age: int, tunnel_min_day: int, q_min_co2: float,
                        tunnel_requirement: Optional[float]) -> tuple[float, bool]:
     """
@@ -206,50 +223,65 @@ def compute(ci: CalcInput) -> CalcResult:
     # вдвое меньше птицы → вдвое меньше «вентиляторов».
     tunnel_min_day  = int(getattr(cfg, "tunnel_min_day", 14))
     tunnel_min_temp = float(getattr(cfg, "tunnel_min_temp_c", 18.0))
-    tunnel_active   = (age >= tunnel_min_day) and (ci.outside_t >= tunnel_min_temp)
+    v_tunnel        = float(getattr(cfg, "v_tunnel_ms", 2.5))
 
+    # Проектный туннельный расход корпуса (полная скорость) — для мощности и UI
     tunnel_requirement: Optional[float] = None
+    # Туннельный расход с учётом возраста: молодой птице полную скорость не дают
+    tunnel_flow_for_age: Optional[float] = None
     if ci.house_width_m and ci.house_height_m:
-        v_tunnel = float(getattr(cfg, "v_tunnel_ms", 2.5))
-        tunnel_requirement = v_tunnel * ci.house_width_m * ci.house_height_m * 3600.0
+        section_m2 = ci.house_width_m * ci.house_height_m
+        tunnel_requirement  = v_tunnel * section_m2 * 3600.0
+        tunnel_flow_for_age = min(v_tunnel, tunnel_speed_limit_ms(age, v_tunnel)) * section_m2 * 3600.0
+
+    # --- Тепловой баланс всего птичника ---
+    # Тепло, которое должна унести вентиляция:
+    #   Q_vent = H_birds - Q_walls
+    #   H_birds = явное тепло КОРПУСА × N  [Вт]  (CIGR 2002, bird_heat)
+    #   Q_walls = UA × (T_in - T_out)  [Вт]  (> 0 = тепло уходит через стены)
+    #
+    # В мороз Q_walls > 0: стены помогают охлаждению, нагрузка на вентиляцию ниже.
+    # Без данных калибровки UA = 0 (консервативно: не занижаем Qmax).
+    #
+    # Баланс — по нагреву воздуха (ρ·Cp·ΔT), поэтому только явное тепло, и на
+    # уровне КОРПУСА: часть тепла птицы уходит на испарение влаги из подстилки
+    # и воздух не греет. Раньше бралось 6.90·W^0.75 (уровень птицы, 65 % полного),
+    # а влагобаланс — долю корпуса: в сумме выходило больше 100 % (аудит 2026-10-18)
+    h_birds_sensible_w = bird_heat.sensible_w * birds_eff
+    q_wall_loss_w      = (_ua_coeff * (t_target_inside - ci.outside_t)
+                          if _ua_coeff is not None else 0.0)
+    q_vent_needed_w    = max(0.0, h_birds_sensible_w - q_wall_loss_w)
+
+    # Объём через вытяжку — внутренний воздух, ρ при T_in (см. ventilation_heat_w)
+    rho_air = air_density_kg_m3(t_target_inside)
+    delta_t = t_target_inside - ci.outside_t
+
+    # ΔT ≈ 0: воздух почти не охлаждает, баланс вырождается (деление на ~0)
+    q_heat_balance = ((q_vent_needed_w * 3600.0) / (rho_air * AIR_CP_J_PER_KG_K * delta_t)
+                      if delta_t > 0.5 else None)
+
+    # --- Туннель: возраст и наружная T разрешают, а тепло корпуса — требует ---
+    # Раньше хватало «≥ 14 дней и ≥ 18 °C»: в 14 дней при 18 °C снаружи (уставка 25 °C)
+    # Qmax = полный туннель 2.5 м/с на птицу 0.5 кг (аудит 2026-10-18). Переходная
+    # вентиляция через боковые клапаны рассчитана на 40–50 % мощности туннеля
+    # (Ross Broiler Handbook 2025, с. 79) — туннель нужен, когда баланс требует больше.
+    tunnel_allowed = (age >= tunnel_min_day) and (ci.outside_t >= tunnel_min_temp)
+    if tunnel_allowed and tunnel_flow_for_age is not None:
+        tunnel_active = (q_heat_balance is None
+                         or q_heat_balance > TRANSITIONAL_SHARE_OF_TUNNEL * tunnel_flow_for_age)
+    else:
+        # Без размеров корпуса сравнить не с чем — прежнее правило, UI попросит размеры
+        tunnel_active = tunnel_allowed
 
     # --- Qmax ---
     house_geometry_missing = False
     if tunnel_active:
-        q_max_need = tunnel_requirement
+        q_max_need = tunnel_flow_for_age
     else:
-        # Туннель OFF: тепловой баланс всего птичника.
-        #
-        # Тепло, которое должна унести вентиляция:
-        #   Q_vent = H_birds - Q_walls
-        #   H_birds = явное тепло КОРПУСА × N  [Вт]  (CIGR 2002, bird_heat)
-        #   Q_walls = UA × (T_in - T_out)  [Вт]  (> 0 = тепло уходит через стены)
-        #
-        # В мороз Q_walls > 0: стены помогают охлаждению, нагрузка на вентиляцию ниже.
-        # Без данных калибровки UA = 0 (консервативно: не занижаем Qmax).
-        #
-        # Баланс — по нагреву воздуха (ρ·Cp·ΔT), поэтому только явное тепло, и на
-        # уровне КОРПУСА: часть тепла птицы уходит на испарение влаги из подстилки
-        # и воздух не греет. Раньше бралось 6.90·W^0.75 (уровень птицы, 65 % полного),
-        # а влагобаланс — долю корпуса: в сумме выходило больше 100 % (аудит 2026-10-18)
-        h_birds_sensible_w = bird_heat.sensible_w * birds_eff
-        q_wall_loss_w      = (_ua_coeff * (t_target_inside - ci.outside_t)
-                              if _ua_coeff is not None else 0.0)
-        q_vent_needed_w    = max(0.0, h_birds_sensible_w - q_wall_loss_w)
-
-        # Объём через вытяжку — внутренний воздух, ρ при T_in (см. ventilation_heat_w)
-        rho_air = air_density_kg_m3(t_target_inside)
-        delta_t = t_target_inside - ci.outside_t
-
-        # ΔT ≈ 0: воздух почти не охлаждает, баланс вырождается (деление на ~0)
-        q_heat_balance = ((q_vent_needed_w * 3600.0) / (rho_air * AIR_CP_J_PER_KG_K * delta_t)
-                          if delta_t > 0.5 else None)
-
         # Потолок переходного режима:
         #   моложе tunnel_min_day — 4 × Qmin (Aviagen: переходная вентиляция 3–5× минимума);
-        #   старше — туннельный расход корпуса (холоднее tunnel_min_temp туннель не включают,
-        #   но больше него установка всё равно не даст)
-        ceiling = 4.0 * q_min if age < tunnel_min_day else tunnel_requirement
+        #   старше — туннельный расход корпуса для этого возраста
+        ceiling = 4.0 * q_min if age < tunnel_min_day else tunnel_flow_for_age
 
         candidates = [q for q in (q_heat_balance, ceiling) if q is not None]
         # (влажностный Qmin ниже берёт тот же потолок через regime_ceiling_m3h)
@@ -278,7 +310,7 @@ def compute(ci: CalcInput) -> CalcResult:
 
     # Потолок режима для влажностного Qmin — тот же, что ограничивает Qmax
     moisture_ceiling, ceiling_needs_geometry = regime_ceiling_m3h(
-        age, tunnel_min_day, q_min_co2, tunnel_requirement)
+        age, tunnel_min_day, q_min_co2, tunnel_flow_for_age)
     _rho_in = 353.05 / (t_target_inside + 273.15)
 
     if rv_percent is not None:

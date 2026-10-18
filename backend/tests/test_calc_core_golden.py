@@ -293,3 +293,29 @@ def test_api_minmax_rejects_numeric_house_id(client):
     payload = dict(house=1, birds=N_BIRDS, age_days=21, outside_t=25.0)
 
     assert client.post("/calc/minmax", json=payload).status_code == 422
+
+
+# ─── Туннель по тепловой потребности и скорость по возрасту (аудит 2026-10-18) ──
+
+def test_tunnel_not_switched_on_while_transitional_ventilation_suffices():
+    """
+    14 дней, 18 °C снаружи: правило «≥ 14 дней и ≥ 18 °C» включало полный туннель
+    (324 000 м³/ч при 2.5 м/с) на птицу ~0.5 кг. Тепловой баланс требует в разы меньше
+    половины туннельного расхода — справляется переходная вентиляция (Ross 2025, с. 79).
+    """
+    r = _calc(age_days=14, outside_t=18.0, outside_rh=40.0, **HOUSE)
+
+    assert r.tunnel_active is False
+    assert r.q_max_m3h < 0.5 * TUNNEL_M3H
+
+
+def test_tunnel_speed_limited_for_birds_younger_than_21_days():
+    """
+    18 дней, 32 °C: туннель нужен, но скорость у птицы до 21 дня — не выше 1.8 м/с
+    (Cobb Broiler Guide 2021, §9.7). Qmax = 1.8 × 36 м² × 3600 = 233 280 м³/ч, а не 324 000.
+    """
+    r = _calc(age_days=18, outside_t=32.0, outside_rh=40.0, **HOUSE)
+
+    assert r.tunnel_active is True
+    assert r.q_max_m3h == pytest.approx(1.8 * 36.0 * 3600.0)
+    assert r.tunnel_requirement_m3h == pytest.approx(TUNNEL_M3H)   # проект корпуса — полная скорость
