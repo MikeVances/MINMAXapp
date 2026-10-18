@@ -5,8 +5,10 @@ from dataclasses import asdict
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
+from ..api_errors import api_error
 from ..write_access import require_write_token
 from ..core.app_config import AppConfig, load_app_config, save_app_config
+from ..core.growth_profiles import ProfileNotFound, load_profile
 
 
 router = APIRouter()
@@ -41,5 +43,12 @@ def get_app_cfg():
 @router.put("/app-config", response_model=AppCfg, dependencies=[Depends(require_write_token)])
 def put_app_cfg(payload: AppCfg):
     """Сохранить настройки хозяйства."""
+    # Профиль по умолчанию берут все расчёты главной, где корпус не выбрал свой.
+    # Несуществующий id сохранялся с ответом 200 — и после этого каждый расчёт
+    # у каждого посетителя отвечал 404 profile_not_found, пока кто-то не исправит
+    try:
+        load_profile(payload.default_growth_profile)
+    except ProfileNotFound:
+        raise api_error(422, "profile_not_found", id=payload.default_growth_profile)
     save_app_config(AppConfig(**payload.model_dump()))
     return payload

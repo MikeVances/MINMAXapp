@@ -129,3 +129,18 @@ def test_feedback_rate_limit_is_a_code(client, monkeypatch):
 
     assert r.status_code == 429
     assert r.json()["detail"] == "feedback_rate_limited"
+
+
+def test_every_raised_code_has_a_text_in_every_dictionary():
+    """Код без srv_<code> клиент показывает как есть: «profile_is_default» вместо фразы."""
+    import re
+    app_dir = Path(__file__).resolve().parents[1] / "app"
+    src = "\n".join(p.read_text(encoding="utf-8") for p in app_dir.rglob("*.py"))
+    codes = set(re.findall(r'api_error\(\s*\d+\s*,\s*"([a-z0-9_]+)"', src))
+    codes |= set(re.findall(r'CalcError\(\s*"([a-z0-9_]+)"', src))
+    assert "profile_is_default" in codes and "profile_not_found" in codes
+    missing = []
+    for lang in ("en", "ru", "de", "fr", "pl"):
+        text = (app_dir / "static" / "i18n" / f"{lang}.js").read_text(encoding="utf-8")
+        missing += [f"{lang}: srv_{c}" for c in sorted(codes) if not re.search(rf"\bsrv_{c}\s*:", text)]
+    assert not missing, "\n".join(missing)

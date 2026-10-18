@@ -136,6 +136,12 @@ def put_profile(profile_id: str, payload: ProfileIn):
     # Без массы расчёт невозможен: хотя бы две точки с весом нужны для интерполяции
     if sum(1 for pt in payload.points if pt.body_weight_g is not None) < 2:
         raise api_error(422, "profile_needs_two_weights")
+    # Расчёт требует и целевую температуру (calc_core: profile_day_missing). Профиль
+    # только с массой сохранялся с 200, а потом каждый расчёт по нему отвечал 400.
+    # Две точки, а не одна: одна дала бы постоянную уставку на весь цикл (33 → 19 °C
+    # у бройлера — не константа), и ошибка ввода прошла бы молча
+    if sum(1 for pt in payload.points if pt.min_temp_c is not None) < 2:
+        raise api_error(422, "profile_needs_two_temps")
 
     profile = GrowthProfile(
         id=profile_id,
@@ -154,6 +160,13 @@ def put_profile(profile_id: str, payload: ProfileIn):
 def delete_profile(profile_id: str):
     _check_path_id(profile_id)
     try:
+        # Встроенный не удаляется в любом случае (403) — эта причина первична
+        if load_profile(profile_id).builtin:
+            raise BuiltinProfileReadOnly(profile_id)
+        # Удалённый профиль по умолчанию ломает расчёты главной у всех (404 на каждый
+        # запрос без своего профиля). Сначала выбрать другой в настройках, потом удалять
+        if profile_id == load_app_config().default_growth_profile:
+            raise api_error(409, "profile_is_default", id=profile_id)
         delete_custom_profile(profile_id)
     except BuiltinProfileReadOnly:
         raise api_error(403, "builtin_profile_read_only")
