@@ -176,7 +176,8 @@ async function finishTest() {
   try {
     lastResult = await computeCurveResult(done);
     renderCurveResult(lastResult);
-    elSaveCalibrationBtn.disabled = false;
+    // Что сервер не сохранит, то и кнопкой не предлагаем (иначе отказ — после нажатия)
+    elSaveCalibrationBtn.disabled = curveSaveBlocked(lastResult) !== null;
   } catch (e) {
     elCalibrationResult.innerHTML = `<div class="danger">${escapeHtml(t('err_prefix') + String(e.message || e))}</div>`;
   }
@@ -220,6 +221,22 @@ function uaQuality(uaM2) {
   return              { label: t('ua_quality_poor'),          grade: 4 };
 }
 
+// Хоть одна зона с неопределённым UA — неопределённа и сумма по корпусу
+function curveUaUnresolved(res) {
+  return res.zones.some(z => (z.warnings || []).includes('ua_not_resolved'));
+}
+
+// Тест короче этого сервер не сохранит (building_thermal.MIN_CALIBRATION_MINUTES);
+// то же 600 с у предупреждения fast_cooling (cooling_fit.FAST_TEST_S)
+const MIN_CALIBRATION_MINUTES = 10;
+
+// Почему результат нельзя сохранить: заголовок карточки или null
+function curveSaveBlocked(res) {
+  if (res.durationMin < MIN_CALIBRATION_MINUTES) return t('cal_curve_too_short', { min: MIN_CALIBRATION_MINUTES });
+  if (curveUaUnresolved(res)) return t('cal_curve_unreliable');
+  return null;
+}
+
 function renderCurveResult(res) {
   const uaUnit  = t('cfg_ua_unit');
   const zoneArea = res.floorArea / res.n;
@@ -228,6 +245,15 @@ function renderCurveResult(res) {
   const cStruct = res.zones.reduce((s, z) => s + z.c_struct_j_per_k, 0);
   const cAir    = res.zones.reduce((s, z) => s + z.c_air_j_per_k, 0);
   const warnings = [...new Set(res.zones.flatMap(z => z.warnings))];
+  const unresolved = curveUaUnresolved(res);
+  const blocked    = curveSaveBlocked(res);
+  // Раньше карточка была зелёной при любом исходе, даже с «C_к ≈ 3.7·10¹⁸× воздуха»:
+  // зелёная — только без замечаний, с замечаниями — жёлтая, без UA — заголовок-отказ
+  const boxClass = warnings.length ? 'note-warn' : 'note-ok';
+  // C_к, которую кривая не определяет, — словами, а не астрономическим числом
+  const cStructText = res.zones.every(z => z.c_struct_resolved !== false)
+    ? t('c_struct_ratio', { x: fmtNum((cStruct / cAir), 1) })
+    : t('c_struct_unresolved');
 
   const zoneRows = res.n > 1 ? res.zones.map((z, i) => {
     const zq = uaQuality(z.ua_coefficient / zoneArea);
@@ -239,19 +265,23 @@ function renderCurveResult(res) {
     `<p class="warn mt-6 mb-0 fs-12">⚠️ ${t('cal_warn_' + w)}</p>`).join('');
 
   elCalibrationResult.innerHTML = `
-    <div class="note-ok p-12">
-      <strong>${t('cal_curve_complete')}</strong>
+    <div class="${boxClass} p-12">
+      <strong>${blocked || t('cal_curve_complete')}</strong>
       <div class="mt-8 d-grid gap-6">
-        <div class="kv"><span>${t('ua_coeff_lbl')}</span><span><strong>${fmtNum(res.uaTotal, 0)} ${uaUnit}</strong></span></div>
+        ${unresolved
+          // Число, которое отметки не определяют, не показываем вовсе: на синтетике
+          // оно расходилось с истинным вдвое, а рядом стояла оценка «плохая изоляция»
+          ? `<div class="kv"><span>${t('ua_coeff_lbl')}</span><span class="c-warn fw-700">${t('ua_not_determined')}</span></div>`
+          : `<div class="kv"><span>${t('ua_coeff_lbl')}</span><span><strong>${fmtNum(res.uaTotal, 0)} ${uaUnit}</strong></span></div>
         <div class="kv"><span>${t('ua_per_m2_lbl')}</span><span>${fmtNum(uaM2, 2)} ${uaUnit}/${t('unit_m2')}
-          <span class="grade-pill bg-grade-${q.grade} c-grade-${q.grade}">${q.label}</span></span></div>
-        <div class="kv"><span>${t('c_struct_lbl')}</span><span>${t('c_struct_ratio', { x: fmtNum((cStruct / cAir), 1) })}</span></div>
+          <span class="grade-pill bg-grade-${q.grade} c-grade-${q.grade}">${q.label}</span></span></div>`}
+        ${unresolved ? '' : `<div class="kv"><span>${t('c_struct_lbl')}</span><span>${cStructText}</span></div>`}
         <div class="kv"><span>${t('duration_lbl')}</span><span>${fmtNum(res.durationMin, 0)} ${t('unit_min')}</span></div>
-        ${zoneRows}
+        ${unresolved ? '' : zoneRows}
       </div>
       ${warnHtml}
       <p class="muted mt-8 mb-0 fs-12">ℹ️ ${t('cal_equilibrium_note')}</p>
-      <p class="muted mt-6 mb-0 fs-13">${t('cal_save_hint')}</p>
+      ${blocked ? '' : `<p class="muted mt-6 mb-0 fs-13">${t('cal_save_hint')}</p>`}
     </div>`;
 }
 
@@ -398,6 +428,7 @@ elSaveHeaterBtn.addEventListener('click', async () => {
 // Save calibration
 elSaveCalibrationBtn.addEventListener('click', async () => {
   if (!lastResult) { alert(t('err_calc_first')); return; }
+  if (curveSaveBlocked(lastResult)) return;   // кнопка и так неактивна — на случай гонки
   try {
     const config = await loadConfig();
     config.house_id = getSelectedHouseId();

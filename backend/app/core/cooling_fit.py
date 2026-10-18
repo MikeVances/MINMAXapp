@@ -29,6 +29,18 @@ T_к = T_a. Тогда начальный наклон кривой опреде
 Решение системы аналитическое (линейная система 2×2 → сумма двух экспонент),
 подгонка — Нелдер–Мид по логарифмам параметров (параметры положительны и
 различаются на порядки). Внешних зависимостей нет.
+
+Что кривая может НЕ определить (аудит 2026-10-18)
+──────────────────────────────────────────────────
+• UA. Его задаёт начальный наклон, а у корпуса с сильной связью воздуха с полом
+  (большое K) быстрая фаза кончается раньше первой отметки: дальше видна лишь
+  медленная мода, и модели с UA на 25 % больше или меньше ложатся на отметки
+  одинаково (на синтетике — ошибка до −80 % без единого предупреждения).
+  Проверка — профиль: UA фиксируется на ×0.8 и ×1.25, остальное подгоняется
+  заново; если хоть одна такая модель не хуже шума нажатий — UA не определён.
+• C_к. Если за тест конструкции почти не остыли, их теплоёмкость уходит в
+  бесконечность (было «3.7·10¹⁸× воздуха»), а UA при этом верен. Это не повод
+  браковать тест — только не показывать число.
 """
 
 from __future__ import annotations
@@ -44,6 +56,13 @@ MIN_TAPS = 4                 # точек после старта: меньше 
 RECOMMENDED_DELTA_T = 15.0   # °C, минимальная разница с улицей для точности
 FAST_TEST_S = 600            # быстрее 10 мин на всю кривую — подозрение на непрогретый корпус
 POOR_FIT_RMS_C = 0.3         # °C, расхождение модели с отметками
+# Профиль UA: насколько сдвинуть UA и что считать «так же хорошо».
+# 0.02 °C — опоздание нажатия на ~3 с при типичном наклоне 1 °C за 2–3 мин
+UA_PROFILE_FACTORS = (0.8, 1.25)
+UA_PROFILE_NOISE_C = 0.02
+# C_к не определена: конструкции почти не обменялись теплом с воздухом за тест
+C_STRUCT_UNRESOLVED_RATIO = 1e3   # C_к / C_воздуха
+K_UNRESOLVED_SHARE = 0.01         # K / UA
 
 
 @dataclass
@@ -55,6 +74,9 @@ class CoolingFit:
     rms_c: float                 # среднеквадратичное расхождение модели и отметок, °C
     duration_s: float
     warnings: List[str] = field(default_factory=list)
+    # False — за тест конструкции почти не остыли, C_к из кривой не извлекается
+    # (UA от этого не страдает): показывать «не определена», а не число
+    c_struct_resolved: bool = True
 
 
 # ─── Модель ──────────────────────────────────────────────────────────────────
@@ -143,10 +165,12 @@ def fit_cooling_curve(
 
     taps = pts[1:]
 
-    def objective(log_params: List[float]) -> float:
-        ua, k, c_struct = (math.exp(x) for x in log_params)
+    def sq_error(ua: float, k: float, c_struct: float) -> float:
         curve = air_temperature_curve(ua, k, c_struct, c_air, delta_t0)
         return sum((curve(t) - (temp - t_outside_c)) ** 2 for t, temp in taps)
+
+    def objective(log_params: List[float]) -> float:
+        return sq_error(*(math.exp(x) for x in log_params))
 
     # Начальное приближение: наклон первого отрезка при теплоёмкости одного воздуха.
     # Несколько стартов по K и C_к — функция цели не выпуклая
@@ -173,7 +197,26 @@ def fit_cooling_curve(
     if rms > POOR_FIT_RMS_C:
         warnings.append("poor_fit")           # отметки не ложатся на модель — проверьте нажатия
 
+    # Профиль UA: лучшая подгонка K и C_к при UA, сдвинутом на ±20–25 %.
+    # Ложится не хуже шума нажатий — значит, отметки UA не различают
+    tolerance = max(2.0 * rms, UA_PROFILE_NOISE_C)
+    for factor in UA_PROFILE_FACTORS:
+        ua_fixed = ua * factor
+        best_sq = min(
+            _nelder_mead(lambda lp: sq_error(ua_fixed, math.exp(lp[0]), math.exp(lp[1])),
+                         [math.log(k_factor * ua_fixed), math.log(c_factor * c_air)])[1]
+            for k_factor in (0.1, 1.0, 5.0, 20.0, 100.0)
+            for c_factor in (2.0, 10.0, 50.0)
+        )
+        if math.sqrt(best_sq / len(taps)) <= tolerance:
+            warnings.append("ua_not_resolved")
+            break
+
+    c_struct_resolved = (c_struct <= C_STRUCT_UNRESOLVED_RATIO * c_air
+                         and k >= K_UNRESOLVED_SHARE * ua)
+
     return CoolingFit(
         ua_w_per_k=ua, c_air_j_per_k=c_air, c_struct_j_per_k=c_struct,
         k_struct_w_per_k=k, rms_c=rms, duration_s=duration, warnings=warnings,
+        c_struct_resolved=c_struct_resolved,
     )

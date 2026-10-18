@@ -75,8 +75,10 @@ class CurveCalibrationResult(BaseModel):
     c_struct_j_per_k: float         # эффективная теплоёмкость пола и стен
     rms_c: float                    # расхождение модели с отметками, °C
     duration_minutes: float
-    warnings: list[str]             # small_delta_t | fast_cooling | poor_fit
+    warnings: list[str]             # small_delta_t | fast_cooling | poor_fit | ua_not_resolved
     method: str = "cooling_curve"
+    # False — конструкции за тест почти не остыли, C_к не определена (UA верен)
+    c_struct_resolved: bool = True
 
 
 logger = logging.getLogger(__name__)
@@ -190,6 +192,7 @@ def update_thermal_config(payload: ThermalConfigModel):
 
     if payload.calibration:
         cal = payload.calibration
+        ua_unresolved = False
         points = [[p.t_s, p.temp_c] for p in cal.points] if cal.points else None
         if cal.ua_coefficient is not None:
             # UA уже рассчитан (round-trip из loadConfig или явное сохранение) — сохраняем как есть
@@ -210,6 +213,7 @@ def update_thermal_config(payload: ThermalConfigModel):
                 fit = fit_cooling_curve(config.building.volume_m3, cal.t_outside_c, points)
             except ValueError as e:
                 raise from_calc_error(e)
+            ua_unresolved = "ua_not_resolved" in fit.warnings
             config.calibration = CalibrationTest(
                 t_initial_c=points[0][1], t_final_c=points[-1][1], t_outside_c=cal.t_outside_c,
                 time_minutes=points[-1][0] / 60.0, ua_coefficient=fit.ua_w_per_k,
@@ -227,6 +231,11 @@ def update_thermal_config(payload: ThermalConfigModel):
             problem = calibration_problem(config.calibration, config.building)
             if problem:
                 raise api_error(422, problem["code"], **problem["params"])
+            # Отметки не различают UA в пределах ±25 % — такое число в расчёт горелок
+            # и Qmax не пускаем (аудит 2026-10-18: ошибка до −80 % молча). После
+            # проверок правдоподобия: «тест короче 10 мин» — понятнее и первичнее
+            if ua_unresolved:
+                raise api_error(422, "calibration_ua_unresolved")
 
     save_thermal_config(config)
 
@@ -259,6 +268,7 @@ def run_curve_calibration(req: CurveCalibrationRequest):
         rms_c=fit.rms_c,
         duration_minutes=fit.duration_s / 60.0,
         warnings=fit.warnings,
+        c_struct_resolved=fit.c_struct_resolved,
     )
 
 

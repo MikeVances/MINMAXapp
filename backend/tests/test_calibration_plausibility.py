@@ -141,3 +141,20 @@ def test_heater_analysis_refuses_implausible_calibration(client, thermal_file):
 
     assert r.status_code == 400
     assert r.json()["detail"] == "calibration_method_obsolete"
+
+
+def test_client_save_gate_uses_server_minimum_duration():
+    """
+    Кнопка «Сохранить» гасится на клиенте по тому же порогу, по которому сервер
+    откажет (иначе отказ всплывает только после нажатия). Порог продублирован в
+    calibration.js — следим, чтобы не разошёлся, в том числе с fast_cooling.
+    """
+    import re
+    from pathlib import Path
+    from backend.app.core.building_thermal import MIN_CALIBRATION_MINUTES
+    from backend.app.core.cooling_fit import FAST_TEST_S
+
+    js = (Path(__file__).resolve().parents[1] / "app" / "static" / "calibration.js").read_text(encoding="utf-8")
+    client_min = float(re.search(r"const MIN_CALIBRATION_MINUTES = ([\d.]+);", js).group(1))
+
+    assert client_min == MIN_CALIBRATION_MINUTES == FAST_TEST_S / 60

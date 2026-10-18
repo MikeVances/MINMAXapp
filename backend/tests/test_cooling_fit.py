@@ -175,3 +175,58 @@ def test_saved_curve_is_recomputed_for_new_volume(client, house_config):
     assert saved["method"] == "cooling_curve"
     assert len(saved["points"]) == len(taps)
     assert saved["ua_coefficient"] == pytest.approx(2 * ua_1, rel=1e-3)
+
+
+# ── Что кривая не определяет (аудит 2026-10-18) ───────────────────────────────
+# Карточка результата была зелёной при любом исходе, с «C_к ≈ 3.7·10¹⁸×», а
+# «Сохранить» — активной. Синтетика показала две разные вещи:
+#   • сильная связь воздуха с полом (K = 100 000 Вт/°C): быстрая фаза кончается до
+#     первой отметки, UA ошибается на +94 %…−15 % при rms ≈ 0 — опасно;
+#   • конструкции почти не остыли: C_к → ∞, но UA верен — только не показывать число.
+
+@pytest.mark.parametrize(
+    "ua, k, c_struct",
+    [(3000, 18000, 6e7), (3000, 18000, 2e8), (5000, 10000, 5e7), (2000, 25000, 1e8)],
+)
+def test_well_posed_curves_are_not_flagged(ua, k, c_struct):
+    fit = fit_cooling_curve(VOLUME, T_OUT, _simulate_taps(ua, k, c_struct, noise_s=3))
+    assert "ua_not_resolved" not in fit.warnings
+    assert fit.c_struct_resolved
+
+
+@pytest.mark.parametrize("c_struct_over_air, noise_s", [(10, 0), (10, 3), (50, 0), (50, 3)])
+def test_ua_hidden_by_fast_floor_exchange_is_flagged(c_struct_over_air, noise_s):
+    """Первая отметка — уже после быстрой фазы: UA из отметок не следует."""
+    taps = _simulate_taps(3000, 100_000, c_struct_over_air * _c_air(), noise_s=noise_s)
+
+    fit = fit_cooling_curve(VOLUME, T_OUT, taps)
+
+    assert "ua_not_resolved" in fit.warnings
+    assert fit.rms_c < 0.05          # кривая при этом ложится идеально — rms ничего не скажет
+
+
+def test_structure_that_barely_cooled_hides_c_struct_but_not_ua():
+    """5 отметок за 9 минут при K = UA: C_к уходит в бесконечность, UA — точный."""
+    fit = fit_cooling_curve(VOLUME, T_OUT, _simulate_taps(3000, 3000, 10 * _c_air(), steps=5))
+
+    assert not fit.c_struct_resolved
+    assert fit.c_struct_j_per_k > 1e3 * fit.c_air_j_per_k
+    assert fit.ua_w_per_k == pytest.approx(3000, rel=0.03)
+    assert "ua_not_resolved" not in fit.warnings
+
+
+def test_api_refuses_to_save_unresolved_ua(client, house_config):
+    house_config(4.25)
+    taps = _simulate_taps(3000, 100_000, 50 * _c_air(), noise_s=3)
+    calc = client.post("/thermal/calibrate-curve", json={"t_outside_c": T_OUT, "points": _api_points(taps)})
+    assert calc.status_code == 200
+    assert "ua_not_resolved" in calc.json()["warnings"]
+
+    cal = {"t_initial_c": T_START, "t_final_c": taps[-1][1], "t_outside_c": T_OUT,
+           "time_minutes": taps[-1][0] / 60, "method": "cooling_curve", "points": _api_points(taps)}
+    r = client.put("/thermal/config", json={"house_id": "1", "building":
+                   {"length_m": 96, "width_m": 17, "height_m": 4.25}, "calibration": cal})
+
+    assert r.status_code == 422
+    assert r.json()["detail"] == "calibration_ua_unresolved"
+    assert client.get("/thermal/config").json().get("calibration") is None
