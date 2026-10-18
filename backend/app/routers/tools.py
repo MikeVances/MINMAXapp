@@ -127,6 +127,9 @@ class EvapCoolingRequest(BaseModel):
         None, ge=1, le=40,
         description="Температура воды подачи на панель, °C (скважина ≈ 8–12, бак летом до 35)"
     )
+    # КПД панели вручную: паспорт SANHE — для новой панели, в работе ниже (UGA 70–75 %)
+    pad_efficiency_pct: Optional[float] = Field(
+        None, ge=30, le=100, description="КПД насыщения панели, % (пусто — по паспорту SANHE)")
     # Вторая точка паспорта системы вентиляторов: расход в рабочей точке с сопротивлением панели
     total_fan_25pa_m3h: float = Field(0.0, ge=0, description="Суммарный расход вентиляторов при 25 Па, м³/ч (0 = неизвестен)")
     # Поголовье и расчётный день — для нагрева воздуха от панелей до вентиляторов
@@ -182,6 +185,7 @@ class EvapCoolingResponse(BaseModel):
     t_dew_c:             float
     # Режим подачи воды (None если не задана)
     water_supply_t_c:    Optional[float]
+    efficiency_basis:    str = "passport"   # passport | user
     water_regime:        Optional[str]   # 'safe' | 'condensation_risk'
     air_temp_rise_c:     float = 0.0     # нагрев воздуха от панелей до вентиляторов
     t_fan_end_c:         float = 0.0     # T у вентиляторов — по ней оценка достаточности
@@ -223,6 +227,7 @@ def calc_evap_cooling(req: EvapCoolingRequest) -> EvapCoolingResponse:
         pad_height_m      = req.pad_height_m,
         t_inside_target_c = req.t_inside_target_c,
         water_supply_t_c  = req.water_supply_t_c,
+        pad_efficiency_pct = req.pad_efficiency_pct,
         num_birds         = req.num_birds if req.bird_age_days else 0,
         total_fan_25pa_m3h = req.total_fan_25pa_m3h,
         bird_weight_kg    = _bird_weight_kg(req.bird_age_days, req.growth_profile_id) if req.num_birds and req.bird_age_days else 0.0,
@@ -249,6 +254,7 @@ def calc_evap_cooling(req: EvapCoolingRequest) -> EvapCoolingResponse:
         status_level            = r.status_level,
         t_dew_c                 = r.t_dew_c,
         water_supply_t_c        = r.water_supply_t_c,
+        efficiency_basis        = r.efficiency_basis,
         water_regime            = r.water_regime,
         air_temp_rise_c         = r.air_temp_rise_c,
         t_fan_end_c             = r.t_fan_end_c,

@@ -746,6 +746,7 @@ document.getElementById('evap-form').addEventListener('submit', async e => {
 
   try {
     const waterT = NumField.value('ev-water-t');
+    const etaPct = NumField.value('ev-eta');   // пусто — КПД по паспорту SANHE
     const payload = {
       house_length_m:    NumField.value('ev-length'),
       t_outdoor_db_c:    NumField.value('ev-tdb'),
@@ -758,6 +759,7 @@ document.getElementById('evap-form').addEventListener('submit', async e => {
       t_inside_target_c: NumField.value('ev-target'),
       // Опционально: температура воды. null = стандартный адиабатический расчёт
       ...(waterT !== null ? { water_supply_t_c: waterT } : {}),
+      ...(etaPct !== null ? { pad_efficiency_pct: etaPct } : {}),
       // Нагрев воздуха над птицей до вентиляторов (0 голов — не учитывать)
       num_birds:         NumField.value('ev-birds') ?? 0,
       // Вторая точка паспорта: расход в рабочей точке с сопротивлением панели
@@ -813,7 +815,9 @@ function renderEvap(d) {
   const potPct  = maxCool > 0 ? Math.round(d.cooling_achieved_c / maxCool * 100) : 100;
   document.getElementById('ev-r-max-cool').textContent =
     fmtNum(maxCool, 1) + ' °C  (' + potPct + '% ' + t('lbl_of_potential') + ')';
-  document.getElementById('ev-r-eta').textContent     = Math.round(d.pad_efficiency * 100) + ' %';
+  // Чей КПД: паспорт новой панели или заданный пользователем — от этого зависит доверие к цифре
+  document.getElementById('ev-r-eta').textContent     = Math.round(d.pad_efficiency * 100) + ' % · '
+    + t(d.efficiency_basis === 'user' ? 'eta_basis_user' : 'eta_basis_passport');
   document.getElementById('ev-r-margin').innerHTML    = (() => {
     const cls = d.temp_margin_c >= 2 ? 'ok' : d.temp_margin_c >= 0 ? 'warn' : 'danger';
     return `<span class="${cls}">${fmtNum(d.temp_margin_c, 1)} °C</span>`;

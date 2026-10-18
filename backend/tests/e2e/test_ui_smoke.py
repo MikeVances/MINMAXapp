@@ -147,9 +147,10 @@ def test_leakage_calculation(page):
 def test_evap_calculation(page):
     _open(page, "/calculators.html", "evap")
     _fill(page, {"#ev-length": 120, "#ev-width": 16, "#ev-tdb": 32, "#ev-rh": 45,
-                 "#ev-fans": 400000, "#ev-pad-length": 24, "#ev-padh": 1.5, "#ev-birds": 30000})
+                 "#ev-fans": 400000, "#ev-pad-length": 24, "#ev-padh": 1.5, "#ev-birds": 30000, "#ev-eta": 75})
     page.click("#evap-btn")
     page.wait_for_selector("#ev-results:not([hidden])", timeout=10_000)
+    assert page.text_content("#ev-r-eta").startswith("75 %")   # заданный КПД дошёл до расчёта
     assert page.errors == []
 
 

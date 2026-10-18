@@ -171,6 +171,11 @@ class EvapCoolingInput:
     # Опционально: температура воды подачи (скважина / бак)
     # None = стандартный адиабатический расчёт (как в UGA)
     water_supply_t_c: Optional[float] = None
+    # КПД насыщения, заданный вручную, % (None — по паспорту SANHE, т. е. новая панель).
+    # Паспорт оптимистичнее работы в корпусе: UGA — 70–75 % в эксплуатации, FSA-1068
+    # (Univ. of Arkansas) — 75 % для панели 150 мм; коэффициента «паспорт → поле»
+    # ни один источник не даёт, поэтому не пересчитываем, а даём задать своё число
+    pad_efficiency_pct: Optional[float] = None
 
 
 @dataclass
@@ -214,6 +219,7 @@ class EvapCoolingResult:
     t_fan_end_c: float = 0.0       # T воздуха у вентиляторов — по ней оценка достаточности
     airflow_m3h: float = 0.0       # расход, по которому считаны скорость, КПД и вода
     airflow_basis: str = "rated_0pa"   # operating_point (с сопротивлением панели) | rated_0pa
+    efficiency_basis: str = "passport"     # "passport" (SANHE, новая панель) | "user" (задан вручную)
 
 
 # ─────────────────────────────────────────────────
@@ -342,6 +348,9 @@ def calculate_evap_cooling(inp: EvapCoolingInput) -> EvapCoolingResult:
     # Интерполяция η и ΔP по фактической скорости
     eta_pct = _interp_linear(velocities, eta_table, air_velocity_ms)
     dp_pa   = _interp_linear(velocities, dp_table,  air_velocity_ms)
+    efficiency_basis = "passport"
+    if inp.pad_efficiency_pct is not None:
+        eta_pct, efficiency_basis = inp.pad_efficiency_pct, "user"
     eta     = eta_pct / 100.0
 
     # Температура воздуха после панели
@@ -418,5 +427,6 @@ def calculate_evap_cooling(inp: EvapCoolingInput) -> EvapCoolingResult:
         status_level            = status_level,
         t_dew_c                 = round(t_dew, 1),
         water_supply_t_c        = inp.water_supply_t_c,
+        efficiency_basis        = efficiency_basis,
         water_regime            = water_regime,
     )
