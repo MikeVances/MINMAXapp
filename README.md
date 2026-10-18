@@ -111,6 +111,11 @@ override the variables you need — the file is served at `/theme.css` after the
 stylesheet and is not tracked by git, so updates never overwrite it. Path can be
 changed with the `THEME_CSS` environment variable.
 
+The markup carries no inline styles: layout uses small utility classes and a few
+named components (`.hint`, `.note-ok`, `.res-table` …) defined in the same file, and
+scripts switch *tones* (`setTone(el, 'danger')`, `ui.js`) rather than colours, so a
+theme reaches dynamic status colours too. A test fails if inline styles creep back.
+
 ## Data Sources
 
 | Source | Used for |

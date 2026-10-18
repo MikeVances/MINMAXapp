@@ -57,6 +57,10 @@
 
 /* ─── База ─────────────────────────────────────────────────────────────────── */
 * { box-sizing: border-box; }
+/* Атрибут hidden — единственный способ скрыть элемент из JS (el.hidden = true).
+   !important нужен, потому что display из классов (.d-flex, .grid) иначе
+   перебивает правило браузера для [hidden] и элемент остаётся видимым. */
+[hidden] { display: none !important; }
 body { background: var(--bg); color: var(--text); margin: 0; font: var(--font); }
 .container { max-width: 980px; margin: 24px auto; padding: 0 16px; }
 h1 { margin: 0 0 16px; font-size: 22px; }
@@ -64,7 +68,9 @@ h2 { font-size: 16px; margin: 0 0 12px; }
 .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
 .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px; }
 label { display: block; margin: 10px 0; }
-label.inline { display: inline-flex; align-items: center; gap: 6px; margin-right: 10px; }
+/* Одиночный класс, а не label.inline: правило должно уступать утилитам ниже
+   (ai-*, gap-*) так же, как раньше уступало inline-стилю */
+.inline { display: inline-flex; align-items: center; gap: 6px; margin-right: 10px; }
 input[type="number"], input[type="text"] { width: 100%; padding: 8px 10px; background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius); }
 select { width: 100%; padding: 8px 10px; background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius); }
 
@@ -148,3 +154,185 @@ input[type="number"], input[type="text"], select, textarea { font-size: 16px; }
 .modal { position: fixed; inset: 0; background: var(--overlay); display: grid; place-items: center; z-index: 1000; }
 .modal.hidden { display: none; }
 .modal-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px; width: min(420px, 90vw); box-shadow: var(--shadow-modal); }
+
+/* ═════════════════════════════════════════════════════════════════════════════
+   Компоненты. Повторяющиеся сочетания со смыслом — правится одно место, а не
+   каждая разметка. Порядок важен: этот раздел идёт после базовых правил
+   (.btn, .kv, .modal-card), поэтому при равной специфичности побеждает он.
+   ═════════════════════════════════════════════════════════════════════════════ */
+/* Подсказка под полем или над таблицей */
+.hint { font-size: 13px; color: var(--muted); }
+/* Подзаголовок группы строк (мелкие заглавные) */
+.section-label { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+/* Формула в справке: моноширинный, просторный межстрочный */
+.formula { font-family: monospace; line-height: 1.9; }
+/* Таблица итогов расчёта */
+.res-table { width: 100%; font-size: 14px; border-collapse: collapse; }
+/* Заметки: цветная левая кромка + фон тона. Отступы — утилитами по месту */
+.note-ok   { background: var(--ok-bg);   border-left: 3px solid var(--ok);   border-radius: var(--radius-xs); }
+.note-warn { background: var(--warn-bg); border-left: 3px solid var(--warn); border-radius: var(--radius-xs); }
+.divider { border: none; border-top: 1px solid var(--border); }
+/* SVG-графики профиля тянутся по ширине карточки */
+.chart-svg { width: 100%; height: auto; display: block; }
+/* Окно чуть шире стандартного .modal-card (обратная связь) */
+.dialog-narrow { width: min(480px, 92vw); }
+
+/* Таймер теста остывания: акцент в покое, второй акцент во время замера */
+.timer-display { font-size: 52px; font-weight: 700; font-family: monospace; letter-spacing: 6px; color: var(--accent); }
+.timer-display.is-running { color: var(--accent-2); }
+/* Кнопка отметки градуса: при одной зоне — крупная, её жмут на ходу */
+.tap-btn-solo { font-size: 18px; padding: 12px 22px; }
+/* Пилюля оценки (качество калибровки UA): фон и цвет — ступень шкалы */
+.grade-pill { padding: 2px 10px; border-radius: 10px; font-size: 12px; }
+/* Переключатель единиц графика: неактивная кнопка приглушена */
+.unit-toggle { padding: 4px 12px; font-size: 12px; }
+.is-dim { opacity: 0.45; }
+
+/* Кнопки языка (создаёт i18n.js): неактивные приглушены, активная — с акцентной рамкой */
+.lang-btn { font-size: 11px; padding: 3px 7px; transition: opacity .15s, border-color .15s; opacity: 0.55; font-weight: 400; }
+.lang-btn.is-active { opacity: 1; border-color: var(--accent); font-weight: 700; }
+.lang-btn:disabled { opacity: 0.3; }
+
+/* Обратная связь (создаёт feedback.js) */
+.feedback-trigger { position: fixed; bottom: 12px; right: 8px; z-index: 9998; font-size: 11px; padding: 4px 9px; }
+.feedback-text { width: 100%; box-sizing: border-box; resize: vertical; background: var(--surface); color: inherit; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px; font-size: 14px; font-family: inherit; }
+.feedback-status { min-height: 18px; font-size: 12px; margin-top: 6px; }
+
+/* ═════════════════════════════════════════════════════════════════════════════
+   Утилиты — одно свойство на класс, для разовой раскладки (отступы, сетки,
+   размер шрифта). Имена: m/p + t/b/l/r/x/y + px (mt-8, px-12), fs-<px>, fw-<вес>,
+   lh-1_5 (=1.5), d-flex, ai-/jc- (align/justify), cols-fit-<px> (auto-fit
+   колонки шириной от N px), r-<px> (радиус). Цвета здесь не задаются — только
+   через токены в разделе «Тоны» ниже.
+   ═════════════════════════════════════════════════════════════════════════════ */
+.d-block { display: block; }
+.d-flex { display: flex; }
+.d-grid { display: grid; }
+.cols-2 { grid-template-columns: 1fr 1fr; }
+.cols-fit-150 { grid-template-columns: repeat(auto-fit,minmax(150px,1fr)); }
+.cols-fit-200 { grid-template-columns: repeat(auto-fit,minmax(200px,1fr)); }
+.cols-fit-220 { grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); }
+.cols-fit-250 { grid-template-columns: repeat(auto-fit,minmax(250px,1fr)); }
+.flex-1 { flex: 1; }
+.shrink-0 { flex-shrink: 0; }
+.wrap { flex-wrap: wrap; }
+.basis-full { flex-basis: 100%; }
+.ai-baseline { align-items: baseline; }
+.ai-center { align-items: center; }
+.ai-flex-end { align-items: flex-end; }
+.ai-flex-start { align-items: flex-start; }
+.ai-start { align-items: start; }
+.jc-between { justify-content: space-between; }
+.jc-end { justify-content: flex-end; }
+.gap-6 { gap: 6px; }
+.gap-8 { gap: 8px; }
+.gap-10 { gap: 10px; }
+.gap-12 { gap: 12px; }
+.gap-16 { gap: 16px; }
+.w-full { width: 100%; }
+.minw-80 { min-width: 80px; }
+.minw-140 { min-width: 140px; }
+.minw-160 { min-width: 160px; }
+.minw-180 { min-width: 180px; }
+.minw-200 { min-width: 200px; }
+.ox-auto { overflow-x: auto; }
+.m-0 { margin: 0; }
+.mb-0 { margin-bottom: 0; }
+.mb-4 { margin-bottom: 4px; }
+.mb-6 { margin-bottom: 6px; }
+.mb-8 { margin-bottom: 8px; }
+.mb-10 { margin-bottom: 10px; }
+.mb-12 { margin-bottom: 12px; }
+.mb-14 { margin-bottom: 14px; }
+.mb-16 { margin-bottom: 16px; }
+.mb-18 { margin-bottom: 18px; }
+.mb-20 { margin-bottom: 20px; }
+.ml-10 { margin-left: 10px; }
+.ml-20 { margin-left: 20px; }
+.mr-0 { margin-right: 0; }
+.mt-0 { margin-top: 0; }
+.mt-2 { margin-top: 2px; }
+.mt-3 { margin-top: 3px; }
+.mt-4 { margin-top: 4px; }
+.mt-6 { margin-top: 6px; }
+.mt-8 { margin-top: 8px; }
+.mt-10 { margin-top: 10px; }
+.mt-12 { margin-top: 12px; }
+.mt-14 { margin-top: 14px; }
+.mt-16 { margin-top: 16px; }
+.mt-20 { margin-top: 20px; }
+.mx-0 { margin-left: 0; margin-right: 0; }
+.my-14 { margin-top: 14px; margin-bottom: 14px; }
+.p-0 { padding: 0; }
+.p-8 { padding: 8px; }
+.p-10 { padding: 10px; }
+.p-12 { padding: 12px; }
+.pl-20 { padding-left: 20px; }
+.pt-8 { padding-top: 8px; }
+.pt-12 { padding-top: 12px; }
+.px-0 { padding-left: 0; padding-right: 0; }
+.px-8 { padding-left: 8px; padding-right: 8px; }
+.px-12 { padding-left: 12px; padding-right: 12px; }
+.px-16 { padding-left: 16px; padding-right: 16px; }
+.py-4 { padding-top: 4px; padding-bottom: 4px; }
+.py-6 { padding-top: 6px; padding-bottom: 6px; }
+.py-20 { padding-top: 20px; padding-bottom: 20px; }
+.fs-10 { font-size: 10px; }
+.fs-11 { font-size: 11px; }
+.fs-12 { font-size: 12px; }
+.fs-13 { font-size: 13px; }
+.fs-14 { font-size: 14px; }
+.fs-16 { font-size: 16px; }
+.fs-18 { font-size: 18px; }
+.fs-20 { font-size: 20px; }
+.fs-32 { font-size: 32px; }
+.fw-400 { font-weight: 400; }
+.fw-500 { font-weight: 500; }
+.fw-600 { font-weight: 600; }
+.fw-700 { font-weight: 700; }
+.lh-1_5 { line-height: 1.5; }
+.lh-1_6 { line-height: 1.6; }
+.lh-1_8 { line-height: 1.8; }
+.ff-mono { font-family: monospace; }
+.ta-center { text-align: center; }
+.ta-right { text-align: right; }
+.ws-nowrap { white-space: nowrap; }
+.op-70 { opacity: 0.7; }
+.r-4 { border-radius: 4px; }
+.r-6 { border-radius: 6px; }
+.r-8 { border-radius: 8px; }
+.r-10 { border-radius: 10px; }
+.b-1 { border: 1px solid var(--border); }
+.bt-1 { border-top: 1px solid var(--border); }
+.bl-4 { border-left: 4px solid var(--border); }
+.bl-3 { border-left: 3px solid var(--border); }
+
+/* ═════════════════════════════════════════════════════════════════════════════
+   Тоны. JS выбирает тон, а не цвет (ui.js: setTone/setBg/setEdge), поэтому
+   смена палитры в theme.css перекрашивает и динамические статусы.
+   Раздел последний: тон перекрывает цвет компонента (.muted, .hint).
+   ═════════════════════════════════════════════════════════════════════════════ */
+.c-text     { color: var(--text); }
+.c-muted    { color: var(--muted); }
+.c-accent   { color: var(--accent); }
+.c-accent-2 { color: var(--accent-2); }
+.c-ok       { color: var(--ok); }
+.c-warn     { color: var(--warn); }
+.c-danger   { color: var(--danger); }
+.c-grade-1  { color: var(--grade-1); }
+.c-grade-2  { color: var(--grade-2); }
+.c-grade-3  { color: var(--grade-3); }
+.c-grade-4  { color: var(--grade-4); }
+
+.bg-bg        { background: var(--bg); }
+.bg-card      { background: var(--card); }
+.bg-ok-bg     { background: var(--ok-bg); }
+.bg-danger-bg { background: var(--danger-bg); }
+.bg-grade-1   { background: var(--grade-1-bg); }
+.bg-grade-2   { background: var(--grade-2-bg); }
+.bg-grade-3   { background: var(--grade-3-bg); }
+.bg-grade-4   { background: var(--grade-4-bg); }
+
+/* Цвет левой кромки карточки-решения; ширину задаёт bl-3/bl-4 */
+.edge-ok     { border-left-color: var(--ok); }
+.edge-danger { border-left-color: var(--danger); }

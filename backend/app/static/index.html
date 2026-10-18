@@ -12,13 +12,14 @@
   <script src="./i18n/de.js"></script>
   <script src="./i18n/fr.js"></script>
   <script src="./i18n.js"></script>
+  <script src="./ui.js"></script>
   <script src="./write-token.js"></script>
 </head>
 <body data-page-title="index_title">
   <main class="container">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
-      <h1 style="margin:0;" data-i18n="index_h1">Ventilation Min/Max</h1>
-      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+    <div class="d-flex jc-between ai-center mb-16 wrap gap-10">
+      <h1 class="m-0" data-i18n="index_h1">Ventilation Min/Max</h1>
+      <div class="d-flex gap-8 wrap">
         <a class="btn btn-secondary" href="./calculators.html" data-i18n="nav_calculators">🔧 Calculators</a>
         <a class="btn btn-secondary" href="./settings.html" data-i18n="nav_settings">⚙️ Farm Settings</a>
       </div>
@@ -26,7 +27,7 @@
 
     <section>
       <div id="tabs" class="tabs"></div>
-      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
+      <div class="d-flex gap-8 wrap mb-10">
         <button id="addTab" class="btn btn-secondary">+ <span data-i18n="label_house_id">House ID</span></button>
         <button id="delTab" class="btn btn-secondary" data-i18n="btn_remove">Remove house</button>
       </div>
@@ -48,18 +49,18 @@
           </label>
 
           <!-- Heater checkbox with explanation -->
-          <label class="inline" style="align-items:flex-start; gap:8px;">
-            <input id="heater" type="checkbox" style="margin-top:3px; flex-shrink:0;" />
+          <label class="inline ai-flex-start gap-8">
+            <input id="heater" type="checkbox" class="mt-3 shrink-0" />
             <span>
               <span data-i18n="heater_label">Gas heaters active</span>
-              <span class="muted" style="font-size:11px; display:block; margin-top:3px; line-height:1.5;"
+              <span class="muted fs-11 d-block mt-3 lh-1_5"
                     data-i18n-html="heater_desc_html"></span>
             </span>
           </label>
 
           <!-- Building dimensions -->
-          <p class="muted" style="font-size:12px; margin:12px 0 4px;" data-i18n="label_bldg_dims_grp">Building dimensions</p>
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+          <p class="muted fs-12 mt-12 mb-4" data-i18n="label_bldg_dims_grp">Building dimensions</p>
+          <div class="d-grid cols-2 gap-8">
             <label>
               <span data-i18n="label_length_idx">Length, m</span>
               <input id="houseLength" type="number" step="0.5" min="10" max="500" placeholder="96" />
@@ -78,10 +79,10 @@
             </label>
           </div>
 
-          <div id="uaBadge" style="display:none; margin-top:8px; padding:6px 12px; background:var(--ok-bg); border-left:3px solid var(--ok); border-radius:4px; font-size:12px;"></div>
+          <div id="uaBadge" class="note-ok mt-8 py-6 px-12 fs-12" hidden></div>
 
-          <p class="muted" style="font-size:12px; margin:12px 0 4px;" data-i18n="label_tunnel_fans_grp">Tunnel ventilation fans</p>
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+          <p class="muted fs-12 mt-12 mb-4" data-i18n="label_tunnel_fans_grp">Tunnel ventilation fans</p>
+          <div class="d-grid cols-2 gap-8">
             <label>
               <span data-i18n="label_num_fans">Tunnel fans, qty</span>
               <input id="numFans" type="number" min="1" max="50" placeholder="8" />
@@ -92,8 +93,8 @@
             </label>
           </div>
 
-          <p class="muted" style="font-size:12px; margin:12px 0 4px;" data-i18n="label_min_fans_grp">Min-ventilation fans</p>
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+          <p class="muted fs-12 mt-12 mb-4" data-i18n="label_min_fans_grp">Min-ventilation fans</p>
+          <div class="d-grid cols-2 gap-8">
             <label>
               <span data-i18n="label_num_min_fans">Min-vent fans, qty</span>
               <input id="numMinFans" type="number" min="1" max="50" placeholder="2" />
@@ -104,16 +105,16 @@
             </label>
           </div>
 
-          <label style="margin-top:8px;">
-            <span style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+          <label class="mt-8">
+            <span class="d-flex ai-center gap-6 wrap">
               <span data-i18n="label_sys_max">System max capacity (m³/h)</span>
-              <span id="capAutoNote" class="muted" style="font-size:11px;"></span>
+              <span id="capAutoNote" class="muted fs-11"></span>
             </span>
             <input id="cap" type="number" min="0"
                    data-i18n-placeholder="placeholder_cap"
                    placeholder="leave blank if unknown" />
           </label>
-          <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:4px;">
+          <div class="d-flex gap-8 wrap mt-4">
             <button id="sumBtn" class="btn" data-i18n="btn_save_house">Save house data</button>
           </div>
         </div>
@@ -122,13 +123,13 @@
 
     <footer>
       <small data-i18n="footer_text">Reference tool only. Verify all setpoints with your breed guide and technical advisor.</small>
-      <small class="muted" style="display:block; margin-top:4px;">
+      <small class="muted d-block mt-4">
         <span data-i18n="footer_see_also">Also see:</span>
-        <a href="https://github.com/MikeVances/PigMaxApp" target="_blank" style="color:var(--muted);">PigMaxApp</a>
+        <a href="https://github.com/MikeVances/PigMaxApp" target="_blank" class="c-muted">PigMaxApp</a>
         — <span data-i18n="footer_related_pig">Pig house ventilation calculator</span>
       </small>
       <!-- Хэш коммита из /version: быстрая проверка, что деплой на Render прошёл -->
-      <small class="muted" style="display:block; margin-top:4px; font-family:monospace;">build <span id="buildVersion">…</span></small>
+      <small class="muted d-block mt-4 ff-mono">build <span id="buildVersion">…</span></small>
     </footer>
 
     <script>
@@ -142,9 +143,9 @@
   <!-- Confirm delete modal -->
   <div id="modal" class="modal hidden">
     <div class="modal-card">
-      <h3 style="margin:0 0 8px;" data-i18n="modal_title">Remove house?</h3>
+      <h3 class="mt-0 mb-8" data-i18n="modal_title">Remove house?</h3>
       <p class="muted" id="modalText" data-i18n="modal_default_txt">Are you sure you want to remove this house?</p>
-      <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:12px;">
+      <div class="d-flex gap-8 jc-end mt-12">
         <button id="modalCancel" class="btn btn-secondary" data-i18n="modal_cancel">Cancel</button>
         <button id="modalOk" class="btn btn-danger" data-i18n="modal_remove">Remove</button>
       </div>

@@ -89,18 +89,18 @@ function renderTapPanel() {
   elTapPanel.innerHTML = test.zones.map((marks, i) => {
     const drops = marks.length - 1;
     const label = n > 1
-      ? `<span style="min-width:80px;font-weight:600;font-size:13px;">${t('zone_lbl', { n: i + 1 })}${
-          i === 0 ? ` <span class="muted" style="font-size:11px;">(${t('zone_entry')})</span>`
-          : i === n - 1 ? ` <span class="muted" style="font-size:11px;">(${t('zone_far')})</span>` : ''}</span>`
+      ? `<span class="minw-80 fw-600 fs-13">${t('zone_lbl', { n: i + 1 })}${
+          i === 0 ? ` <span class="muted fs-11">(${t('zone_entry')})</span>`
+          : i === n - 1 ? ` <span class="muted fs-11">(${t('zone_far')})</span>` : ''}</span>`
       : '';
     const list = marks.slice(1).map(([sec, temp]) => `${temp} °C — ${timerFormat(sec)}`).join(' · ');
     return `
-      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px;background:var(--bg);border-radius:8px;margin-bottom:8px;">
+      <div class="d-flex ai-center gap-10 wrap p-10 bg-bg r-8 mb-8">
         ${label}
-        <button class="btn" data-zone="${i}" style="${n === 1 ? 'font-size:18px;padding:12px 22px;' : ''}">
+        <button class="btn${n === 1 ? ' tap-btn-solo' : ''}" data-zone="${i}">
           ${t('tap_btn', { t: nextTemp(i) })}</button>
-        <span class="muted" style="font-size:12px;">${t('marks_count', { n: drops })}</span>
-        <div class="muted" style="flex-basis:100%;font-size:11px;">${list}</div>
+        <span class="muted fs-12">${t('marks_count', { n: drops })}</span>
+        <div class="muted basis-full fs-11">${list}</div>
       </div>`;
   }).join('');
   elTapPanel.querySelectorAll('button[data-zone]').forEach(btn =>
@@ -120,10 +120,8 @@ function recordMark(zone) {
 function stopTimer() {
   if (test && test.interval) clearInterval(test.interval);
   elTimerBtn.textContent      = t('btn_start_test');
-  elTimerBtn.style.background = '';
-  elTimerBtn.style.color      = '';
-  elTimerDisplay.style.color  = 'var(--accent)';
-  elFinishBtn.style.display   = 'none';
+  elTimerDisplay.classList.remove('is-running');
+  elFinishBtn.hidden = true;
 }
 
 function startTest() {
@@ -131,12 +129,12 @@ function startTest() {
   const tStart = parseFloat(elTStartInside.value);
   if (isNaN(tOut) || isNaN(tStart)) {
     elTimerStatus.textContent = t('err_enter_temps_first');
-    elTimerStatus.style.color = 'var(--danger)';
+    setTone(elTimerStatus, 'danger');
     return;
   }
   if (tStart - tOut < MIN_DELTA_T) {
     elTimerStatus.textContent = t('err_start_temp', { dt: MIN_DELTA_T });
-    elTimerStatus.style.color = 'var(--danger)';
+    setTone(elTimerStatus, 'danger');
     return;
   }
   // Отметки — целые градусы ниже старта: стартовую температуру округляем до 0.1
@@ -149,11 +147,11 @@ function startTest() {
   lastResult = null;
   elSaveCalibrationBtn.disabled = true;
   elCalibrationResult.innerHTML = '';
-  elTimerDisplay.style.color  = 'var(--accent-2)';
-  elTimerStatus.style.color   = '';
+  elTimerDisplay.classList.add('is-running');
+  setTone(elTimerStatus, null);
   elTimerStatus.textContent   = t(zoneCount() > 1 ? 'mz_timer_running' : 'timer_running', { n: zoneCount() });
   elTimerBtn.textContent      = t('btn_cancel_test');
-  elFinishBtn.style.display   = '';
+  elFinishBtn.hidden = false;
   elFinishBtn.disabled        = true;
   renderTapPanel();
 }
@@ -171,7 +169,7 @@ async function finishTest() {
   stopTimer();
   test = null;
   renderTapPanel();
-  elTimerStatus.style.color = 'var(--ok)';
+  setTone(elTimerStatus, 'ok');
   elTimerStatus.textContent = t('timer_done', { min: (Math.max(...done.zones.map(m => m[m.length - 1][0])) / 60).toFixed(1) });
   try {
     lastResult = await computeCurveResult(done);
@@ -213,10 +211,11 @@ async function computeCurveResult(done) {
 }
 
 function uaQuality(uaM2) {
-  if (uaM2 < 0.5) return { label: t('ua_quality_excellent'), bg: 'var(--grade-1-bg)', color: 'var(--grade-1)' };
-  if (uaM2 < 1.0) return { label: t('ua_quality_good'),      bg: 'var(--grade-2-bg)', color: 'var(--grade-2)' };
-  if (uaM2 < 2.0) return { label: t('ua_quality_avg'),       bg: 'var(--grade-3-bg)', color: 'var(--grade-3)' };
-  return              { label: t('ua_quality_poor'),          bg: 'var(--grade-4-bg)', color: 'var(--grade-4)' };
+  // grade — ступень шкалы 1…4 (styles.css: c-grade-N, bg-grade-N)
+  if (uaM2 < 0.5) return { label: t('ua_quality_excellent'), grade: 1 };
+  if (uaM2 < 1.0) return { label: t('ua_quality_good'),      grade: 2 };
+  if (uaM2 < 2.0) return { label: t('ua_quality_avg'),       grade: 3 };
+  return              { label: t('ua_quality_poor'),          grade: 4 };
 }
 
 function renderCurveResult(res) {
@@ -231,26 +230,26 @@ function renderCurveResult(res) {
   const zoneRows = res.n > 1 ? res.zones.map((z, i) => {
     const zq = uaQuality(z.ua_coefficient / zoneArea);
     return `<div class="kv"><span>${t('zone_lbl', { n: i + 1 })}</span>
-      <span style="color:${zq.color};font-weight:700;">${(z.ua_coefficient / zoneArea).toFixed(2)} ${uaUnit}/${t('unit_m2')}</span></div>`;
+      <span class="c-grade-${zq.grade} fw-700">${(z.ua_coefficient / zoneArea).toFixed(2)} ${uaUnit}/${t('unit_m2')}</span></div>`;
   }).join('') : '';
 
   const warnHtml = warnings.map(w =>
-    `<p class="warn" style="margin:6px 0 0;font-size:12px;">⚠️ ${t('cal_warn_' + w)}</p>`).join('');
+    `<p class="warn mt-6 mb-0 fs-12">⚠️ ${t('cal_warn_' + w)}</p>`).join('');
 
   elCalibrationResult.innerHTML = `
-    <div style="padding:12px; background:var(--ok-bg); border-left:3px solid var(--ok); border-radius:4px;">
+    <div class="note-ok p-12">
       <strong>${t('cal_curve_complete')}</strong>
-      <div style="margin-top:8px; display:grid; gap:6px;">
+      <div class="mt-8 d-grid gap-6">
         <div class="kv"><span>${t('ua_coeff_lbl')}</span><span><strong>${res.uaTotal.toFixed(0)} ${uaUnit}</strong></span></div>
         <div class="kv"><span>${t('ua_per_m2_lbl')}</span><span>${uaM2.toFixed(2)} ${uaUnit}/${t('unit_m2')}
-          <span style="padding:2px 10px;border-radius:10px;font-size:12px;background:${q.bg};color:${q.color};">${q.label}</span></span></div>
+          <span class="grade-pill bg-grade-${q.grade} c-grade-${q.grade}">${q.label}</span></span></div>
         <div class="kv"><span>${t('c_struct_lbl')}</span><span>${t('c_struct_ratio', { x: (cStruct / cAir).toFixed(1) })}</span></div>
         <div class="kv"><span>${t('duration_lbl')}</span><span>${res.durationMin.toFixed(0)} ${t('unit_min')}</span></div>
         ${zoneRows}
       </div>
       ${warnHtml}
-      <p class="muted" style="margin:8px 0 0;font-size:12px;">ℹ️ ${t('cal_equilibrium_note')}</p>
-      <p class="muted" style="margin:6px 0 0;font-size:13px;">${t('cal_save_hint')}</p>
+      <p class="muted mt-8 mb-0 fs-12">ℹ️ ${t('cal_equilibrium_note')}</p>
+      <p class="muted mt-6 mb-0 fs-13">${t('cal_save_hint')}</p>
     </div>`;
 }
 
@@ -301,7 +300,7 @@ elHeightRidge.addEventListener('input', updateDimensionsDisplay);
 
 // Toggle gas info visibility
 function updateGasInfoVisibility() {
-  elGasInfo.style.display = elHeaterType.value === 'gas_open' ? 'block' : 'none';
+  elGasInfo.hidden = elHeaterType.value !== 'gas_open';
 }
 
 elHeaterType.addEventListener('change', updateGasInfoVisibility);
@@ -314,7 +313,7 @@ elSaveBuildingBtn.addEventListener('click', async () => {
 
   if (!l || !w || !hEff || l <= 0 || w <= 0 || hEff <= 0) {
     elBuildingStatus.textContent = t('err_valid_dims');
-    elBuildingStatus.style.color = 'var(--danger)';
+    setTone(elBuildingStatus, 'danger');
     return;
   }
 
@@ -348,12 +347,12 @@ elSaveBuildingBtn.addEventListener('click', async () => {
     if (!r.ok) throw await apiError(r);
 
     elBuildingStatus.textContent = t('status_saved');
-    elBuildingStatus.style.color = 'var(--ok)';
+    setTone(elBuildingStatus, 'ok');
     await loadAndDisplayConfig();
 
   } catch (e) {
     elBuildingStatus.textContent = t('err_prefix') + e.message;
-    elBuildingStatus.style.color = 'var(--danger)';
+    setTone(elBuildingStatus, 'danger');
   }
 });
 
@@ -364,7 +363,7 @@ elSaveHeaterBtn.addEventListener('click', async () => {
 
   if (!power || power < 0) {
     elHeaterStatus.textContent = t('err_valid_heater');
-    elHeaterStatus.style.color = 'var(--danger)';
+    setTone(elHeaterStatus, 'danger');
     return;
   }
 
@@ -381,12 +380,12 @@ elSaveHeaterBtn.addEventListener('click', async () => {
     if (!r.ok) throw await apiError(r);
 
     elHeaterStatus.textContent = t('status_saved');
-    elHeaterStatus.style.color = 'var(--ok)';
+    setTone(elHeaterStatus, 'ok');
     await loadAndDisplayConfig();
 
   } catch (e) {
     elHeaterStatus.textContent = t('err_prefix') + e.message;
-    elHeaterStatus.style.color = 'var(--danger)';
+    setTone(elHeaterStatus, 'danger');
   }
 });
 
@@ -466,48 +465,48 @@ function renderAnalysis(data) {
   const birdFrac     = (data.bird_heat_fraction * 100).toFixed(0);
   const combAir      = data.combustion_air_m3h.toFixed(0);
 
-  // Цвет duty cycle: зелёный → жёлтый → красный
-  const dutyColor = data.duty_cycle >= 0.95 ? 'var(--danger)'
-                  : data.duty_cycle >= 0.75 ? 'var(--warn)'
-                  : 'var(--ok)';
+  // Тон duty cycle: ок → внимание → перегрузка
+  const dutyTone = data.duty_cycle >= 0.95 ? 'danger'
+                 : data.duty_cycle >= 0.75 ? 'warn'
+                 : 'ok';
 
   const overloadBanner = !data.heater_covers_need
-    ? `<div class="danger" style="padding:6px 8px; border-radius:4px; margin-top:4px;">${t('heater_overload_warn')}</div>`
+    ? `<div class="danger py-6 px-8 r-4 mt-4">${t('heater_overload_warn')}</div>`
     : '';
 
   const airSection = data.combustion_air_m3h > 0
-    ? `<div class="kv" style="background:var(--warn-bg); padding:8px; border-radius:4px; border-left:3px solid var(--warn);">
+    ? `<div class="kv note-warn p-8">
          <span>${t('combustion_lbl')}</span>
          <span><strong>${combAir} ${t('unit_m3h')}</strong></span>
        </div>
-       <p class="muted" style="margin:4px 0 0 0; font-size:12px;">${t('air_added_hint')}</p>`
-    : `<p class="muted" style="margin:8px 0 0 0;">${t('no_combustion')}</p>`;
+       <p class="muted mt-4 mb-0 fs-12">${t('air_added_hint')}</p>`
+    : `<p class="muted mt-8 mb-0">${t('no_combustion')}</p>`;
 
   elAnalysisResult.innerHTML = `
-    <div style="padding:12px; background:var(--card); border:1px solid var(--border); border-radius:8px; margin-top:12px;">
+    <div class="p-12 bg-card b-1 r-8 mt-12">
       <strong>${t('analysis_title')}</strong>
-      <div style="margin-top:10px; display:grid; gap:6px;">
+      <div class="mt-10 d-grid gap-6">
 
-        <div style="font-size:11px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:.5px;">
+        <div class="section-label">
           ${t('heat_balance_title')}
         </div>
         <div class="kv"><span>${t('q_walls_lbl')}</span><span>${qWalls} ${t('unit_kw')}</span></div>
         <div class="kv"><span>${t('q_ventilation_lbl')}</span><span>${qVent} ${t('unit_kw')}</span></div>
         <div class="kv">
           <span>${t('q_birds_lbl')}</span>
-          <span>−${qBirds} ${t('unit_kw')} <span class="muted" style="font-size:12px;">(${birdFrac}% ${t('bird_heat_pct_lbl')})</span></span>
+          <span>−${qBirds} ${t('unit_kw')} <span class="muted fs-12">(${birdFrac}% ${t('bird_heat_pct_lbl')})</span></span>
         </div>
 
-        <div class="kv" style="border-top:1px solid var(--border); padding-top:8px; font-weight:600;">
+        <div class="kv bt-1 pt-8 fw-600">
           <span>${t('q_heater_lbl')}</span>
-          <span style="color:${dutyColor}">${qHeater} ${t('unit_kw')} &nbsp;·&nbsp; ${dutyCyclePct}%</span>
+          <span class="c-${dutyTone}">${qHeater} ${t('unit_kw')} &nbsp;·&nbsp; ${dutyCyclePct}%</span>
         </div>
         ${overloadBanner}
 
-        <div style="font-size:11px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:.5px; margin-top:8px;">
+        <div class="section-label mt-8">
           ${t('status_lbl')}
         </div>
-        <div style="padding:6px 8px; background:var(--bg); border-radius:4px; font-size:13px;">
+        <div class="py-6 px-8 bg-bg r-4 fs-13">
           ${t('ht_status_' + data.status_code, {
             birds_kw: qBirds, deficit_kw: data.heater_deficit_kw.toFixed(1), duty_pct: data.duty_cycle_percent.toFixed(0),
           })}
@@ -535,7 +534,7 @@ async function loadAndDisplayConfig() {
   let html = '';
 
   if (config.house_id) {
-    html += `<div style="margin-bottom:10px; padding:6px 12px; background:var(--bg); border-radius:6px; font-size:13px;">
+    html += `<div class="mb-10 py-6 px-12 bg-bg r-6 fs-13">
       🏠 ${t('cfg_house_lbl')}: <strong>${escapeHtml(houseLabel(config.house_id))}</strong>
     </div>`;
   }
@@ -549,7 +548,7 @@ async function loadAndDisplayConfig() {
     const uM2 = t('unit_m2');
 
     html += `
-      <div style="margin-bottom:12px;">
+      <div class="mb-12">
         <strong>${t('cfg_bldg_h')}</strong>
         <div class="kv"><span>${t('cfg_lwh')}</span><span>${b.length_m} × ${b.width_m} ${uM}</span></div>
         <div class="kv"><span>${t('label_height_eff')}</span><span>${b.height_m} ${uM}</span></div>
@@ -566,7 +565,7 @@ async function loadAndDisplayConfig() {
     const typeLabel = h.heater_type === 'gas_open' ? t('cfg_gas_lbl') : t('cfg_elec_lbl');
 
     html += `
-      <div style="margin-bottom:12px;">
+      <div class="mb-12">
         <strong>${t('cfg_heater_h')}</strong>
         <div class="kv"><span>${t('cfg_heater_type')}</span><span>${typeLabel}</span></div>
         <div class="kv"><span>${t('cfg_heater_cap')}</span><span>${h.total_power_kw} ${t('cfg_kw_unit')}</span></div>
@@ -590,7 +589,7 @@ async function loadAndDisplayConfig() {
           ? `<div class="kv"><span>${t('cfg_test_cond')}</span><span>${t('cfg_curve_val', { n: c.points.length - 1, time: Math.round(c.time_minutes), tout: c.t_outside_c })}</span></div>`
           : c.method === 'cooling_curve' ? ''
           : `<div class="kv"><span>${t('cfg_test_cond')}</span><span>${t('cfg_test_val', { t0: c.t_initial_c, t1: c.t_final_c, time: c.time_minutes, tout: c.t_outside_c })}</span></div>
-             <p class="warn" style="margin:6px 0 0;font-size:12px;">⚠️ ${t('cfg_air_only_recalibrate')}</p>`}
+             <p class="warn mt-6 mb-0 fs-12">⚠️ ${t('cfg_air_only_recalibrate')}</p>`}
       </div>
     `;
   } else {

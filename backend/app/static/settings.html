@@ -12,16 +12,17 @@
   <script src="./i18n/de.js"></script>
   <script src="./i18n/fr.js"></script>
   <script src="./i18n.js"></script>
+  <script src="./ui.js"></script>
   <script src="./write-token.js"></script>
 </head>
 <body data-page-title="settings_title">
   <main class="container">
 
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:10px;">
-      <h1 style="margin:0;" data-i18n="settings_h1">Farm Settings</h1>
+    <div class="d-flex jc-between ai-center mb-10 wrap gap-10">
+      <h1 class="m-0" data-i18n="settings_h1">Farm Settings</h1>
       <a class="btn btn-secondary" href="./" data-i18n="nav_home">← Home</a>
     </div>
-    <p class="muted" style="margin-bottom:20px;" data-i18n="settings_desc">Define anchor points for the growth and ventilation profile. Values between points are automatically interpolated to fill the full cycle.</p>
+    <p class="muted mb-20" data-i18n="settings_desc">Define anchor points for the growth and ventilation profile. Values between points are automatically interpolated to fill the full cycle.</p>
 
     <div id="configSection"></div>
 

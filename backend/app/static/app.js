@@ -8,19 +8,19 @@ async function updateUaBadge(tabId) {
   _uaFetchController = new AbortController();
   try {
     const r = await fetch('./thermal/config', { signal: _uaFetchController.signal });
-    if (!r.ok) { el.style.display = 'none'; return; }
+    if (!r.ok) { el.hidden = true; return; }
     const cfg = await r.json();
     const ua  = cfg.calibration?.ua_coefficient;
     if (!ua || cfg.house_id !== String(tabId)) {
-      el.style.display = 'none'; return;
+      el.hidden = true; return;
     }
     // Корпус совпадает — показываем UA
     el.innerHTML = `🌡️ UA = <strong>${ua.toFixed(0)} ${t('cfg_ua_unit')}</strong> &nbsp;—&nbsp;
       <span class="muted">${t('ua_calibrated_lbl')}</span>
-      &nbsp;<a href="./calculators.html" style="font-size:11px; opacity:.7;">${t('ua_recal_link')}</a>`;
-    el.style.display = 'block';
+      &nbsp;<a href="./calculators.html" class="fs-11 op-70">${t('ua_recal_link')}</a>`;
+    el.hidden = false;
   } catch (e) {
-    if (e.name !== 'AbortError') el.style.display = 'none';
+    if (e.name !== 'AbortError') el.hidden = true;
   }
 }
 

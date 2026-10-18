@@ -12,20 +12,21 @@
   <script src="./i18n/de.js"></script>
   <script src="./i18n/fr.js"></script>
   <script src="./i18n.js"></script>
+  <script src="./ui.js"></script>
   <script src="./write-token.js"></script>
 </head>
 <body data-page-title="calc_title">
 <main class="container">
 
-  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
-    <h1 style="margin:0;" data-i18n="calc_h1">🔧 Engineering tools</h1>
-    <div style="display:flex; gap:8px;">
+  <div class="d-flex jc-between ai-center mb-16 wrap gap-10">
+    <h1 class="m-0" data-i18n="calc_h1">🔧 Engineering tools</h1>
+    <div class="d-flex gap-8">
       <a class="btn btn-secondary" href="./" data-i18n="nav_home">← Home</a>
       <a class="btn btn-secondary" href="./settings.html" data-i18n="nav_settings">⚙️ Farm Settings</a>
     </div>
   </div>
 
-  <p class="muted" style="margin-bottom:20px; font-size:13px;" data-i18n="calc_intro">
+  <p class="muted mb-20 fs-13" data-i18n="calc_intro">
     Calculation tools based on UGA (University of Georgia, Michael Czarick) methodology. All units are metric.
   </p>
 
@@ -45,25 +46,25 @@
   <div class="tool-panel active" id="panel-profile">
 
     <!-- Profile charts with unit toggle -->
-    <div id="profile-charts" style="margin-bottom:16px;"></div>
+    <div id="profile-charts" class="mb-16"></div>
 
-    <div class="card" style="margin-bottom:16px;">
+    <div class="card mb-16">
 
       <!-- House selector — reads from main-page localStorage data -->
-      <div style="margin-bottom:14px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-        <label style="display:flex; align-items:center; gap:8px; margin:0;">
-          <span class="muted" style="font-size:12px; white-space:nowrap;" data-i18n="prof_from_house">House:</span>
-          <select id="prof-house-select" style="min-width:200px;"></select>
+      <div class="mb-14 d-flex ai-center gap-10 wrap">
+        <label class="d-flex ai-center gap-8 m-0">
+          <span class="muted fs-12 ws-nowrap" data-i18n="prof_from_house">House:</span>
+          <select id="prof-house-select" class="minw-200"></select>
         </label>
         <!-- Профиль роста (кросс) для выбранного корпуса — заполняет редактор профиля -->
-        <label style="display:flex; align-items:center; gap:8px; margin:0;">
-          <span class="muted" style="font-size:12px; white-space:nowrap;" data-i18n="growth_profile_lbl">Growth profile:</span>
-          <select id="prof-growth-select" style="min-width:200px;"></select>
+        <label class="d-flex ai-center gap-8 m-0">
+          <span class="muted fs-12 ws-nowrap" data-i18n="growth_profile_lbl">Growth profile:</span>
+          <select id="prof-growth-select" class="minw-200"></select>
         </label>
       </div>
 
       <!-- Parameters row -->
-      <div class="field-row" style="margin-bottom:14px;">
+      <div class="field-row mb-14">
         <label>
           <span data-i18n="label_outdoor_t">Outdoor temperature, °C</span>
           <input id="prof-outside-t" type="number" step="1" min="-40" max="50" value="15">
@@ -93,10 +94,10 @@
     </div>
 
     <!-- Results rendered here by JS -->
-    <div id="prof-summary" style="display:none; margin-bottom:16px;"></div>
+    <div id="prof-summary" class="mb-16" hidden></div>
 
     <!-- Editable anchor table + save/CIGR -->
-    <div id="profile-editor" style="margin-bottom:16px;"></div>
+    <div id="profile-editor" class="mb-16"></div>
 
   </div><!-- /panel-profile -->
 
@@ -105,21 +106,21 @@
   ═══════════════════════════════════════════════════ -->
   <div class="tool-panel" id="panel-leakage">
 
-    <div class="info-block" style="margin-bottom:20px;" data-i18n-html="leakage_method_html"></div>
+    <div class="info-block mb-20" data-i18n-html="leakage_method_html"></div>
 
-    <div class="grid" style="align-items:start; gap:16px;">
+    <div class="grid ai-start gap-16">
 
       <!-- Input form -->
       <div class="card">
         <h2 data-i18n="leakage_h2">Test parameters</h2>
 
         <!-- House selector -->
-        <div style="display:flex; align-items:center; gap:8px; margin-bottom:16px; flex-wrap:wrap;">
-          <span class="muted" style="font-size:12px; white-space:nowrap;" data-i18n="prof_from_house">House:</span>
-          <select id="l-house-sel" style="flex:1; min-width:160px;"><option value="">—</option></select>
+        <div class="d-flex ai-center gap-8 mb-16 wrap">
+          <span class="muted fs-12 ws-nowrap" data-i18n="prof_from_house">House:</span>
+          <select id="l-house-sel" class="flex-1 minw-160"><option value="">—</option></select>
         </div>
 
-        <p class="muted" style="font-size:12px; margin:0 0 14px;" data-i18n="leakage_dims_grp">House dimensions</p>
+        <p class="muted fs-12 mt-0 mb-14" data-i18n="leakage_dims_grp">House dimensions</p>
         <div class="field-row">
           <label>
             <span data-i18n="label_l_length">Length, m</span>
@@ -132,32 +133,32 @@
         </div>
 
         <hr class="section-divider" />
-        <p class="muted" style="font-size:12px; margin:0 0 14px;" data-i18n="leakage_test_grp">Tightness test</p>
+        <p class="muted fs-12 mt-0 mb-14" data-i18n="leakage_test_grp">Tightness test</p>
         <label>
           <span data-i18n="label_fan_cap_25pa">Test fan capacity at 25 Pa, m³/h</span>
           <input id="l-fan-cap" type="number" step="500" min="500" value="34000" />
-          <span class="muted" style="font-size:11px;" data-i18n="hint_fan_20000">≈ 20 000 CFM × 1.7</span>
+          <span class="muted fs-11" data-i18n="hint_fan_20000">≈ 20 000 CFM × 1.7</span>
         </label>
         <label>
           <span data-i18n="label_test_pa">Static pressure at test, Pa</span>
           <input id="l-pressure" type="number" step="1" min="5" max="250" value="25" />
-          <span class="muted" style="font-size:11px;" data-i18n="hint_pa_val">25 Pa ≈ 0.10″, 63 Pa ≈ 0.25″</span>
+          <span class="muted fs-11" data-i18n="hint_pa_val">25 Pa ≈ 0.10″, 63 Pa ≈ 0.25″</span>
         </label>
 
-        <button class="btn" id="l-calc-btn" style="margin-top:16px; width:100%;" data-i18n="btn_calc_leakage">
+        <button class="btn mt-16 w-full" id="l-calc-btn" data-i18n="btn_calc_leakage">
           Calculate tightness
         </button>
       </div>
 
       <!-- Results -->
-      <div id="l-results" style="display:none;">
+      <div id="l-results" hidden>
 
         <!-- Tightness class -->
-        <div class="card" style="margin-bottom:12px;">
+        <div class="card mb-12">
           <h2 data-i18n="leakage_result_h2">Test result</h2>
           <div id="l-badge" class="result-badge"></div>
 
-          <div class="result" style="margin-top:8px;">
+          <div class="result mt-8">
             <div class="kv">
               <span data-i18n="lbl_ela">Leakage area (ELA)</span>
               <span id="l-ela" class="big"></span>
@@ -176,7 +177,7 @@
             </div>
           </div>
 
-          <div class="info-block" id="l-class-tip" style="margin-top:12px;"></div>
+          <div class="info-block mt-12" id="l-class-tip"></div>
         </div>
 
       </div><!-- /l-results -->
@@ -189,9 +190,9 @@
   ═══════════════════════════════════════════════════ -->
   <div class="tool-panel" id="panel-evap">
 
-    <div class="info-block" style="margin-bottom:20px;" data-i18n-html="evap_info_html"></div>
+    <div class="info-block mb-20" data-i18n-html="evap_info_html"></div>
 
-    <div class="grid" style="align-items:start; gap:16px;">
+    <div class="grid ai-start gap-16">
 
       <!-- Form -->
       <div class="card">
@@ -199,12 +200,12 @@
         <form id="evap-form">
 
           <!-- House selector -->
-          <div style="display:flex; align-items:center; gap:8px; margin-bottom:16px; flex-wrap:wrap;">
-            <span class="muted" style="font-size:12px; white-space:nowrap;" data-i18n="prof_from_house">House:</span>
-            <select id="ev-house-sel" style="flex:1; min-width:160px;"><option value="">—</option></select>
+          <div class="d-flex ai-center gap-8 mb-16 wrap">
+            <span class="muted fs-12 ws-nowrap" data-i18n="prof_from_house">House:</span>
+            <select id="ev-house-sel" class="flex-1 minw-160"><option value="">—</option></select>
           </div>
 
-          <h3 style="font-size:13px; color:var(--muted); margin:0 0 6px;" data-i18n="evap_dims_grp">House dimensions</h3>
+          <h3 class="hint mt-0 mb-6" data-i18n="evap_dims_grp">House dimensions</h3>
           <div class="field-row">
             <label>
               <span data-i18n="label_l_length">Length, m</span>
@@ -217,7 +218,7 @@
           </div>
 
           <hr class="section-divider" />
-          <h3 style="font-size:13px; color:var(--muted); margin:0 0 6px;" data-i18n="evap_climate_grp">Outdoor climate</h3>
+          <h3 class="hint mt-0 mb-6" data-i18n="evap_climate_grp">Outdoor climate</h3>
           <div class="field-row">
             <label>
               <span data-i18n="label_tdb">Dry-bulb temperature, °C</span>
@@ -230,14 +231,14 @@
           </div>
 
           <hr class="section-divider" />
-          <h3 style="font-size:13px; color:var(--muted); margin:0 0 6px;" data-i18n="evap_fans_grp">Ventilation</h3>
+          <h3 class="hint mt-0 mb-6" data-i18n="evap_fans_grp">Ventilation</h3>
           <label>
             <span data-i18n="label_total_fans">Total fan capacity, m³/h</span>
             <input id="ev-fans" type="number" step="100" min="1000" placeholder="180000" required />
           </label>
 
           <hr class="section-divider" />
-          <h3 style="font-size:13px; color:var(--muted); margin:0 0 6px;" data-i18n="evap_pad_grp">Pad (evaporative media)</h3>
+          <h3 class="hint mt-0 mb-6" data-i18n="evap_pad_grp">Pad (evaporative media)</h3>
           <div class="field-row">
             <label>
               <span data-i18n="label_pad_type">Pad type (SANHE)</span>
@@ -266,86 +267,86 @@
           </div>
 
           <hr class="section-divider" />
-          <h3 style="font-size:13px; color:var(--muted); margin:0 0 6px;" data-i18n="evap_target_grp">Target</h3>
+          <h3 class="hint mt-0 mb-6" data-i18n="evap_target_grp">Target</h3>
           <label>
             <span data-i18n="label_target_t">Target indoor temperature, °C</span>
             <input id="ev-target" type="number" step="0.5" min="15" max="40" value="28" required />
           </label>
 
           <hr class="section-divider" />
-          <h3 style="font-size:13px; color:var(--muted); margin:0 0 6px;" data-i18n="evap_water_src_grp">Water supply (optional)</h3>
+          <h3 class="hint mt-0 mb-6" data-i18n="evap_water_src_grp">Water supply (optional)</h3>
           <label>
             <span data-i18n="label_water_t">Water supply temperature, °C</span>
             <input id="ev-water-t" type="number" step="0.5" min="1" max="40" placeholder="—" />
           </label>
-          <p class="muted" style="font-size:11px; margin:4px 0 0; line-height:1.5;" data-i18n="evap_water_t_hint">
+          <p class="muted fs-11 mt-4 mb-0 lh-1_5" data-i18n="evap_water_t_hint">
             Well water: typically 8–12 °C
           </p>
 
-          <button type="submit" id="evap-btn" class="btn" style="margin-top:16px;" data-i18n="btn_calc_evap">Calculate</button>
+          <button type="submit" id="evap-btn" class="btn mt-16" data-i18n="btn_calc_evap">Calculate</button>
         </form>
       </div>
 
       <!-- Results -->
-      <div id="ev-results" style="display:none;">
+      <div id="ev-results" hidden>
 
-        <div class="card" style="margin-bottom:12px;">
+        <div class="card mb-12">
           <span id="ev-status" class="result-badge">—</span>
 
-          <h3 style="font-size:13px; color:var(--muted); margin:16px 0 8px;" data-i18n="evap_temps_h3">Temperatures</h3>
-          <table style="width:100%; font-size:14px; border-collapse:collapse;">
-            <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_twb">Wet-bulb temperature (T_wb)</td>
-                <td style="text-align:right;" id="ev-r-twb">—</td></tr>
-            <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_tdew">Dew point (T_dp)</td>
-                <td style="text-align:right;" id="ev-r-tdew">—</td></tr>
-            <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_tpad">Air temperature after pad</td>
-                <td style="text-align:right; font-size:18px; font-weight:700;" id="ev-r-tpad">—</td></tr>
-            <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_cooling">Cooling achieved</td>
-                <td style="text-align:right;" id="ev-r-cool">—</td></tr>
-            <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_max_cooling">Max possible cooling (T_wb limit)</td>
-                <td style="text-align:right; color:var(--muted);" id="ev-r-max-cool">—</td></tr>
-            <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_eta">Pad efficiency</td>
-                <td style="text-align:right;" id="ev-r-eta">—</td></tr>
-            <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_margin">Margin to target temp</td>
-                <td style="text-align:right;" id="ev-r-margin">—</td></tr>
+          <h3 class="hint mt-16 mb-8" data-i18n="evap_temps_h3">Temperatures</h3>
+          <table class="res-table">
+            <tr><td class="muted py-4 px-0" data-i18n="lbl_twb">Wet-bulb temperature (T_wb)</td>
+                <td class="ta-right" id="ev-r-twb">—</td></tr>
+            <tr><td class="muted py-4 px-0" data-i18n="lbl_tdew">Dew point (T_dp)</td>
+                <td class="ta-right" id="ev-r-tdew">—</td></tr>
+            <tr><td class="muted py-4 px-0" data-i18n="lbl_tpad">Air temperature after pad</td>
+                <td class="ta-right fs-18 fw-700" id="ev-r-tpad">—</td></tr>
+            <tr><td class="muted py-4 px-0" data-i18n="lbl_cooling">Cooling achieved</td>
+                <td class="ta-right" id="ev-r-cool">—</td></tr>
+            <tr><td class="muted py-4 px-0" data-i18n="lbl_max_cooling">Max possible cooling (T_wb limit)</td>
+                <td class="ta-right c-muted" id="ev-r-max-cool">—</td></tr>
+            <tr><td class="muted py-4 px-0" data-i18n="lbl_eta">Pad efficiency</td>
+                <td class="ta-right" id="ev-r-eta">—</td></tr>
+            <tr><td class="muted py-4 px-0" data-i18n="lbl_margin">Margin to target temp</td>
+                <td class="ta-right" id="ev-r-margin">—</td></tr>
           </table>
         </div>
 
-        <div class="card" style="margin-bottom:12px;">
-          <h3 style="font-size:13px; color:var(--muted); margin:0 0 8px;" data-i18n="evap_pad_h3">Pad and air speed</h3>
-          <table style="width:100%; font-size:14px; border-collapse:collapse;">
-            <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_pad_area">Actual pad area</td>
-                <td style="text-align:right;" id="ev-r-area">—</td></tr>
-            <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_air_vel">Air velocity</td>
-                <td style="text-align:right;" id="ev-r-vel">—</td></tr>
-            <tr><td class="muted" style="padding:4px 0;" colspan="2" id="ev-r-velstatus" style="font-size:12px;"></td></tr>
-            <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_rec_area">Recommended pad area</td>
-                <td style="text-align:right;" id="ev-r-rec-area">—</td></tr>
-            <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_pad_dp">Pad pressure drop</td>
-                <td style="text-align:right;" id="ev-r-dp">—</td></tr>
+        <div class="card mb-12">
+          <h3 class="hint mt-0 mb-8" data-i18n="evap_pad_h3">Pad and air speed</h3>
+          <table class="res-table">
+            <tr><td class="muted py-4 px-0" data-i18n="lbl_pad_area">Actual pad area</td>
+                <td class="ta-right" id="ev-r-area">—</td></tr>
+            <tr><td class="muted py-4 px-0" data-i18n="lbl_air_vel">Air velocity</td>
+                <td class="ta-right" id="ev-r-vel">—</td></tr>
+            <tr><td class="muted px 0; py-4 px-0" colspan="2" id="ev-r-velstatus"></td></tr>
+            <tr><td class="muted py-4 px-0" data-i18n="lbl_rec_area">Recommended pad area</td>
+                <td class="ta-right" id="ev-r-rec-area">—</td></tr>
+            <tr><td class="muted py-4 px-0" data-i18n="lbl_pad_dp">Pad pressure drop</td>
+                <td class="ta-right" id="ev-r-dp">—</td></tr>
           </table>
         </div>
 
         <div class="card">
-          <h3 style="font-size:13px; color:var(--muted); margin:0 0 8px;" data-i18n="evap_water_h3">Water consumption</h3>
-          <table style="width:100%; font-size:14px; border-collapse:collapse;">
-            <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_water_lpm">Water flow</td>
-                <td style="text-align:right;" id="ev-r-water-lpm">—</td></tr>
-            <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_water_h">Per hour</td>
-                <td style="text-align:right;" id="ev-r-water-h">—</td></tr>
+          <h3 class="hint mt-0 mb-8" data-i18n="evap_water_h3">Water consumption</h3>
+          <table class="res-table">
+            <tr><td class="muted py-4 px-0" data-i18n="lbl_water_lpm">Water flow</td>
+                <td class="ta-right" id="ev-r-water-lpm">—</td></tr>
+            <tr><td class="muted py-4 px-0" data-i18n="lbl_water_h">Per hour</td>
+                <td class="ta-right" id="ev-r-water-h">—</td></tr>
           </table>
         </div>
 
         <!-- Water supply check card — visible only when water_supply_t_c was provided -->
-        <div id="ev-water-card" class="card" style="display:none;">
-          <h3 style="font-size:13px; color:var(--muted); margin:0 0 8px;" data-i18n="evap_water_effect_h3">Water supply check</h3>
-          <table style="width:100%; font-size:14px; border-collapse:collapse;">
-            <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_water_src_t">Water supply temperature</td>
-                <td style="text-align:right;" id="ev-r-water-t">—</td></tr>
-            <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_water_min">Min. recommended water temperature</td>
-                <td style="text-align:right; font-weight:600;" id="ev-r-water-min">—</td></tr>
+        <div id="ev-water-card" class="card bl-3" hidden>
+          <h3 class="hint mt-0 mb-8" data-i18n="evap_water_effect_h3">Water supply check</h3>
+          <table class="res-table">
+            <tr><td class="muted py-4 px-0" data-i18n="lbl_water_src_t">Water supply temperature</td>
+                <td class="ta-right" id="ev-r-water-t">—</td></tr>
+            <tr><td class="muted py-4 px-0" data-i18n="lbl_water_min">Min. recommended water temperature</td>
+                <td class="ta-right fw-600" id="ev-r-water-min">—</td></tr>
           </table>
-          <p id="ev-water-note" class="muted" style="font-size:12px; margin:10px 0 0; line-height:1.6; padding:8px; border-radius:6px;"></p>
+          <p id="ev-water-note" class="muted fs-12 mt-10 mb-0 lh-1_6 p-8 r-6"></p>
         </div>
 
       </div><!-- /ev-results -->
@@ -358,9 +359,9 @@
   ═══════════════════════════════════════════════════ -->
   <div class="tool-panel" id="panel-tunnel">
 
-    <div class="info-block" style="margin-bottom:20px;" data-i18n-html="tunnel_info_html"></div>
+    <div class="info-block mb-20" data-i18n-html="tunnel_info_html"></div>
 
-    <div class="grid" style="align-items:start; gap:16px;">
+    <div class="grid ai-start gap-16">
 
       <!-- Form -->
       <div class="card">
@@ -368,12 +369,12 @@
         <form id="tunnel-form">
 
           <!-- House selector -->
-          <div style="display:flex; align-items:center; gap:8px; margin-bottom:16px; flex-wrap:wrap;">
-            <span class="muted" style="font-size:12px; white-space:nowrap;" data-i18n="prof_from_house">House:</span>
-            <select id="tn-house-sel" style="flex:1; min-width:160px;"><option value="">—</option></select>
+          <div class="d-flex ai-center gap-8 mb-16 wrap">
+            <span class="muted fs-12 ws-nowrap" data-i18n="prof_from_house">House:</span>
+            <select id="tn-house-sel" class="flex-1 minw-160"><option value="">—</option></select>
           </div>
 
-          <h3 style="font-size:13px; color:var(--muted); margin:0 0 6px;" data-i18n="tunnel_sect_grp">Tunnel cross-section</h3>
+          <h3 class="hint mt-0 mb-6" data-i18n="tunnel_sect_grp">Tunnel cross-section</h3>
           <div class="field-row">
             <label>
               <span data-i18n="label_tn_width">House width, m</span>
@@ -385,13 +386,13 @@
                      data-i18n-title="hint_tn_height" required />
             </label>
           </div>
-          <p id="tn-height-hint" class="muted" style="font-size:11px; margin:2px 0 0; display:none;"
-             data-i18n="hint_tn_height_auto"></p>
+          <p id="tn-height-hint" class="muted fs-11 mt-2 mb-0"
+             data-i18n="hint_tn_height_auto" hidden></p>
 
           <hr class="section-divider" />
-          <h3 style="font-size:13px; color:var(--muted); margin:0 0 4px;" data-i18n="tunnel_fans_grp">Fans</h3>
-          <p id="tn-fans-missing" class="muted" style="font-size:11px; margin:0 0 6px; display:none;"
-             data-i18n="hint_tn_fans_missing"></p>
+          <h3 class="hint mt-0 mb-4" data-i18n="tunnel_fans_grp">Fans</h3>
+          <p id="tn-fans-missing" class="muted fs-11 mt-0 mb-6"
+             data-i18n="hint_tn_fans_missing" hidden></p>
           <div class="field-row">
             <label>
               <span data-i18n="label_tn_fans">Number of fans</span>
@@ -411,8 +412,8 @@
           </div>
 
           <hr class="section-divider" />
-          <h3 style="font-size:13px; color:var(--muted); margin:0 0 4px;" data-i18n="tunnel_climate_grp">Climate and birds</h3>
-          <p class="muted" style="font-size:11px; margin:0 0 8px;" data-i18n="hint_tunnel_design_day">For house readiness assessment use the last day of the cycle — the worst-case thermal and ventilation load.</p>
+          <h3 class="hint mt-0 mb-4" data-i18n="tunnel_climate_grp">Climate and birds</h3>
+          <p class="muted fs-11 mt-0 mb-8" data-i18n="hint_tunnel_design_day">For house readiness assessment use the last day of the cycle — the worst-case thermal and ventilation load.</p>
           <div class="field-row">
             <label>
               <span data-i18n="label_tn_tdb">Outdoor temperature, °C</span>
@@ -435,13 +436,13 @@
           </div>
 
           <hr class="section-divider" />
-          <h3 style="font-size:13px; color:var(--muted); margin:0 0 4px;" data-i18n="tunnel_inlet_grp">Inlet system</h3>
-          <p class="muted" style="font-size:11px; margin:0 0 8px; line-height:1.5;" data-i18n="hint_inlet_measure">Open end: 1 section × house width × tunnel height. Curtain panels: count sections × width × height each.</p>
+          <h3 class="hint mt-0 mb-4" data-i18n="tunnel_inlet_grp">Inlet system</h3>
+          <p class="muted fs-11 mt-0 mb-8 lh-1_5" data-i18n="hint_inlet_measure">Open end: 1 section × house width × tunnel height. Curtain panels: count sections × width × height each.</p>
           <label>
             <span data-i18n="label_num_inlets">Number of openings, qty</span>
             <input id="tn-num-inlets" type="number" min="1" max="500" value="1" />
           </label>
-          <div class="field-row" style="margin-top:4px;">
+          <div class="field-row mt-4">
             <label>
               <span data-i18n="label_inlet_width">Opening width, m</span>
               <input id="tn-inlet-w" type="number" step="0.1" min="0.5" max="30" placeholder="18" />
@@ -452,95 +453,95 @@
             </label>
           </div>
 
-          <button type="submit" id="tunnel-btn" class="btn" style="margin-top:16px;" data-i18n="btn_calc_tunnel">Calculate</button>
+          <button type="submit" id="tunnel-btn" class="btn mt-16" data-i18n="btn_calc_tunnel">Calculate</button>
         </form>
       </div>
 
       <!-- Results -->
-      <div id="tn-results" style="display:none;">
+      <div id="tn-results" hidden>
 
-        <div class="card" style="margin-bottom:12px;">
+        <div class="card mb-12">
           <span id="tn-status" class="result-badge">—</span>
 
-          <h3 style="font-size:13px; color:var(--muted); margin:16px 0 8px;" data-i18n="tunnel_flow_h3">Air flow</h3>
-          <table style="width:100%; font-size:14px; border-collapse:collapse;">
-            <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_cross_sect">Tunnel cross-section</td>
-                <td style="text-align:right;" id="tn-r-section">—</td></tr>
-            <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_total_flow">Total flow</td>
-                <td style="text-align:right;" id="tn-r-total">—</td></tr>
-            <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_air_speed">Air speed</td>
-                <td style="text-align:right; font-size:20px; font-weight:700;" id="tn-r-vel">—</td></tr>
+          <h3 class="hint mt-16 mb-8" data-i18n="tunnel_flow_h3">Air flow</h3>
+          <table class="res-table">
+            <tr><td class="muted py-4 px-0" data-i18n="lbl_cross_sect">Tunnel cross-section</td>
+                <td class="ta-right" id="tn-r-section">—</td></tr>
+            <tr><td class="muted py-4 px-0" data-i18n="lbl_total_flow">Total flow</td>
+                <td class="ta-right" id="tn-r-total">—</td></tr>
+            <tr><td class="muted py-4 px-0" data-i18n="lbl_air_speed">Air speed</td>
+                <td class="ta-right fs-20 fw-700" id="tn-r-vel">—</td></tr>
           </table>
-          <div class="info-block" style="margin-top:8px; font-size:12px;" id="tn-r-vel-status"></div>
+          <div class="info-block mt-8 fs-12" id="tn-r-vel-status"></div>
         </div>
 
         <!-- Wind cooling -->
-        <div class="card" style="margin-bottom:12px;">
-          <h3 style="font-size:13px; color:var(--muted); margin:0 0 8px;" data-i18n="tunnel_chill_h3">Wind cooling</h3>
-          <table style="width:100%; font-size:14px; border-collapse:collapse;">
-            <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_treal">Actual temperature</td>
-                <td style="text-align:right;" id="tn-r-treal">—</td></tr>
-            <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_wind_chill">Wind cooling</td>
-                <td style="text-align:right; color:var(--ok);" id="tn-r-windchill">—</td></tr>
-            <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_eff_temp">Effective temperature</td>
-                <td style="text-align:right; font-size:18px; font-weight:700;" id="tn-r-efftemp">—</td></tr>
+        <div class="card mb-12">
+          <h3 class="hint mt-0 mb-8" data-i18n="tunnel_chill_h3">Wind cooling</h3>
+          <table class="res-table">
+            <tr><td class="muted py-4 px-0" data-i18n="lbl_treal">Actual temperature</td>
+                <td class="ta-right" id="tn-r-treal">—</td></tr>
+            <tr><td class="muted py-4 px-0" data-i18n="lbl_wind_chill">Wind cooling</td>
+                <td class="ta-right c-ok" id="tn-r-windchill">—</td></tr>
+            <tr><td class="muted py-4 px-0" data-i18n="lbl_eff_temp">Effective temperature</td>
+                <td class="ta-right fs-18 fw-700" id="tn-r-efftemp">—</td></tr>
           </table>
         </div>
 
         <!-- THVI (Tao & Xin 2003) -->
-        <div class="card" style="margin-bottom:12px;">
-          <h3 style="font-size:13px; color:var(--muted); margin:0 0 8px;" data-i18n="tunnel_thi_h3">Broiler heat stress index (THVI)</h3>
-          <div style="display:flex; align-items:baseline; gap:12px;">
-            <span style="font-size:32px; font-weight:700;" id="tn-r-thi">—</span>
-            <span id="tn-r-thi-status" style="font-size:14px;">—</span>
+        <div class="card mb-12">
+          <h3 class="hint mt-0 mb-8" data-i18n="tunnel_thi_h3">Broiler heat stress index (THVI)</h3>
+          <div class="d-flex ai-baseline gap-12">
+            <span class="fs-32 fw-700" id="tn-r-thi">—</span>
+            <span id="tn-r-thi-status" class="fs-14">—</span>
           </div>
-          <div class="info-block" style="margin-top:8px; font-size:12px;" data-i18n="thi_scale">
+          <div class="info-block mt-8 fs-12" data-i18n="thi_scale">
             &lt;35 Normal · 35–38 Alert · 38–40 Danger · &gt;40 Critical
           </div>
         </div>
 
         <!-- Inlet system -->
-        <div class="card" style="margin-bottom:12px;">
-          <h3 style="font-size:13px; color:var(--muted); margin:0 0 8px;" data-i18n="tunnel_inlet_res_h3">Inlet system</h3>
-          <table style="width:100%; font-size:14px; border-collapse:collapse;">
-            <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_inlet_area">Inlet area</td>
-                <td style="text-align:right;" id="tn-r-inlet-area">—</td></tr>
-            <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_inlet_vel">Inlet velocity</td>
-                <td style="text-align:right; font-weight:700;" id="tn-r-inlet-vel">—</td></tr>
-            <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_inlet_sp">Inlet static pressure</td>
-                <td style="text-align:right;" id="tn-r-inlet-sp">—</td></tr>
+        <div class="card mb-12">
+          <h3 class="hint mt-0 mb-8" data-i18n="tunnel_inlet_res_h3">Inlet system</h3>
+          <table class="res-table">
+            <tr><td class="muted py-4 px-0" data-i18n="lbl_inlet_area">Inlet area</td>
+                <td class="ta-right" id="tn-r-inlet-area">—</td></tr>
+            <tr><td class="muted py-4 px-0" data-i18n="lbl_inlet_vel">Inlet velocity</td>
+                <td class="ta-right fw-700" id="tn-r-inlet-vel">—</td></tr>
+            <tr><td class="muted py-4 px-0" data-i18n="lbl_inlet_sp">Inlet static pressure</td>
+                <td class="ta-right" id="tn-r-inlet-sp">—</td></tr>
           </table>
-          <div class="info-block" style="margin-top:8px; font-size:12px;" id="tn-r-inlet-status"></div>
+          <div class="info-block mt-8 fs-12" id="tn-r-inlet-status"></div>
         </div>
 
         <!-- Pressure & recommendations -->
         <div class="card">
-          <h3 style="font-size:13px; color:var(--muted); margin:0 0 8px;" data-i18n="tunnel_press_h3">Pressure and recommendations</h3>
-          <table style="width:100%; font-size:14px; border-collapse:collapse;">
-            <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_dyn_pa">Dynamic pressure</td>
-                <td style="text-align:right;" id="tn-r-dyn-pa">—</td></tr>
-            <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_tot_pa">Estimated fan pressure</td>
-                <td style="text-align:right;" id="tn-r-tot-pa">—</td></tr>
-            <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_speed_target">Speed target (age)</td>
-                <td style="text-align:right;" id="tn-r-target">—</td></tr>
-            <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_fans_needed">Fans for lower bound</td>
-                <td style="text-align:right; font-weight:700;" id="tn-r-fans-need">—</td></tr>
+          <h3 class="hint mt-0 mb-8" data-i18n="tunnel_press_h3">Pressure and recommendations</h3>
+          <table class="res-table">
+            <tr><td class="muted py-4 px-0" data-i18n="lbl_dyn_pa">Dynamic pressure</td>
+                <td class="ta-right" id="tn-r-dyn-pa">—</td></tr>
+            <tr><td class="muted py-4 px-0" data-i18n="lbl_tot_pa">Estimated fan pressure</td>
+                <td class="ta-right" id="tn-r-tot-pa">—</td></tr>
+            <tr><td class="muted py-4 px-0" data-i18n="lbl_speed_target">Speed target (age)</td>
+                <td class="ta-right" id="tn-r-target">—</td></tr>
+            <tr><td class="muted py-4 px-0" data-i18n="lbl_fans_needed">Fans for lower bound</td>
+                <td class="ta-right fw-700" id="tn-r-fans-need">—</td></tr>
           </table>
         </div>
 
         <!-- Decision card: tunnel vs evaporative cooling -->
-        <div id="tn-decision-card" class="card" style="margin-top:12px; border-left:4px solid var(--border); display:none;">
-          <h3 style="font-size:14px; margin:0 0 10px;" data-i18n="tn_decision_h3">Tunnel mode — is it enough?</h3>
-          <table style="width:100%; font-size:14px; border-collapse:collapse;">
-            <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_comfort_target">Comfort target (age)</td>
-                <td style="text-align:right;" id="tn-r-comfort-target">—</td></tr>
-            <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_eff_temp_margin">Effective temp / margin</td>
-                <td style="text-align:right; font-weight:700;" id="tn-r-margin">—</td></tr>
-            <tr><td class="muted" style="padding:4px 0;" data-i18n="lbl_tunnel_limit">Tunnel effective up to</td>
-                <td style="text-align:right; font-size:16px; font-weight:700;" id="tn-r-tunnel-limit">—</td></tr>
+        <div id="tn-decision-card" class="card mt-12 bl-4" hidden>
+          <h3 class="fs-14 mt-0 mb-10" data-i18n="tn_decision_h3">Tunnel mode — is it enough?</h3>
+          <table class="res-table">
+            <tr><td class="muted py-4 px-0" data-i18n="lbl_comfort_target">Comfort target (age)</td>
+                <td class="ta-right" id="tn-r-comfort-target">—</td></tr>
+            <tr><td class="muted py-4 px-0" data-i18n="lbl_eff_temp_margin">Effective temp / margin</td>
+                <td class="ta-right fw-700" id="tn-r-margin">—</td></tr>
+            <tr><td class="muted py-4 px-0" data-i18n="lbl_tunnel_limit">Tunnel effective up to</td>
+                <td class="ta-right fs-16 fw-700" id="tn-r-tunnel-limit">—</td></tr>
           </table>
-          <p id="tn-decision-note" style="font-size:13px; margin:10px 0 0; line-height:1.5;"></p>
-          <button id="tn-to-evap-btn" class="btn btn-secondary" style="margin-top:10px; display:none;" data-i18n="btn_go_to_evap">→ Evaporative cooling</button>
+          <p id="tn-decision-note" class="fs-13 mt-10 mb-0 lh-1_5"></p>
+          <button id="tn-to-evap-btn" class="btn btn-secondary mt-10 d-block" data-i18n="btn_go_to_evap" hidden>→ Evaporative cooling</button>
         </div>
 
       </div><!-- /tn-results -->
@@ -718,11 +719,11 @@ document.querySelectorAll('.tool-tab:not([disabled])').forEach(btn => {
       // Значение вне таблицы не применено — сказать об этом, а не молча считать по профилю
       if (rhRaw !== '' && targetRH === null) {
         profSummary.insertAdjacentHTML('afterbegin',
-          `<p class="warn" style="font-size:12px;margin:0 0 8px;">⚠ ${t('target_rh_ignored')}</p>`);
+          `<p class="warn fs-12 mt-0 mb-8">⚠ ${t('target_rh_ignored')}</p>`);
       }
     } catch (e) {
       profSummary.innerHTML = `<div class="card"><div class="danger">${escapeHtml(t('err_prefix') + (e.message || e))}</div></div>`;
-      profSummary.style.display = 'block';
+      profSummary.hidden = false;
     } finally {
       profBtn.disabled = false; profBtn.textContent = t('btn_calc_profile');
     }
@@ -781,15 +782,15 @@ document.querySelectorAll('.tool-tab:not([disabled])').forEach(btn => {
     }).join('');
 
     const capWarn = d.rows.some(r => r.capacity_insufficient)
-      ? `<p class="danger" style="font-size:12px; margin:8px 0 0;">⚠ ${t('cap_insufficient_note')}</p>`
+      ? `<p class="danger fs-12 mt-8 mb-0">⚠ ${t('cap_insufficient_note')}</p>`
       : '';
     // Влажный наружный воздух: вентиляцией RH не удержать — Qmin в таких строках по CO₂
     const humWarn = d.rows.some(r => r.humidity_uncontrollable)
-      ? `<p class="warn" style="font-size:12px; margin:8px 0 0;">⚠ ${t('humidity_uncontrollable_note')}</p>`
+      ? `<p class="warn fs-12 mt-8 mb-0">⚠ ${t('humidity_uncontrollable_note')}</p>`
       : '';
     // Туннельный Qmax считается из сечения корпуса — без размеров он равен Qmin
     const geomWarn = d.rows.some(r => r.house_geometry_missing)
-      ? `<p class="warn" style="font-size:12px; margin:8px 0 0;">⚠ ${t('geometry_missing_note')}</p>`
+      ? `<p class="warn fs-12 mt-8 mb-0">⚠ ${t('geometry_missing_note')}</p>`
       : '';
 
     // Физическая проверка (Cobb 2021 §9)
@@ -811,21 +812,21 @@ document.querySelectorAll('.tool-tab:not([disabled])').forEach(btn => {
       const cls_vtun  = hasSysCap && v_tun != null ? (v_tun >= 3.0 ? 'ok' : v_tun >= 2.0 ? '' : 'warn') : '';
 
       physBlock = `
-        <div style="margin-top:14px; padding-top:12px; border-top:1px solid var(--border);">
-          <div class="muted" style="font-size:12px; margin-bottom:6px; font-weight:500;">${t('phys_title')}</div>
+        <div class="mt-14 pt-12 bt-1">
+          <div class="muted fs-12 mb-6 fw-500">${t('phys_title')}</div>
           <div class="kv"><span>${t('phys_floor_area')}</span><span>${S_floor.toFixed(0)} ${t('unit_m2')}</span></div>
           ${V_house ? `<div class="kv"><span>${t('phys_volume')}</span><span>${V_house.toFixed(0)} ${t('unit_m3')}</span></div>` : ''}
           ${S_cross  ? `<div class="kv"><span>${t('phys_cross_section')}</span><span>${S_cross.toFixed(1)} ${t('unit_m2')}</span></div>` : ''}
-          <div style="margin-top:6px;">
+          <div class="mt-6">
             ${qMinM2 != null ? `<div class="kv"><span>${t('phys_min_vent_check')}</span><span class="${cls_qmin}">${qMinM2.toFixed(1)} ${t('unit_m3h_m2')} <span class="muted">[≥18]</span></span></div>` : ''}
             ${qMaxM2 != null ? `<div class="kv"><span>${t('phys_max_vent_check')}</span><span class="${cls_qmax}">${qMaxM2.toFixed(1)} ${t('unit_m3h_m2')} <span class="muted">[165–200]</span></span></div>` : ''}
             ${T_exch  != null ? `<div class="kv"><span>${t('phys_exchange_time')}</span><span class="${cls_texch}">${T_exch} ${t('unit_sec')} <span class="muted">[40–60]</span></span></div>` : ''}
             ${v_tun   != null ? `<div class="kv"><span>${t('phys_airspeed_tunnel')}</span><span class="${cls_vtun}">${v_tun.toFixed(2)} ${t('unit_ms')} <span class="muted">[${t('phys_airspeed_target')}]</span></span></div>` : ''}
           </div>
-          <p class="muted" style="font-size:10px; margin:8px 0 0;">${t('phys_cobb_source')}</p>
+          <p class="muted fs-10 mt-8 mb-0">${t('phys_cobb_source')}</p>
         </div>`;
     } else {
-      physBlock = `<p class="muted" style="font-size:11px; margin-top:10px;">${t('phys_dims_needed')}</p>`;
+      physBlock = `<p class="muted fs-11 mt-10">${t('phys_dims_needed')}</p>`;
     }
 
     profSummary.innerHTML = `<div class="card">${head}
@@ -841,7 +842,7 @@ document.querySelectorAll('.tool-tab:not([disabled])').forEach(btn => {
       ${geomWarn}
       ${physBlock}
     </div>`;
-    profSummary.style.display = 'block';
+    profSummary.hidden = false;
   }
 
   profBtn.addEventListener('click', calcProfile);
@@ -896,14 +897,14 @@ initHouseSelector('tn-house-sel', tab => {
       hintHeight.textContent = hasRidge
         ? t('hint_tn_height_gable', { wall: tab.height_wall_m, ridge: tab.height_ridge_m, result: freeH })
         : t('hint_tn_height_auto');
-      hintHeight.style.color = '';
-      hintHeight.style.display = 'block';
+      setTone(hintHeight, null);
+      hintHeight.hidden = false;
     }
   } else {
     if (hintHeight) {
       hintHeight.textContent = t('hint_tn_height_missing');
-      hintHeight.style.color = 'var(--warn)';
-      hintHeight.style.display = 'block';
+      setTone(hintHeight, 'warn');
+      hintHeight.hidden = false;
     }
   }
 
@@ -913,10 +914,10 @@ initHouseSelector('tn-house-sel', tab => {
   if (hasFans) {
     _setVal('tn-fans',    tab.num_fans);
     _setVal('tn-fan-cap', tab.fan_cap_m3h);
-    if (fansMissing) fansMissing.style.display = 'none';
+    if (fansMissing) fansMissing.hidden = true;
   } else {
     // Данных нет — показываем подсказку
-    if (fansMissing) fansMissing.style.display = 'block';
+    if (fansMissing) fansMissing.hidden = false;
   }
 });
 
@@ -986,7 +987,7 @@ function renderLeakage(d) {
   document.getElementById('l-fan-corr').textContent = `${d.fan_corrected_m3h.toFixed(0)} ${t('unit_m3h')}`;
   document.getElementById('l-class-tip').textContent = t(tc.tipKey);
 
-  document.getElementById('l-results').style.display = 'block';
+  document.getElementById('l-results').hidden = false;
 }
 
 // ═══════════════════════════════════════════════════
@@ -1072,22 +1073,20 @@ function renderTunnel(d, t_real) {
   // THVI
   const thiEl = document.getElementById('tn-r-thi');
   thiEl.textContent = d.thi_value.toFixed(1);
-  // Пороги THVI (Tao & Xin 2003): 35 / 38 / 40 °C
-  thiEl.style.color = d.thi_value < 35 ? 'var(--grade-1)'
-                    : d.thi_value < 38 ? 'var(--grade-2)'
-                    : d.thi_value < 40 ? 'var(--grade-3)'
-                    : 'var(--grade-4)';
+  // Пороги THVI (Tao & Xin 2003): 35 / 38 / 40 °C → ступень шкалы 1…4
+  setTone(thiEl, 'grade-' + (d.thi_value < 35 ? 1 : d.thi_value < 38 ? 2 : d.thi_value < 40 ? 3 : 4));
   document.getElementById('tn-r-thi-status').textContent = t('thvi_' + d.thi_status);
 
   // Inlet system
   document.getElementById('tn-r-inlet-area').textContent =
     d.inlet_area_m2.toFixed(1) + ' ' + uM2;
-  const inletVelColor = d.inlet_velocity_ms < 2.0 ? 'var(--grade-1)'
-                      : d.inlet_velocity_ms < 3.0 ? 'var(--grade-2)'
-                      : d.inlet_velocity_ms < 4.0 ? 'var(--grade-3)'
-                      : 'var(--grade-4)';
+  // Скорость в приточных: 2 / 3 / 4 м/с → ступень шкалы 1…4
+  const inletVelGrade = d.inlet_velocity_ms < 2.0 ? 1
+                      : d.inlet_velocity_ms < 3.0 ? 2
+                      : d.inlet_velocity_ms < 4.0 ? 3
+                      : 4;
   document.getElementById('tn-r-inlet-vel').innerHTML =
-    `<span style="color:${inletVelColor};">${d.inlet_velocity_ms.toFixed(2)} ${uMs}</span>`;
+    `<span class="c-grade-${inletVelGrade}">${d.inlet_velocity_ms.toFixed(2)} ${uMs}</span>`;
   document.getElementById('tn-r-inlet-sp').textContent =
     d.inlet_sp_pa.toFixed(1) + ' ' + uPa;
   document.getElementById('tn-r-inlet-status').textContent =
@@ -1106,11 +1105,10 @@ function renderTunnel(d, t_real) {
   const noteEl   = document.getElementById('tn-decision-note');
   const evapBtn  = document.getElementById('tn-to-evap-btn');
   const limitOk  = d.tunnel_sufficient;
-  const accentOk   = 'var(--ok)';
-  const accentWarn = 'var(--danger)';
+  const limitTone = limitOk ? 'ok' : 'danger';
 
-  decCard.style.borderLeftColor = limitOk ? accentOk : accentWarn;
-  decCard.style.display = 'block';
+  setEdge(decCard, limitTone);
+  decCard.hidden = false;
 
   document.getElementById('tn-r-comfort-target').textContent =
     d.bird_comfort_target_c.toFixed(1) + ' °C';
@@ -1119,23 +1117,23 @@ function renderTunnel(d, t_real) {
   const marginSign = d.temp_margin_c >= 0 ? '−' : '+';
   document.getElementById('tn-r-margin').innerHTML =
     `${d.effective_temp_c.toFixed(1)} °C &nbsp;` +
-    `<span style="color:${limitOk ? accentOk : accentWarn};">(${marginSign}${marginAbs} °C)</span>`;
+    `<span class="c-${limitTone}">(${marginSign}${marginAbs} °C)</span>`;
 
   const atCap = d.t_outdoor_tunnel_limit_c >= 42;
   document.getElementById('tn-r-tunnel-limit').textContent =
     atCap ? t('tunnel_limit_no_limit') : d.t_outdoor_tunnel_limit_c.toFixed(1) + ' °C';
-  document.getElementById('tn-r-tunnel-limit').style.color =
-    atCap ? accentOk : (d.t_outdoor_tunnel_limit_c > t_real ? accentOk : accentWarn);
+  setTone(document.getElementById('tn-r-tunnel-limit'),
+    atCap || d.t_outdoor_tunnel_limit_c > t_real ? 'ok' : 'danger');
 
   if (limitOk) {
     noteEl.textContent = t('tn_note_ok', { limit: d.t_outdoor_tunnel_limit_c.toFixed(1) });
-    evapBtn.style.display = 'none';
+    evapBtn.hidden = true;
   } else {
     noteEl.textContent = t('tn_note_need_evap');
-    evapBtn.style.display = 'block';
+    evapBtn.hidden = false;
   }
 
-  document.getElementById('tn-results').style.display = 'block';
+  document.getElementById('tn-results').hidden = false;
 }
 
 // Кнопка "Перейти к испарительному охлаждению" — переключает вкладку
@@ -1274,21 +1272,21 @@ function renderEvap(d) {
     const noteEl = document.getElementById('ev-water-note');
     const minT   = d.t_dew_c.toFixed(1);
     if (d.water_regime === 'safe') {
-      waterCard.style.borderLeft = '3px solid var(--ok)';
-      noteEl.style.background    = 'var(--ok-bg)';
+      setEdge(waterCard, 'ok');
+      setBg(noteEl, 'ok-bg');
       noteEl.textContent = t('ev_water_safe', { t_water: d.water_supply_t_c.toFixed(1), t_dew: minT });
     } else {
-      waterCard.style.borderLeft = '3px solid var(--danger)';
-      noteEl.style.background    = 'var(--danger-bg)';
+      setEdge(waterCard, 'danger');
+      setBg(noteEl, 'danger-bg');
       noteEl.textContent = t('ev_water_cold', { t_water: d.water_supply_t_c.toFixed(1), t_dew: minT });
     }
 
-    waterCard.style.display = 'block';
+    waterCard.hidden = false;
   } else {
-    waterCard.style.display = 'none';
+    waterCard.hidden = true;
   }
 
-  document.getElementById('ev-results').style.display = 'block';
+  document.getElementById('ev-results').hidden = false;
 }
 </script>
 
@@ -1297,42 +1295,42 @@ function renderEvap(d) {
 ═══════════════════════════════════════════════════ -->
 <div class="tool-panel" id="panel-calibration">
 
-  <div class="card" style="margin-bottom:16px;">
+  <div class="card mb-16">
     <p class="muted" data-i18n="cal_intro"></p>
   </div>
 
   <!-- Step 1 -->
-  <div class="card" style="margin-bottom:16px;">
+  <div class="card mb-16">
     <h2 data-i18n="step1_h2">Step 1: Building dimensions</h2>
-    <p class="muted" style="margin-bottom:12px;" data-i18n="step1_desc"></p>
+    <p class="muted mb-12" data-i18n="step1_desc"></p>
 
     <!-- House selector — loads from main-page localStorage data -->
-    <div style="margin-bottom:14px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-      <label style="display:flex; align-items:center; gap:8px; margin:0;">
-        <span class="muted" style="font-size:12px; white-space:nowrap;" data-i18n="dims_from_house_lbl">Load from house:</span>
-        <select id="dimHouseSelect" style="min-width:160px;"></select>
+    <div class="mb-14 d-flex ai-center gap-10 wrap">
+      <label class="d-flex ai-center gap-8 m-0">
+        <span class="muted fs-12 ws-nowrap" data-i18n="dims_from_house_lbl">Load from house:</span>
+        <select id="dimHouseSelect" class="minw-160"></select>
       </label>
     </div>
 
-    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:12px;">
+    <div class="d-grid cols-fit-150 gap-12">
       <label><span data-i18n="label_length_m">Length, m</span><input id="length" type="number" step="0.5" min="1" max="500" placeholder="96"></label>
       <label><span data-i18n="label_width_m">Width, m</span><input id="width" type="number" step="0.5" min="1" max="200" placeholder="18"></label>
       <label><span data-i18n="label_height_wall_m">Wall height, m</span><input id="height-wall" type="number" step="0.1" min="1" max="10" placeholder="2.5"></label>
       <label><span data-i18n="label_height_ridge_m">Ridge height, m</span><input id="height-ridge" type="number" step="0.1" min="1" max="20" placeholder="4.5"></label>
     </div>
-    <div style="margin-top:12px; padding:12px; background:var(--bg); border-radius:8px;">
-      <div class="kv"><span data-i18n="bldg_volume_lbl">Volume</span><span id="volumeDisplay" style="font-weight:600;" data-i18n="vol_default">— m³</span></div>
-      <div class="kv"><span data-i18n="bldg_area_lbl">Floor area</span><span id="areaDisplay" style="font-weight:600;" data-i18n="area_default">— m²</span></div>
+    <div class="mt-12 p-12 bg-bg r-8">
+      <div class="kv"><span data-i18n="bldg_volume_lbl">Volume</span><span id="volumeDisplay" class="fw-600" data-i18n="vol_default">— m³</span></div>
+      <div class="kv"><span data-i18n="bldg_area_lbl">Floor area</span><span id="areaDisplay" class="fw-600" data-i18n="area_default">— m²</span></div>
     </div>
-    <button id="saveBuildingBtn" class="btn" style="margin-top:12px;" data-i18n="btn_save_dims">Save dimensions</button>
-    <span id="buildingStatus" class="muted" style="margin-left:10px;"></span>
+    <button id="saveBuildingBtn" class="btn mt-12" data-i18n="btn_save_dims">Save dimensions</button>
+    <span id="buildingStatus" class="muted ml-10"></span>
   </div>
 
   <!-- Step 2 -->
-  <div class="card" style="margin-bottom:16px;">
+  <div class="card mb-16">
     <h2 data-i18n="step2_h2">Step 2: Heating equipment</h2>
-    <p class="muted" style="margin-bottom:12px;" data-i18n="step2_desc"></p>
-    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap:12px;">
+    <p class="muted mb-12" data-i18n="step2_desc"></p>
+    <div class="d-grid cols-fit-250 gap-12">
       <label>
         <span data-i18n="heater_type_lbl">Heater type</span>
         <select id="heaterType">
@@ -1342,54 +1340,54 @@ function renderEvap(d) {
       </label>
       <label><span data-i18n="heating_cap_lbl">Total capacity, kW</span><input id="heaterPower" type="number" step="1" min="0" max="10000" placeholder="500"></label>
     </div>
-    <div id="gasInfo" style="margin-top:12px; padding:12px; background:var(--warn-bg); border-left:3px solid var(--warn); border-radius:4px;" data-i18n-html="gas_info_html"></div>
-    <button id="saveHeaterBtn" class="btn" style="margin-top:12px;" data-i18n="btn_save_heater">Save configuration</button>
-    <span id="heaterStatus" class="muted" style="margin-left:10px;"></span>
+    <div id="gasInfo" class="note-warn mt-12 p-12" data-i18n-html="gas_info_html"></div>
+    <button id="saveHeaterBtn" class="btn mt-12" data-i18n="btn_save_heater">Save configuration</button>
+    <span id="heaterStatus" class="muted ml-10"></span>
   </div>
 
   <!-- Step 3: Timer -->
-  <div class="card" style="margin-bottom:16px;">
+  <div class="card mb-16">
     <h2 data-i18n="step3_h2">Step 3: Cooling test</h2>
-    <div style="margin-bottom:16px;" data-i18n-html="step3_proc_html"></div>
-    <div style="display:flex; gap:16px; flex-wrap:wrap; align-items:flex-end;">
-      <label style="flex:1; min-width:180px;">
+    <div class="mb-16" data-i18n-html="step3_proc_html"></div>
+    <div class="d-flex gap-16 wrap ai-flex-end">
+      <label class="flex-1 minw-180">
         <span data-i18n="label_t_start_inside">Indoor temperature now, °C</span>
         <input id="tStartInside" type="number" step="0.1" min="-20" max="50" placeholder="25.0">
       </label>
-      <label style="flex:1; min-width:180px;">
+      <label class="flex-1 minw-180">
         <span data-i18n="label_t_outside">Outdoor temperature, °C</span>
         <input id="tOutside" type="number" step="0.1" min="-40" max="50" placeholder="-5.0">
       </label>
-      <label style="min-width:140px;">
+      <label class="minw-140">
         <span data-i18n="label_zone_count">Heating zones</span>
-        <input id="zoneCount" type="number" min="1" max="8" value="1" style="text-align:center;">
+        <input id="zoneCount" type="number" min="1" max="8" value="1" class="ta-center">
       </label>
     </div>
-    <div style="margin-top:20px; padding:20px 16px; background:var(--bg); border-radius:10px; text-align:center;">
-      <div id="timerDisplay" style="font-size:52px; font-weight:700; font-family:monospace; letter-spacing:6px; color:var(--accent);">00:00</div>
-      <div id="timerStatus" class="muted" style="margin:10px 0 18px; font-size:13px;" data-i18n="timer_ready"></div>
+    <div class="mt-20 py-20 px-16 bg-bg r-10 ta-center">
+      <div id="timerDisplay" class="timer-display">00:00</div>
+      <div id="timerStatus" class="muted mt-10 mb-18 fs-13" data-i18n="timer_ready"></div>
       <button id="timerBtn" class="btn" data-i18n="btn_start_test">▶ Start test</button>
-      <button id="finishTestBtn" class="btn btn-secondary" style="display:none;" disabled data-i18n="btn_finish_test">✔ Finish</button>
+      <button id="finishTestBtn" class="btn btn-secondary" hidden disabled data-i18n="btn_finish_test">✔ Finish</button>
     </div>
     <!-- Кнопки «градусник показал N °C» — по одной на зону -->
-    <div id="tapPanel" style="margin-top:12px;"></div>
-    <div id="calibrationResult" style="margin-top:14px;"></div>
-    <button id="saveCalibrationBtn" class="btn" style="margin-top:10px;" disabled data-i18n="btn_save_cal">💾 Save calibration</button>
+    <div id="tapPanel" class="mt-12"></div>
+    <div id="calibrationResult" class="mt-14"></div>
+    <button id="saveCalibrationBtn" class="btn mt-10" disabled data-i18n="btn_save_cal">💾 Save calibration</button>
   </div>
 
   <!-- Step 4 -->
-  <div class="card" style="margin-bottom:16px;">
+  <div class="card mb-16">
     <h2 data-i18n="step4_h2">Step 4: Heater analysis</h2>
-    <p class="muted" style="margin-bottom:12px;" data-i18n="step4_desc"></p>
-    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:12px;">
+    <p class="muted mb-12" data-i18n="step4_desc"></p>
+    <div class="d-grid cols-fit-200 gap-12">
       <label><span data-i18n="label_t_inside">Target indoor temp, °C</span><input id="tInsideTarget" type="number" step="0.1" min="-20" max="50" placeholder="33.0" value="33.0"></label>
       <label><span data-i18n="label_t_outside2">Outdoor temp, °C</span><input id="tOutsideAnalysis" type="number" step="0.1" min="-40" max="50" placeholder="-5.0" value="-5.0"></label>
       <label><span data-i18n="label_q_min_analysis">Min. ventilation Q_min, m³/h</span><input id="qMinAnalysis" type="number" step="100" min="0" placeholder="15000"></label>
       <label><span data-i18n="label_num_birds_analysis">Number of birds</span><input id="numBirdsAnalysis" type="number" step="1000" min="0" placeholder="35000"></label>
       <label><span data-i18n="label_bird_weight_analysis">Avg. bird weight, kg</span><input id="birdWeightAnalysis" type="number" step="0.1" min="0.04" max="20" placeholder="1.5"></label>
     </div>
-    <button id="analyzeBtn" class="btn" style="margin-top:12px;" data-i18n="btn_analyse">🔍 Analyse</button>
-    <div id="analysisResult" style="margin-top:12px;"></div>
+    <button id="analyzeBtn" class="btn mt-12" data-i18n="btn_analyse">🔍 Analyse</button>
+    <div id="analysisResult" class="mt-12"></div>
   </div>
 
   <!-- Current config -->
@@ -1516,7 +1514,7 @@ function renderEvap(d) {
     const xTicks  = allX.filter(x => x === 1 || x % 7 === 0);
     const xLabels = allX.filter(x => x === 1 || x % 14 === 0 || x === xMax);
 
-    let o = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block;">`;
+    let o = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" class="chart-svg">`;
     o += `<rect width="${W}" height="${H}" fill="var(--card)" rx="8"/>`;
     o += `<text x="${P.l}" y="17" fill="var(--text)" font-size="12" font-weight="600" font-family="system-ui,Arial">${title}</text>`;
     o += `<text x="${W - P.r}" y="17" fill="var(--muted)" font-size="10" text-anchor="end" font-family="system-ui,Arial">${yUnit}</text>`;
@@ -1667,16 +1665,16 @@ function renderEvap(d) {
       title: t('chart_vent'), yUnit: unitLabel,
     });
 
-    const bB = `<button id="pu-bird" class="btn btn-secondary" style="padding:4px 12px;font-size:12px;${chartUnit==='per_bird'?'':'opacity:.45;'}">${birdLabel}</button>`;
-    const bK = `<button id="pu-kg"   class="btn btn-secondary" style="padding:4px 12px;font-size:12px;${chartUnit==='per_kg'  ?'':'opacity:.45;'}">${kgLabel}</button>`;
+    const bB = `<button id="pu-bird" class="btn btn-secondary unit-toggle${chartUnit==='per_bird' ? '' : ' is-dim'}">${birdLabel}</button>`;
+    const bK = `<button id="pu-kg"   class="btn btn-secondary unit-toggle${chartUnit==='per_kg'   ? '' : ' is-dim'}">${kgLabel}</button>`;
 
     container.innerHTML = `
       <div class="card">
-        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
-          <h2 style="margin:0;">${t('charts_h2')}</h2>
-          <div style="display:flex;gap:6px;">${bB}${bK}</div>
+        <div class="d-flex jc-between ai-center wrap gap-8 mb-12">
+          <h2 class="m-0">${t('charts_h2')}</h2>
+          <div class="d-flex gap-6">${bB}${bK}</div>
         </div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;">
+        <div class="d-grid cols-fit-220 gap-12">
           ${wChart}${tChart}${vChart}
         </div>
       </div>`;
@@ -1721,7 +1719,7 @@ function renderEvap(d) {
 
   function sourceHTML(src) {
     const parts = Object.entries(src || {}).map(([k, v]) => sourceEntryHTML(k, v));
-    return parts.length ? `<p class="muted" style="font-size:11px;margin:0 0 10px;">${t('gp_source')}: ${parts.join(' · ')}</p>` : '';
+    return parts.length ? `<p class="muted fs-11 mt-0 mb-10">${t('gp_source')}: ${parts.join(' · ')}</p>` : '';
   }
 
   function renderTable() {
@@ -1737,25 +1735,25 @@ function renderEvap(d) {
 
     container.innerHTML = `
       <div class="card">
-        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:4px;">
-          <h2 style="margin:0;">${t('profile_h2')} — ${esc(current.name)}
-            <span class="muted" style="font-size:12px;font-weight:400;">(${ro ? t('gp_builtin') : t('gp_custom')})</span></h2>
-          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <div class="d-flex jc-between ai-center wrap gap-8 mb-4">
+          <h2 class="m-0">${t('profile_h2')} — ${esc(current.name)}
+            <span class="muted fs-12 fw-400">(${ro ? t('gp_builtin') : t('gp_custom')})</span></h2>
+          <div class="d-flex gap-8 ai-center wrap">
             ${buttons}
-            <span id="prof-status" class="muted" style="font-size:12px;"></span>
+            <span id="prof-status" class="muted fs-12"></span>
           </div>
         </div>
-        ${ro ? `<p class="muted" style="font-size:11px;margin:0 0 6px;">${t('gp_readonly_hint')}</p>` : ''}
-        ${!ro ? `<label style="margin:0 0 10px;display:block;"><span class="muted" style="font-size:12px;">${t('profile_name_lbl')}</span>
+        ${ro ? `<p class="muted fs-11 mt-0 mb-6">${t('gp_readonly_hint')}</p>` : ''}
+        ${!ro ? `<label class="mt-0 mb-10 mx-0 d-block"><span class="muted fs-12">${t('profile_name_lbl')}</span>
           <input id="gp-name" type="text" maxlength="80" value="${esc(current.name)}"/></label>` : ''}
         ${sourceHTML(current.source)}
-        <p class="muted" style="font-size:11px;margin:0 0 12px;">${t('cigr_hint')}</p>
-        <div style="overflow-x:auto;">
+        <p class="muted fs-11 mt-0 mb-12">${t('cigr_hint')}</p>
+        <div class="ox-auto">
           <table>
             <thead><tr>
               <th>${t('col_day')}</th>
               <th>${t('col_weight')}</th>
-              <th>${t('col_min_temp')} <span class="muted" style="font-weight:400;">${t('gp_temp_ref')}</span></th>
+              <th>${t('col_min_temp')} <span class="muted fw-400">${t('gp_temp_ref')}</span></th>
               <th>${t('col_rh')}</th>
             </tr></thead>
             <tbody>${weeklyDays().map(d => rowHTML(dayRow(d), ro)).join('')}</tbody>

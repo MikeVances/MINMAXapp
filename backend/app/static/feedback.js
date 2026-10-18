@@ -5,12 +5,10 @@
 
     // ── Кнопка ───────────────────────────────────────────────────────────────
     const btn = document.createElement('button');
-    btn.className     = 'btn btn-secondary';
+    btn.className     = 'btn btn-secondary feedback-trigger';   // положение — в styles.css
     btn.id            = 'feedbackTrigger';
     btn.dataset.i18n  = 'feedback_btn';
     btn.textContent   = '💬';
-    btn.style.cssText =
-      'position:fixed;bottom:12px;right:8px;z-index:9998;font-size:11px;padding:4px 9px;';
     document.body.appendChild(btn);
 
     // ── Модальное окно ────────────────────────────────────────────────────────
@@ -18,17 +16,13 @@
     modal.id        = 'feedbackModal';
     modal.className = 'modal hidden';
     modal.innerHTML = `
-      <div class="modal-card" style="width:min(480px,92vw);">
-        <h3 style="margin:0 0 10px;" data-i18n="feedback_title">Send Feedback</h3>
-        <textarea id="feedbackText"
+      <div class="modal-card dialog-narrow">
+        <h3 class="mt-0 mb-10" data-i18n="feedback_title">Send Feedback</h3>
+        <textarea id="feedbackText" class="feedback-text"
           rows="5" maxlength="2000"
-          style="width:100%;box-sizing:border-box;resize:vertical;
-                 background:var(--surface);color:inherit;
-                 border:1px solid var(--border);border-radius:6px;
-                 padding:8px;font-size:14px;font-family:inherit;"
           data-i18n-placeholder="feedback_placeholder"></textarea>
-        <div id="feedbackStatus" style="min-height:18px;font-size:12px;margin-top:6px;"></div>
-        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px;">
+        <div id="feedbackStatus" class="feedback-status"></div>
+        <div class="d-flex gap-8 jc-end mt-10">
           <button id="feedbackCancel" class="btn btn-secondary" data-i18n="feedback_cancel">Cancel</button>
           <button id="feedbackSend"   class="btn"               data-i18n="feedback_send">Send</button>
         </div>
@@ -46,7 +40,7 @@
     function openModal() {
       textEl.value    = '';
       statusEl.textContent = '';
-      statusEl.style.color = '';
+      setTone(statusEl, null);
       modal.classList.remove('hidden');
       textEl.focus();
     }
@@ -67,7 +61,7 @@
 
       sendBtn.disabled = true;
       statusEl.textContent = '…';
-      statusEl.style.color = '';
+      setTone(statusEl, null);
 
       try {
         const resp = await fetch('./feedback', {
@@ -81,18 +75,18 @@
 
         if (resp.ok) {
           statusEl.textContent = window.t ? window.t('feedback_sent') : 'Sent!';
-          statusEl.style.color = 'var(--ok)';
+          setTone(statusEl, 'ok');
           setTimeout(closeModal, 1500);
         } else {
           // Сервер отвечает кодом (feedback_rate_limited, feedback_not_configured …) —
           // текст на языке интерфейса подбирает общий переводчик ошибок API
           const err = window.apiError ? await window.apiError(resp) : null;
           statusEl.textContent = (err && err.message) || (window.t ? window.t('feedback_error') : 'Error. Try again.');
-          statusEl.style.color = 'var(--danger)';
+          setTone(statusEl, 'danger');
         }
       } catch (_) {
         statusEl.textContent = window.t ? window.t('feedback_error') : 'Error. Try again.';
-        statusEl.style.color = 'var(--danger)';
+        setTone(statusEl, 'danger');
       } finally {
         sendBtn.disabled = false;
       }

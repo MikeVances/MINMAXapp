@@ -150,9 +150,7 @@
       const btn = switcherBar.querySelector('[data-lang="' + code + '"]');
       if (!btn) return;
       const active = code === currentLang;
-      btn.style.opacity      = active ? '1'   : '0.55';
-      btn.style.borderColor  = active ? 'var(--accent)' : 'var(--border)';
-      btn.style.fontWeight   = active ? '700' : '400';
+      btn.classList.toggle('is-active', active);   // вид — в styles.css (.lang-btn)
     });
   }
 
@@ -164,16 +162,14 @@
 
     LANG_META.forEach(({ code, flag, label }) => {
       const btn = document.createElement('button');
-      btn.className       = 'btn btn-secondary';
+      btn.className       = 'btn btn-secondary lang-btn';
       btn.dataset.lang    = code;
-      btn.style.cssText   = 'font-size:11px;padding:3px 7px;transition:opacity .15s,border-color .15s;';
       btn.textContent     = flag + ' ' + label;
 
       const hasData = !!(window.LOCALES[code] && Object.keys(window.LOCALES[code]).length > 0);
       if (!hasData) {
         // Stub file loaded but empty — dim and disable
-        btn.disabled          = true;
-        btn.style.opacity     = '0.3';
+        btn.disabled          = true;   // приглушение — .lang-btn:disabled
         btn.title             = 'Translation in progress';
       } else {
         btn.onclick = () => setLang(code);
