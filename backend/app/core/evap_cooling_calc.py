@@ -5,14 +5,14 @@
   evaporative_cooling_pad_system_design_2014_v2.xlsx
   evaporative_cooling_design_spreadsheet_2014_-_metric.xlsx
 
-ДАННЫЕ ПЭДОВ: таблицы SANHE (оцифровано с кривых производителя):
+ДАННЫЕ ПАНЕЛЕЙ: таблицы SANHE (оцифровано с кривых производителя):
 ─────────────────────────────────────────────────────────────────
-  Эффективность насыщения пэда (saturation efficiency):
+  Эффективность насыщения панели (saturation efficiency):
     η = (T_db_in − T_db_out) / (T_db_in − T_wb_in) × 100%
-    Интерполируется линейно по скорости воздуха через пэд.
+    Интерполируется линейно по скорости воздуха через панель.
     — не КПД по энергии, а степень приближения к T_wb.
 
-  Типы пэдов SANHE:
+  Типы панелей SANHE:
     7090 — высокоэффективный (угол гофры 70°/90°): высокая η, больший ΔP
     7060 — стандартный (70°/60°): ниже ΔP, ниже η при той же толщине
     5090 — компактный (50°/90°): высокая η для своей толщины, тонкие секции
@@ -70,7 +70,7 @@ def design_pad_velocity_ms(thickness_mm: float) -> float:
 
 
 # ─────────────────────────────────────────────────────────────────
-# Данные пэдов SANHE (оцифровано с кривых производителя)
+# Данные панелей SANHE (оцифровано с кривых производителя)
 # structure: velocities [м/с], thicknesses [мм],
 #   efficiency_pct [%] и pressure_pa [Па] — как функция скорости для каждой толщины
 # ─────────────────────────────────────────────────────────────────
@@ -157,9 +157,9 @@ class EvapCoolingInput:
     # Система вентиляции
     total_fan_m3h: float           # Суммарная производительность туннельных вентиляторов, м³/ч
 
-    # Параметры пэда
-    pad_type: str                  # Тип пэда SANHE: "7090", "7060", "5090"
-    pad_thickness_mm: int          # Толщина пэда, мм (зависит от типа)
+    # Параметры панели
+    pad_type: str                  # Тип панели SANHE: "7090", "7060", "5090"
+    pad_thickness_mm: int          # Толщина панели, мм (зависит от типа)
     pad_length_m: float            # Суммарная длина панелей охлаждения, м
     pad_height_m: float            # Высота панелей охлаждения, м
 
@@ -183,18 +183,18 @@ class EvapCoolingInput:
 class EvapCoolingResult:
     # --- Психрометрика ---
     t_wb_c: float                  # Температура мокрого термометра, °C
-    t_pad_out_c: float             # Температура воздуха после пэда, °C
+    t_pad_out_c: float             # Температура воздуха после панели, °C
     cooling_achieved_c: float      # Достигнутое охлаждение, °C
     pad_efficiency: float          # Эффективность насыщения η (0..1): η=(T_db_in−T_db_out)/(T_db_in−T_wb_in)
 
-    # --- Геометрия пэда ---
-    pad_area_m2: float             # Фактическая площадь пэдов, м²
-    air_velocity_ms: float         # Скорость воздуха через пэд, м/с
+    # --- Геометрия панели ---
+    pad_area_m2: float             # Фактическая площадь панелей, м²
+    air_velocity_ms: float         # Скорость воздуха через панель, м/с
     velocity_ok: bool              # Скорость в допустимом диапазоне
     velocity_status: str           # too_low | ok | too_high (перевод на клиенте)
-    pad_v_min_ms: float            # Допустимый диапазон скорости для этого пэда —
+    pad_v_min_ms: float            # Допустимый диапазон скорости для этой панели —
     pad_v_max_ms: float            # клиенту для текста статуса
-    pad_pressure_drop_pa: float    # Перепад давления на пэде, Па (SANHE, интерп. по скорости)
+    pad_pressure_drop_pa: float    # Перепад давления на панели, Па (SANHE, интерп. по скорости)
 
     # --- Водопотребление ---
     water_flow_lpm: float          # Расход воды, л/мин
@@ -213,7 +213,7 @@ class EvapCoolingResult:
     t_dew_c: float                         # Точка росы входящего воздуха, °C (всегда вычисляется)
     water_supply_t_c: Optional[float]      # Температура воды подачи (None если не задана)
     # 'safe'             — T_вода > T_dp, испарение не нарушено
-    # 'condensation_risk'— T_вода < T_dp, конденсация на пэде, потеря эффективности насыщения
+    # 'condensation_risk'— T_вода < T_dp, конденсация на панели, потеря эффективности насыщения
     # None               — температура воды не указана
     water_regime: Optional[str]
     air_temp_rise_c: float = 0.0   # нагрев воздуха от панелей до вентиляторов, °C
@@ -295,7 +295,7 @@ def _water_flow_lpm(
     """
     Расход воды — психрометрический массовый баланс (метод UGA Excel).
 
-    Воздух, проходя через пэд с эффективностью насыщения η, достигает промежуточного состояния
+    Воздух, проходя через панель с эффективностью насыщения η, достигает промежуточного состояния
     на линии адиабатического насыщения между исходной точкой (T_db, W_outside)
     и точкой насыщения (T_wb, W_sat(T_wb)):
 
@@ -326,9 +326,9 @@ def _dew_point(t_db: float, rh_pct: float) -> float:
       Pv = (RH/100) × Psat(T_db)
       T_dp = 243.5 × ln(Pv/611.2) / (17.67 − ln(Pv/611.2))
 
-    Если T_вода < T_dp → поверхность пэда холоднее точки росы →
-    водяной пар конденсируется на пэде, выделяя скрытую теплоту →
-    эффективность насыщения пэда снижается.
+    Если T_вода < T_dp → поверхность панели холоднее точки росы →
+    водяной пар конденсируется на панели, выделяя скрытую теплоту →
+    эффективность насыщения панели снижается.
     """
     pv     = (rh_pct / 100.0) * _sat_pressure_pa(t_db)
     ln_pv  = math.log(pv / 611.2)
@@ -373,7 +373,7 @@ def pad_operating_airflow_m3s(q0_m3s: float, q25_m3s: float, pad_area_m2: float,
 def calculate_evap_cooling(inp: EvapCoolingInput) -> EvapCoolingResult:
     """Расчёт системы испарительного охлаждения птичника."""
 
-    # Получаем данные пэда из таблицы SANHE
+    # Получаем данные панели из таблицы SANHE
     pad_data  = SANHE_PADS.get(inp.pad_type, SANHE_PADS[PAD_TYPE_DEFAULT])
     velocities = pad_data["velocities"]
     eta_table  = pad_data["efficiency_pct"][inp.pad_thickness_mm]
@@ -384,12 +384,12 @@ def calculate_evap_cooling(inp: EvapCoolingInput) -> EvapCoolingResult:
     # Температура мокрого термометра
     t_wb = _wet_bulb_stull(inp.t_outdoor_db_c, inp.rh_outdoor_pct)
 
-    # Геометрия пэда — прямые размеры: длина × высота
+    # Геометрия панели — прямые размеры: длина × высота
     pad_area_m2 = inp.pad_length_m * inp.pad_height_m
     if pad_area_m2 <= 0:
         pad_area_m2 = 0.001  # защита от деления на ноль
 
-    # Скорость воздуха через пэд: Q / A
+    # Скорость воздуха через панель: Q / A
     q0_m3s = inp.total_fan_m3h / 3600.0
     q25_m3s = inp.total_fan_25pa_m3h / 3600.0
     if 0.0 < q25_m3s < q0_m3s:
@@ -406,14 +406,14 @@ def calculate_evap_cooling(inp: EvapCoolingInput) -> EvapCoolingResult:
     dp_pa   = _interp_linear(velocities, dp_table,  air_velocity_ms)
     eta     = eta_pct / 100.0
 
-    # Температура воздуха после пэда
+    # Температура воздуха после панели
     t_pad_out = inp.t_outdoor_db_c - eta * (inp.t_outdoor_db_c - t_wb)
     cooling_achieved = inp.t_outdoor_db_c - t_pad_out
 
     # Проверка диапазона скорости
     velocity_ok = v_min <= air_velocity_ms <= v_max
     if air_velocity_ms < v_min:
-        velocity_status = "too_low"      # риск плесени на пэде
+        velocity_status = "too_low"      # риск плесени на панели
     elif air_velocity_ms > v_max:
         velocity_status = "too_high"     # брызги воды в птичник
     else:
@@ -451,7 +451,7 @@ def calculate_evap_cooling(inp: EvapCoolingInput) -> EvapCoolingResult:
     # Режим подачи воды (если задана температура)
     water_regime: Optional[str] = None
     if inp.water_supply_t_c is not None:
-        # Добавляем 0.5°C запаса: пэд чуть теплее чем вода подачи из-за теплообмена
+        # Добавляем 0.5°C запаса: панель чуть теплее чем вода подачи из-за теплообмена
         water_regime = 'safe' if inp.water_supply_t_c >= (t_dew + 0.5) else 'condensation_risk'
 
     return EvapCoolingResult(
