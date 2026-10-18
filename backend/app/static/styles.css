@@ -15,6 +15,10 @@
   --btn-secondary:   #2a2c33;
   --border:          #26272c;
   --border-active:   #2b2e35;
+  /* Рамка поля ввода. Не --border: та декоративная (карточки, строки), а по рамке
+     поля человек узнаёт, куда тапать, — WCAG 1.4.11 требует 3:1 к фону карточки.
+     #26272c давал 1.2:1, поле на телефоне в корпусе не было видно вовсе */
+  --field-border:    #666b75;
 
   /* Текст и акценты */
   --text:            #e6e7eb;
@@ -71,11 +75,17 @@ label { display: block; margin: 10px 0; }
 /* Одиночный класс, а не label.inline: правило должно уступать утилитам ниже
    (ai-*, gap-*) так же, как раньше уступало inline-стилю */
 .inline { display: inline-flex; align-items: center; gap: 6px; margin-right: 10px; }
-input[type="number"], input[type="text"] { width: 100%; padding: 8px 10px; background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius); }
-select { width: 100%; padding: 8px 10px; background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius); }
+input[type="number"], input[type="text"] { width: 100%; padding: 8px 10px; background: var(--surface); color: var(--text); border: 1px solid var(--field-border); border-radius: var(--radius); }
+select { width: 100%; padding: 8px 10px; background: var(--surface); color: var(--text); border: 1px solid var(--field-border); border-radius: var(--radius); }
+/* Без этого ссылки браузерно-синие: #0000ee на тёмной карточке — 1.9:1, не читается.
+   Правило из стилей автора перекрывает и :visited браузера */
+a { color: var(--accent); }
 
 /* ─── Кнопки ───────────────────────────────────────────────────────────────── */
 .btn { background: var(--accent); color: var(--on-accent); border: 0; padding: 10px 14px; border-radius: 10px; cursor: pointer; font-weight: 600; }
+/* Ссылка в виде кнопки (навигация): подчёркивание браузера ей не нужно — форма
+   кнопки уже говорит, что сюда жмут. Строчные ссылки в тексте подчёркнуты (WCAG 1.4.1) */
+a.btn { text-decoration: none; }
 .btn-secondary { background: var(--btn-secondary); color: var(--text); border: 1px solid var(--border); }
 .btn-danger { background: var(--danger); color: var(--on-danger); }
 .btn:disabled { opacity: 0.38; cursor: not-allowed; }
@@ -130,6 +140,9 @@ th, td { border-bottom: 1px solid var(--border); padding: 8px 6px; text-align: r
 th:first-child, td:first-child { text-align: left; }
 /* input внутри td создаёт свой formatting context — наследование text-align не работает */
 td input[type="number"], td input[type="text"] { text-align: right; }
+/* Нижняя граница ширины: иначе соседняя колонка с длинным заголовком сжимает
+   поле до 30–40 px, и трёхзначное число в нём уже не видно целиком */
+td input[type="text"] { min-width: 64px; }
 /* Неразобранное или вне диапазона число (numfield.js) — рамка у самого поля */
 input.is-invalid { border-color: var(--danger); background: var(--danger-bg); }
 footer { margin-top: 18px; color: var(--muted); }
@@ -142,14 +155,25 @@ input[type="number"], input[type="text"], select, textarea { font-size: 16px; }
 /* Убираем 300мс задержку двойного тапа на iOS на интерактивных элементах */
 .btn, .tab, button { touch-action: manipulation; }
 
-/* Переключатель языка (создаёт i18n.js) */
-.lang-switcher { position: fixed; top: 8px; right: 8px; z-index: 9999; display: flex; gap: 3px; }
+/* Переключатель языка (создаёт i18n.js) — всегда строка над шапкой, по правому краю
+   колонки .container. Фиксированный угол закрывал кнопки навигации на любом экране
+   уже 1500 px: контейнер 980 px оставляет справа поле меньше ширины пяти кнопок */
+.lang-switcher { display: flex; gap: 3px; justify-content: flex-end; max-width: 980px; margin: 0 auto; padding: 8px 16px 0; }
 
 @media (max-width: 860px) {
   .grid { grid-template-columns: 1fr; }
-  /* На узком экране фиксированный угол закрывал заголовок страницы —
-     переключатель становится обычной строкой над шапкой */
-  .lang-switcher { position: static; justify-content: flex-end; padding: 8px 16px 0; }
+}
+
+/* Сенсорный экран: касаемые не меньше 44 px (Apple HIG, WCAG 2.5.5). Палец в
+   перчатке на телефоне в корпусе промахивается по кнопке в 26 px. Только для
+   pointer: coarse — на десктопе мышью мелкие кнопки удобнее и не раздувают форму */
+@media (pointer: coarse) {
+  .btn, .tab, .tool-tab,
+  input[type="number"], input[type="text"], select { min-height: 44px; }
+  /* У строчной ссылки min-height не действует — нужен блочный контекст */
+  a.btn { display: inline-flex; align-items: center; }
+  /* Целью служит весь label вокруг флажка, сам флажок — чтобы было видно, куда тапать */
+  input[type="checkbox"] { width: 22px; height: 22px; }
 }
 
 /* ─── Модальное окно ───────────────────────────────────────────────────────── */
@@ -196,8 +220,14 @@ input[type="number"], input[type="text"], select, textarea { font-size: 16px; }
 .lang-btn:disabled { opacity: 0.3; }
 
 /* Обратная связь (создаёт feedback.js) */
-.feedback-trigger { position: fixed; bottom: 12px; right: 8px; z-index: 9998; font-size: 11px; padding: 4px 9px; }
-.feedback-text { width: 100%; box-sizing: border-box; resize: vertical; background: var(--surface); color: inherit; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px; font-size: 14px; font-family: inherit; }
+/* В потоке под содержимым, по правому краю колонки: прибитая к углу кнопка при
+   прокрутке закрывала правую колонку чисел в таблицах результатов (они выровнены
+   вправо). В угол — только когда боковое поле у контейнера 980 px шире самой кнопки */
+.feedback-trigger { display: block; margin: 0 max(16px, calc((100% - 980px) / 2 + 16px)) 24px auto; font-size: 11px; padding: 4px 9px; }
+@media (min-width: 1300px) {
+  .feedback-trigger { position: fixed; bottom: 12px; right: 8px; z-index: 9998; margin: 0; }
+}
+.feedback-text { width: 100%; box-sizing: border-box; resize: vertical; background: var(--surface); color: inherit; border: 1px solid var(--field-border); border-radius: var(--radius-sm); padding: 8px; font-size: 14px; font-family: inherit; }
 .feedback-status { min-height: 18px; font-size: 12px; margin-top: 6px; }
 
 /* ═════════════════════════════════════════════════════════════════════════════

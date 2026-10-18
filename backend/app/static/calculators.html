@@ -1851,13 +1851,16 @@ function renderEvap(d) {
         ${!ro ? `<label class="mt-0 mb-10 mx-0 d-block"><span class="muted fs-12">${t('profile_name_lbl')}</span>
           <input id="gp-name" type="text" maxlength="80" value="${esc(current.name)}"/></label>` : ''}
         ${sourceHTML(current.source)}
-        <p class="muted fs-11 mt-0 mb-12">${t('cigr_hint')}</p>
+        <p class="muted fs-11 mt-0 mb-6">${t('cigr_hint')}</p>
+        <!-- Сноска к колонке температуры — над таблицей, а не в заголовке: длинный
+             заголовок забирал ширину, и колонка ОВ сжималась до 31 px на телефоне -->
+        <p class="muted fs-11 mt-0 mb-12">${t('col_min_temp')} ${t('gp_temp_ref')}</p>
         <div class="ox-auto">
           <table>
             <thead><tr>
               <th>${t('col_day')}</th>
               <th>${t('col_weight')}</th>
-              <th>${t('col_min_temp')} <span class="muted fw-400">${t('gp_temp_ref')}</span></th>
+              <th>${t('col_min_temp')}</th>
               <th>${t('col_rh')}</th>
             </tr></thead>
             <tbody>${weeklyDays().map(d => rowHTML(dayRow(d), ro)).join('')}</tbody>

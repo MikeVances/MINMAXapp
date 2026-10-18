@@ -29,6 +29,7 @@
   --bg: #f4f5f7;  --card: #ffffff;  --surface: #f0f1f4;
   --surface-raised: #e9ebef;  --surface-active: #dfe6f5;
   --border: #d5d8de;  --border-active: #b9c3d6;  --btn-secondary: #e4e6ea;
+  --field-border: #80868f;   /* рамка поля: не ниже 3:1 к --card */
   --text: #1b1f27;  --muted: #5d6572;  --on-accent: #ffffff;
   --ok-bg: #e4f6ea;  --warn-bg: #fff4d6;  --danger-bg: #fde3e3;
   --overlay: rgba(0, 0, 0, 0.35);

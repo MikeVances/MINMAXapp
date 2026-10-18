@@ -245,8 +245,8 @@
   }
 
   function injectLangSwitcher() {
-    // Позиционирование — в styles.css (.lang-switcher): на десктопе fixed в углу,
-    // на узком экране обычная строка над шапкой, чтобы не налезать на заголовок
+    // Позиционирование — в styles.css (.lang-switcher): строка над шапкой на любом
+    // экране; фиксированный угол налезал на кнопки навигации
     switcherBar = document.createElement('div');
     switcherBar.className = 'lang-switcher';
 
@@ -268,8 +268,8 @@
       switcherBar.appendChild(btn);
     });
 
-    // В начало body: на мобильном переключатель становится статичной строкой и
-    // должен стоять над содержимым, а не под футером
+    // В начало body: переключатель — статичная строка и должен стоять над
+    // содержимым, а не под футером
     document.body.prepend(switcherBar);
     updateSwitcherUI();
   }
