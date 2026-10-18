@@ -291,7 +291,8 @@ async function finishTest() {
 // Расчёт на сервере (core/cooling_fit). Объём — из СОХРАНЁННЫХ размеров корпуса:
 // по ним же сервер пересчитает UA при сохранении, и показанное совпадёт с сохранённым
 async function computeCurveResult(done) {
-  const config = await loadConfig();
+  // Корпус — тот, на котором тест НАЧАЛИ (done.houseId), а не выбранный сейчас
+  const config = await loadConfig(done.houseId);
   const b = config.building;
   if (!b) throw new Error(t('err_need_dims'));
   const volume = b.length_m * b.width_m * b.height_m;
@@ -304,7 +305,9 @@ async function computeCurveResult(done) {
       body: JSON.stringify({
         t_outside_c: done.tOut,
         points: done.zones[i].map(([t_s, temp_c]) => ({ t_s, temp_c })),
-        ...(n > 1 ? { volume_m3: volume / n } : {}),
+        // Объём передаём всегда: без него сервер брал размеры из «единственного»
+        // конфига фермы, то есть, возможно, другого корпуса
+        volume_m3: volume / n,
       }),
     });
     if (!r.ok) throw await apiError(r);
@@ -456,13 +459,10 @@ elSaveBuildingBtn.addEventListener('click', async () => {
   }
 
   try {
-    const config = await loadConfig();
     const houseId = getSelectedHouseId();
-    if (config.house_id != null && houseId != null && config.house_id !== houseId) {
-      // Другой корпус: калибровка и горелки прежнего корпуса к нему не относятся
-      config.calibration = null;
-      config.heater      = null;
-    } else if (config.calibration) {
+    // Запись ЭТОГО корпуса: калибровки и горелки других корпусов здесь не видны
+    const config = await loadConfig(houseId);
+    if (config.calibration) {
       if (config.calibration.points) {
         // Тот же корпус, но размеры могли измениться: UA пересчитает сервер
         // по сохранённым отметкам и новому объёму
@@ -509,7 +509,10 @@ elSaveHeaterBtn.addEventListener('click', async () => {
   }
 
   try {
+    // Горелки — свойство корпуса. Раньше конфиг брался без корпуса, и горелка
+    // записывалась тому корпусу, что был в файле, а не выбранному
     const config = await loadConfig();
+    config.house_id = getSelectedHouseId();
     config.heater = { heater_type: heaterType, total_power_kw: power };
 
     const r = await fetch('./thermal/config', {
@@ -582,6 +585,8 @@ elAnalyzeBtn.addEventListener('click', async () => {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({
+        // Калибровка и горелки — выбранного корпуса (хранятся по корпусам)
+        ...(getSelectedHouseId() ? { house_id: getSelectedHouseId() } : {}),
         t_inside_target: tInside,
         t_outside:       tOutside,
         q_min_m3h:       qMin,
@@ -665,10 +670,12 @@ function renderAnalysis(data) {
   `;
 }
 
-// Load current configuration
-async function loadConfig() {
+// Теплотехника корпуса: размеры, горелки и калибровка хранятся на сервере ПО
+// КОРПУСАМ. По умолчанию — корпус, выбранный в шаге 1; без выбора — запись без корпуса
+async function loadConfig(houseId = getSelectedHouseId()) {
   try {
-    const r = await fetch('./thermal/config');
+    const url = './thermal/config' + (houseId ? '?house_id=' + encodeURIComponent(houseId) : '');
+    const r = await fetch(url);
     if (r.ok) return await r.json();
   } catch (e) {
     console.error('Failed to load config:', e);
@@ -754,11 +761,10 @@ async function loadAndDisplayConfig() {
 async function fillFormFromConfig() {
   const config = await loadConfig();
   // Ответ сервера приходит ПОСЛЕ того, как селектор корпусов уже заполнил форму
-  // размерами выбранного корпуса (стена + конёк). Серверный конфиг хранит один корпус
-  // и только эффективную высоту — перезапись затирала бы размеры другого корпуса
-  // и терялся конёк. Поэтому: корпус выбран → размеры из его вкладки, не с сервера.
+  // размерами выбранного корпуса (стена + конёк). Сервер хранит только эффективную
+  // высоту — перезапись теряла бы конёк. Поэтому: корпус выбран → размеры из его
+  // вкладки, не с сервера.
   const selectedHouse = getSelectedHouseId();
-  const sameHouse = selectedHouse == null || config.house_id == null || config.house_id === selectedHouse;
   if (config.building && selectedHouse == null) {
     elLength.value     = config.building.length_m;
     elWidth.value      = config.building.width_m;
@@ -768,13 +774,22 @@ async function fillFormFromConfig() {
     elHeightRidge.value = '';
     updateDimensionsDisplay();
   }
-  // Горелки — свойство корпуса: подставляем только для того же корпуса
-  if (config.heater && sameHouse) {
-    elHeaterType.value  = config.heater.heater_type;
-    elHeaterPower.value = config.heater.total_power_kw;
-    updateGasInfoVisibility();
-  }
+  fillHeaterFields(config);
 }
+
+// Горелки выбранного корпуса; у корпуса без записи поле мощности пустое — иначе
+// осталась бы мощность предыдущего корпуса и ушла бы при сохранении не туда
+function fillHeaterFields(config) {
+  elHeaterPower.value = config.heater ? config.heater.total_power_kw : '';
+  if (config.heater) elHeaterType.value = config.heater.heater_type;
+  updateGasInfoVisibility();
+}
+
+// Сменили корпус в шаге 1 — его горелки и его сохранённая теплотехника
+document.getElementById('dimHouseSelect')?.addEventListener('change', async () => {
+  fillHeaterFields(await loadConfig());
+  loadAndDisplayConfig();
+});
 
 // Initialize
 updateDimensionsDisplay();

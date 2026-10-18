@@ -6,7 +6,7 @@ from __future__ import annotations
 import logging
 import re
 
-from fastapi import APIRouter, Depends
+from fastapi import Query, APIRouter, Depends
 from pydantic import BaseModel, Field
 
 from ..api_errors import api_error, from_calc_error
@@ -62,6 +62,8 @@ class CalibrationTestModel(BaseModel):
 
 
 class CurveCalibrationRequest(BaseModel):
+    # Корпус, чья теплотехника берётся (размеры / калибровка / горелки хранятся по корпусам)
+    house_id: str | None = Field(None, min_length=1, max_length=64, pattern=HOUSE_ID_PATTERN)
     t_outside_c: float = Field(..., ge=-40, le=50, description="Температура снаружи, °C")
     points: list[CurvePointModel] = Field(..., min_length=2, max_length=60)
     # Объём зоны для многозонного теста; не задан — объём всего корпуса
@@ -110,6 +112,8 @@ class ThermalConfigModel(BaseModel):
 
 
 class HeaterAnalysisRequest(BaseModel):
+    # Корпус, чья теплотехника берётся (размеры / калибровка / горелки хранятся по корпусам)
+    house_id: str | None = Field(None, min_length=1, max_length=64, pattern=HOUSE_ID_PATTERN)
     t_inside_target: float = Field(..., ge=-10, le=50, description="Целевая температура внутри, °C")
     t_outside:       float = Field(..., ge=-40, le=50, description="Температура снаружи, °C")
     q_min_m3h:       float = Field(
@@ -147,9 +151,9 @@ class HeaterAnalysisModel(BaseModel):
 # ===== Endpoints =====
 
 @router.get("/config", response_model=ThermalConfigModel)
-def get_thermal_config():
-    """Получить текущую конфигурацию теплотехнических параметров"""
-    config = load_thermal_config()
+def get_thermal_config(house_id: str | None = Query(None, min_length=1, max_length=64, pattern=HOUSE_ID_PATTERN)):
+    """Теплотехника корпуса house_id (без параметра — запись без корпуса, старые клиенты)"""
+    config = load_thermal_config(house_id=house_id)
 
     result = ThermalConfigModel(
         house_id=_safe_stored_house_id(config.house_id),
@@ -250,7 +254,7 @@ def run_curve_calibration(req: CurveCalibrationRequest):
     """
     volume = req.volume_m3
     if volume is None:
-        config = load_thermal_config()
+        config = load_thermal_config(house_id=req.house_id)
         if not config.building:
             raise api_error(400, "dimensions_missing")
         volume = config.building.volume_m3
@@ -294,7 +298,7 @@ def analyze_heaters(req: HeaterAnalysisRequest):
 
     **Требуется:** наличие калибровки и конфигурации обогревателей в `/thermal/config`.
     """
-    config = load_thermal_config()
+    config = load_thermal_config(house_id=req.house_id)
 
     if not config.calibration:
         raise api_error(400, "calibration_missing")

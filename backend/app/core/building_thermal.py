@@ -458,52 +458,72 @@ def calculate_heat_balance(
     )
 
 
-def load_thermal_config(path: str = THERMAL_CONFIG_PATH) -> ThermalConfig:
-    """Загружает конфигурацию теплотехнических параметров из JSON"""
-    if not os.path.exists(path):
-        return ThermalConfig()
+# ─── Хранение: теплотехника ПО КОРПУСАМ ──────────────────────────────────────
+# Файл: {"houses": {"<house_id>": {building, heater, calibration}}}. Раньше — один
+# объект на ферму: калибровка второго корпуса затирала первую, горелка была одна
+# на всех, а «Сохранить горелки» писал её в тот корпус, что был в файле (аудит
+# 2026-10-18). Старый файл из одного объекта читается как запись своего house_id;
+# запись без корпуса — под ключом "" и, как и раньше, ни к какому корпусу не
+# применяется (usable_ua: calibration_other_house).
 
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-
-        building = None
-        if "building" in data and data["building"]:
-            building = BuildingDimensions(**data["building"])
-
-        heater = None
-        if "heater" in data and data["heater"]:
-            heater = HeaterConfig(**data["heater"])
-
-        calibration = None
-        if "calibration" in data and data["calibration"]:
-            # Незнакомые ключи (из будущих/прошлых версий) не должны ронять загрузку
-            known = {f.name for f in fields(CalibrationTest)}
-            calibration = CalibrationTest(**{k: v for k, v in data["calibration"].items() if k in known})
-
-        return ThermalConfig(
-            house_id=data.get("house_id"),
-            building=building,
-            heater=heater,
-            calibration=calibration,
-        )
-
-    except Exception:
-        # Калибровка UA потеряна — расчёт горелок пойдёт без неё, это должно быть видно в логе
-        logger.exception("thermal_config не читается: %s — используются значения по умолчанию", path)
-        return ThermalConfig()
+def _config_from_dict(house_id: Optional[str], data: dict) -> ThermalConfig:
+    building = BuildingDimensions(**data["building"]) if data.get("building") else None
+    heater = HeaterConfig(**data["heater"]) if data.get("heater") else None
+    calibration = None
+    if data.get("calibration"):
+        # Незнакомые ключи (из будущих/прошлых версий) не должны ронять загрузку
+        known = {f.name for f in fields(CalibrationTest)}
+        calibration = CalibrationTest(**{k: v for k, v in data["calibration"].items() if k in known})
+    return ThermalConfig(house_id=house_id, building=building, heater=heater, calibration=calibration)
 
 
-def save_thermal_config(config: ThermalConfig, path: str = THERMAL_CONFIG_PATH) -> None:
-    """Сохраняет конфигурацию теплотехнических параметров в JSON"""
+def _config_to_dict(config: ThermalConfig) -> dict:
     data = {}
-    if config.house_id is not None:
-        data["house_id"] = config.house_id
     if config.building:
         data["building"] = asdict(config.building)
     if config.heater:
         data["heater"] = asdict(config.heater)
     if config.calibration:
         data["calibration"] = asdict(config.calibration)
+    return data
 
-    atomic_write_json(path, data)
+
+def load_thermal_store(path: str = THERMAL_CONFIG_PATH) -> dict[str, ThermalConfig]:
+    """Все корпуса: house_id ("" — запись без корпуса) → конфигурация."""
+    if not os.path.exists(path):
+        return {}
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f) or {}
+        if "houses" in data:
+            return {hid: _config_from_dict(hid or None, cfg or {}) for hid, cfg in data["houses"].items()}
+        # Старый формат — один объект на ферму: становится записью своего корпуса
+        hid = data.get("house_id") or ""
+        legacy = _config_from_dict(hid or None, data)
+        return {hid: legacy} if _config_to_dict(legacy) else {}
+    except Exception:
+        logger.exception("thermal_config не читается: %s — работаем без теплотехники", path)
+        return {}
+
+
+def load_thermal_config(path: str = THERMAL_CONFIG_PATH, house_id: Optional[str] = None) -> ThermalConfig:
+    """
+    Теплотехника корпуса house_id (пустая, если для него ничего не сохранено).
+
+    house_id = None — запись без корпуса: старые клиенты и расчёты без house.
+    """
+    store = load_thermal_store(path)
+    return store.get(house_id or "") or ThermalConfig(house_id=house_id)
+
+
+def save_thermal_config(config: ThermalConfig, path: str = THERMAL_CONFIG_PATH) -> None:
+    """Сохраняет конфигурацию ОДНОГО корпуса; записи остальных корпусов не трогает."""
+    store = load_thermal_store(path)
+    key = config.house_id or ""
+    data = _config_to_dict(config)
+    houses = {hid: _config_to_dict(cfg) for hid, cfg in store.items()}
+    if data:
+        houses[key] = data
+    else:
+        houses.pop(key, None)
+    atomic_write_json(path, {"houses": houses})

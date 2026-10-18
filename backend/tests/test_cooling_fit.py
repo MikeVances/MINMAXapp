@@ -145,7 +145,8 @@ def test_api_curve_calibration(client, house_config):
     house_config(4.25)
     taps = _simulate_taps(3000, 18000, 6e7, noise_s=2)
 
-    r = client.post("/thermal/calibrate-curve", json={"t_outside_c": T_OUT, "points": _api_points(taps)})
+    r = client.post("/thermal/calibrate-curve",
+                    json={"house_id": "1", "t_outside_c": T_OUT, "points": _api_points(taps)})
 
     assert r.status_code == 200
     body = r.json()
@@ -166,11 +167,11 @@ def test_saved_curve_is_recomputed_for_new_volume(client, house_config):
     house_config(4.25)
     assert client.put("/thermal/config", json={"house_id": "1", "building":
                       {"length_m": 96, "width_m": 17, "height_m": 4.25}, "calibration": cal}).status_code == 200
-    ua_1 = client.get("/thermal/config").json()["calibration"]["ua_coefficient"]
+    ua_1 = client.get("/thermal/config", params={"house_id": "1"}).json()["calibration"]["ua_coefficient"]
 
     assert client.put("/thermal/config", json={"house_id": "1", "building":
                       {"length_m": 96, "width_m": 17, "height_m": 8.5}, "calibration": cal}).status_code == 200
-    saved = client.get("/thermal/config").json()["calibration"]
+    saved = client.get("/thermal/config", params={"house_id": "1"}).json()["calibration"]
 
     assert saved["method"] == "cooling_curve"
     assert len(saved["points"]) == len(taps)
@@ -218,7 +219,8 @@ def test_structure_that_barely_cooled_hides_c_struct_but_not_ua():
 def test_api_refuses_to_save_unresolved_ua(client, house_config):
     house_config(4.25)
     taps = _simulate_taps(3000, 100_000, 50 * _c_air(), noise_s=3)
-    calc = client.post("/thermal/calibrate-curve", json={"t_outside_c": T_OUT, "points": _api_points(taps)})
+    calc = client.post("/thermal/calibrate-curve",
+                       json={"house_id": "1", "t_outside_c": T_OUT, "points": _api_points(taps)})
     assert calc.status_code == 200
     assert "ua_not_resolved" in calc.json()["warnings"]
 
@@ -229,4 +231,4 @@ def test_api_refuses_to_save_unresolved_ua(client, house_config):
 
     assert r.status_code == 422
     assert r.json()["detail"] == "calibration_ua_unresolved"
-    assert client.get("/thermal/config").json().get("calibration") is None
+    assert client.get("/thermal/config", params={"house_id": "1"}).json().get("calibration") is None

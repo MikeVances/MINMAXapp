@@ -124,7 +124,8 @@ def test_undersized_burners_are_flagged(monkeypatch, tmp_path):
     }), encoding="utf-8")
     monkeypatch.setattr(building_thermal, "THERMAL_CONFIG_PATH", str(path))
     from backend.app.core import calc_core
-    monkeypatch.setattr(calc_core, "load_thermal_config", lambda: building_thermal.load_thermal_config(str(path)))
+    monkeypatch.setattr(calc_core, "load_thermal_config",
+                        lambda house_id=None: building_thermal.load_thermal_config(str(path), house_id=house_id))
 
     r = compute(CalcInput(birds=30_000, age_days=7, outside_t=-20.0, outside_rh=50.0, heater_on=True))
 

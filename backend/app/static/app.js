@@ -7,7 +7,9 @@ async function updateUaBadge(tabId) {
   if (_uaFetchController) _uaFetchController.abort();
   _uaFetchController = new AbortController();
   try {
-    const r = await fetch('./thermal/config', { signal: _uaFetchController.signal });
+    // Теплотехника хранится по корпусам — запрашиваем запись этого корпуса
+    const r = await fetch('./thermal/config?house_id=' + encodeURIComponent(String(tabId)),
+                          { signal: _uaFetchController.signal });
     if (!r.ok) { el.hidden = true; return; }
     const cfg = await r.json();
     const ua  = cfg.calibration?.ua_coefficient;

@@ -170,7 +170,8 @@ def compute(ci: CalcInput) -> CalcResult:
     _ua_coeff: Optional[float] = None
     calibration_ignored: Optional[dict] = None
     try:
-        _thermal_cfg = load_thermal_config()
+        # Теплотехника СВОЕГО корпуса: калибровка и горелки хранятся по корпусам
+        _thermal_cfg = load_thermal_config(house_id=ci.house_id)
         _ua_coeff, calibration_ignored = usable_ua(_thermal_cfg, ci.house_id)
     except Exception:
         _thermal_cfg = None

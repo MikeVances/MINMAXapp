@@ -81,6 +81,7 @@ def test_production_calibration_does_not_change_the_result(thermal_file):
 
 
 def test_calibration_applies_only_to_its_own_house(thermal_file):
+    """Теплотехника хранится по корпусам: у корпуса 2 своей калибровки нет — расчёт без UA."""
     thermal_file()
     no_cal, _ = _qmax("2")
     thermal_file(house_id="1", building=HOUSE_DIMS, calibration=GOOD_CALIBRATION)
@@ -89,7 +90,7 @@ def test_calibration_applies_only_to_its_own_house(thermal_file):
     q_own, own_ignored = _qmax("1")
 
     assert q_other == pytest.approx(no_cal)
-    assert ignored == {"code": "calibration_other_house", "params": {"house_id": "1"}}
+    assert ignored is None                       # нечего отклонять: запись чужого корпуса не видна
     assert own_ignored is None
     assert q_own != pytest.approx(no_cal)        # UA своего корпуса участвует в балансе
 
@@ -125,7 +126,7 @@ def test_stored_obsolete_record_does_not_block_saving_heaters(client, thermal_fi
     r = client.put("/thermal/config", json={"house_id": "1", "building": HOUSE_DIMS,
                                             "heater": {"heater_type": "gas_open", "total_power_kw": 300},
                                             "calibration": PRODUCTION_CALIBRATION})
-    cfg = client.get("/thermal/config").json()
+    cfg = client.get("/thermal/config", params={"house_id": "1"}).json()
 
     assert r.status_code == 200
     assert cfg["heater"]["total_power_kw"] == 300
@@ -137,7 +138,7 @@ def test_heater_analysis_refuses_implausible_calibration(client, thermal_file):
                  heater={"heater_type": "gas_open", "total_power_kw": 300})
 
     r = client.post("/thermal/analyze-heaters", json={
-        "t_inside_target": 30, "t_outside": -5, "q_min_m3h": 3000, "num_birds": 20000, "bird_weight_kg": 0.2})
+        "house_id": "1", "t_inside_target": 30, "t_outside": -5, "q_min_m3h": 3000, "num_birds": 20000, "bird_weight_kg": 0.2})
 
     assert r.status_code == 400
     assert r.json()["detail"] == "calibration_method_obsolete"

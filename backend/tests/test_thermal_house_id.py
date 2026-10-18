@@ -38,7 +38,7 @@ def test_put_accepts_cyrillic_house_name(client, clean_thermal_config):
     r = client.put("/thermal/config", json={"house_id": "Корпус 3-А_1.2"})
 
     assert r.status_code == 200
-    assert client.get("/thermal/config").json()["house_id"] == "Корпус 3-А_1.2"
+    assert client.get("/thermal/config", params={"house_id": "Корпус 3-А_1.2"}).json()["house_id"] == "Корпус 3-А_1.2"
 
 
 def test_get_drops_legacy_house_id_with_markup(client, clean_thermal_config):
