@@ -695,6 +695,11 @@ function renderTunnel(d, t_real) {
     v: fmtNum(d.air_velocity_ms, 1), v_min: fmtNum(d.target_v_min_ms, 1), n: d.fans_needed_for_target,
   });
   evapBtn.hidden = !(action === 'pads' || action === 'add_fans_and_pads');
+  // Туннель в пределах Cobb, но птица ощущает больше уставки профиля — смотреть на поведение
+  if (limitOk && d.above_profile_target && d.profile_target_c != null) {
+    noteEl.textContent += ' ' + t('tn_above_profile_note', {
+      t_eff: fmtNum(d.effective_temp_c, 1), target: fmtNum(d.profile_target_c, 1) });
+  }
 
   document.getElementById('tn-results').hidden = false;
 }

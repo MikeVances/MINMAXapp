@@ -104,20 +104,14 @@ _SPEED_TARGETS = [
     (999, 2.5, 3.5),
 ]
 
-# Верхний предел комфортной (ощущаемой) температуры для бройлеров по возрасту, °C.
-# Ссылка «Aviagen Broiler Management Guide 2019» НЕ подтверждена (проверено 2026-10-19):
-# ни Ross Handbook 2025 (разд. 6, туннель), ни Cobb 2021 (§9.7) такой таблицы не дают.
-# Cobb 2021 §9.7: ощущаемая температура «below 30 °C» для любого возраста и «целевые
-# температуры по возрасту» (= уставка профиля). Как связать с профилем — решение
-# владельца, см. TODO.md («комфорт в tunnel»)
-_COMFORT_TARGETS = [
-    (7,   32.0),
-    (14,  29.0),
-    (21,  27.0),
-    (28,  26.0),
-    (35,  25.0),
-    (999, 24.0),
-]
+# Предел ощущаемой температуры в туннеле, °C — Cobb Broiler Management Guide 2021,
+# §9.7: «Bird effective temperatures should be maintained below 30 °C (86 °F)», для
+# любого возраста. Раньше стояла таблица 32→24 °C по возрасту со ссылкой на
+# «Aviagen 2019», которую не подтвердили ни Ross Handbook 2025 (разд. 6), ни Cobb
+# 2021 (решение 2026-10-19). Уставка профиля на день (Cobb: «target temperatures for
+# specific ages») — второй, информационный уровень: выше неё птице может быть
+# жарко, и это проверяется поведением (Ross 2025, с. 81), а не термометром.
+EFFECTIVE_TEMP_MAX_C = 30.0
 
 # Практический максимум T_outdoor для птицеводства в таблице — если лимит выше, считаем "без ограничений"
 _T_LIMIT_CAP = 42.0
@@ -152,6 +146,8 @@ class TunnelSpeedInput:
     # Площадь панелей = площадь впуска: воздух входит только через них
     pad_type:         Optional[str] = None
     pad_thickness_mm: int = 0
+    # Уставка профиля роста на этот день, °C (RH 60 %) — информационный уровень
+    profile_target_c: Optional[float] = None
 
 
 # Допустимая разница температур между торцами корпуса в тоннельном режиме, °C
@@ -186,7 +182,7 @@ class TunnelSpeedResult:
     status_code:            str     # ok | needs_cooling | thvi_alert | thvi_high | too_slow | too_fast | above_range
     status_level:           str     # ok | warn | danger
     # Тепловой вердикт: туннель vs испарительное охлаждение
-    bird_comfort_target_c:    float  # Целевая T комфорта по возрасту птицы
+    bird_comfort_target_c:    float  # Предел ощущаемой T, °C (Cobb 2021 §9.7: < 30)
     tunnel_sufficient:        bool   # Туннель справляется при текущих условиях
     t_outdoor_tunnel_limit_c: float  # Макс. T_нар при которой туннель достаточен
     temp_margin_c:            float  # Запас: T_цель − T_ощущ (>0 = запас есть)
@@ -206,6 +202,8 @@ class TunnelSpeedResult:
     tunnel_action:            str = "ok"
     pad_pressure_pa:          float = 0.0   # сопротивление панели на впуске, Па
     pad_velocity_ms:          float = 0.0   # скорость воздуха через панель, м/с
+    profile_target_c:         Optional[float] = None  # уставка профиля на день, °C
+    above_profile_target:     bool = False  # ощущаемая выше уставки профиля — смотреть на птицу
 
 
 # ─────────────────────────────────────────────────
@@ -367,14 +365,6 @@ def target_speed_range(age_days: int) -> tuple[float, float]:
     return 2.5, 3.5
 
 
-def _bird_comfort_target(age_days: int) -> float:
-    """Верхний предел комфортной температуры для бройлера данного возраста, °C."""
-    for max_age, target in _COMFORT_TARGETS:
-        if age_days <= max_age:
-            return target
-    return 24.0
-
-
 def _find_tunnel_temp_limit(rh_pct: float, v_ms: float, t_target_c: float) -> float:
     """
     Максимальная наружная температура, при которой туннельная вентиляция
@@ -514,13 +504,15 @@ def calculate_tunnel_speed(inp: TunnelSpeedInput) -> TunnelSpeedResult:
     fans_needed = math.ceil(q_need_m3s / q_per_fan)
 
     # Тепловой вердикт (нужен до формирования status_code)
-    comfort_target = _bird_comfort_target(inp.bird_age_days)
+    comfort_target = EFFECTIVE_TEMP_MAX_C
+    # Уставка профиля на день — выше неё предупреждаем, но туннель не «недостаточен»
+    above_profile_target = inp.profile_target_c is not None and t_eff > inp.profile_target_c
     temp_margin    = comfort_target - t_eff
     # Туннель достаточен только если ОБА условия выполнены:
     # 1. Скорость воздуха >= минимальной проектной (обеспечивает ветровое охлаждение)
     # 2. Ощущаемая T <= целевой комфортной T для данного возраста
     speed_ok       = v_ms >= v_min_t
-    heat_ok        = t_eff <= comfort_target
+    heat_ok        = t_eff < comfort_target       # Cobb: «below 30 °C» — строго
     tunnel_ok      = speed_ok and heat_ok
 
     # Лекарство зависит от того, ЧТО не выполнено (аудит 2026-10-18: карточка при
@@ -534,7 +526,7 @@ def calculate_tunnel_speed(inp: TunnelSpeedInput) -> TunnelSpeedResult:
         tunnel_action = "ok" if heat_ok else "pads"
     elif heat_ok:
         tunnel_action = "add_fans"            # птице сейчас не жарко, но скорость ниже проектной
-    elif t_eff_at_target <= comfort_target:
+    elif t_eff_at_target < comfort_target:
         tunnel_action = "add_fans_heat"       # жарко из-за нехватки скорости — панели не нужны
     else:
         tunnel_action = "add_fans_and_pads"
@@ -584,6 +576,8 @@ def calculate_tunnel_speed(inp: TunnelSpeedInput) -> TunnelSpeedResult:
         status_code               = status_code,
         status_level              = status_level,
         bird_comfort_target_c     = comfort_target,
+        profile_target_c          = inp.profile_target_c,
+        above_profile_target      = above_profile_target,
         tunnel_sufficient         = tunnel_ok,
         t_outdoor_tunnel_limit_c  = t_limit,
         temp_margin_c             = round(temp_margin, 1),

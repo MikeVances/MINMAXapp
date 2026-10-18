@@ -148,16 +148,16 @@ def test_birds_heat_air_along_the_house_and_comfort_is_checked_at_the_fans(clien
 # tunnel_sufficient = (скорость ≥ цели) И (ощущаемая ≤ цели), а карточка при любом
 # провале писала «ощущаемая выше целевой → панели». При нехватке одной скорости
 # это неверно: птице не жарко, а лечится всё вентиляторами, не панелями.
-# День 35: цель скорости 2.0 м/с, комфорт ≤ 25 °C; сечение 18 × 3 = 54 м².
+# День 35: цель скорости 2.0 м/с, предел ощущаемой < 30 °C (Cobb 2021 §9.7); сечение 18 × 3 = 54 м².
 TUNNEL_35D = dict(house_width_m=18, tunnel_height_m=3.0, fan_capacity_m3h=40_000,
                   rh_outdoor_pct=50, bird_age_days=35, num_inlets=2, inlet_width_m=20, inlet_height_m=1.5)
 
 
 @pytest.mark.parametrize("fans, t_out, action, speed_ok, heat_ok", [
-    (6, 24, "add_fans", False, True),             # 1.23 м/с, ощущаемая 20.6 < 25 — НЕ жарко
-    (6, 33, "add_fans_heat", False, False),       # жарко, но при 2.0 м/с — 23.6 ≤ 25
-    (6, 36, "add_fans_and_pads", False, False),   # и при 2.0 м/с — 30.0 > 25
-    (12, 36, "pads", True, False),                # 2.47 м/с, а всё равно 30.0 > 25
+    (6, 24, "add_fans", False, True),             # 1.23 м/с, ощущаемая 20.6 < 30 — НЕ жарко
+    (6, 36, "add_fans_heat", False, False),       # 31.2 ≥ 30, но при 2.0 м/с — ниже 30
+    (6, 38, "add_fans_and_pads", False, False),   # и при 2.0 м/с — 38 (охлаждение ветром гаснет к 37.8)
+    (12, 38, "pads", True, False),                # 2.47 м/с, а всё равно 38 ≥ 30
     (12, 30, "ok", True, True),
 ])
 def test_tunnel_verdict_names_what_is_missing(client, fans, t_out, action, speed_ok, heat_ok):
@@ -165,7 +165,8 @@ def test_tunnel_verdict_names_what_is_missing(client, fans, t_out, action, speed
                     json={**TUNNEL_35D, "num_fans": fans, "t_outdoor_db_c": t_out}).json()
     assert (r["tunnel_action"], r["speed_sufficient"], r["heat_sufficient"]) == (action, speed_ok, heat_ok)
     assert r["tunnel_sufficient"] is (speed_ok and heat_ok)
-    assert r["heat_sufficient"] is (r["effective_temp_c"] <= r["bird_comfort_target_c"])
+    assert r["bird_comfort_target_c"] == 30.0
+    assert r["heat_sufficient"] is (r["effective_temp_c"] < r["bird_comfort_target_c"])
 
 
 def test_effective_temperature_at_target_speed_matches_a_house_that_has_it():
@@ -217,3 +218,15 @@ def test_api_passes_the_pad_through(client):
     payload = {**HOUSE, "fan_capacity_25pa_m3h": 36_000, "pad_type": "7060", "pad_thickness_mm": 150}
     r = client.post("/calc/tools/tunnel_speed", json=payload)
     assert r.status_code == 200 and r.json()["pad_pressure_pa"] > 0
+
+
+def test_profile_target_is_reported_but_does_not_fail_the_tunnel(client):
+    """
+    Уставка профиля на день (Cobb: «target temperatures for specific ages») — второй
+    уровень: выше неё — предупреждение «смотрите на птицу», туннель не «недостаточен».
+    Таблица 32→24 °C по возрасту без источника снята (решение 2026-10-19).
+    """
+    r = client.post("/calc/tools/tunnel_speed",
+                    json={**TUNNEL_35D, "num_fans": 12, "t_outdoor_db_c": 30}).json()
+    assert r["profile_target_c"] == pytest.approx(20.0, abs=0.5)     # тестовый профиль, день 35
+    assert r["above_profile_target"] is True and r["tunnel_sufficient"] is True
