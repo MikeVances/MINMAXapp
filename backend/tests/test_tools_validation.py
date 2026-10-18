@@ -33,3 +33,17 @@ def test_evap_valid_pad_still_calculates(client):
                     json={**_EVAP, "pad_type": "5090", "pad_thickness_mm": 150})
 
     assert r.status_code == 200
+
+
+@pytest.mark.parametrize("thickness, v_design", [(100, 1.14), (150, 1.78)])
+def test_recommended_pad_area_uses_design_velocity_of_thickness(client, thickness, v_design):
+    """
+    UGA (Czarick): 225 fpm ≈ 1.14 м/с для 100 мм, 350 fpm ≈ 1.78 м/с для 150 мм.
+    Раньше одна скорость 1.25 м/с: для 150 мм площадь была в 1.4 раза больше нужной
+    (аудит 2026-10-18).
+    """
+    body = client.post("/calc/tools/evap_cooling",
+                       json={**_EVAP, "pad_type": "7090", "pad_thickness_mm": thickness}).json()
+
+    assert body["recommended_pad_area_m2"] == pytest.approx(
+        _EVAP["total_fan_m3h"] / 3600.0 / v_design, abs=0.01)

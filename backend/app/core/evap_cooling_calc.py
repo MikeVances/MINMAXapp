@@ -48,8 +48,23 @@ RHO_AIR_KG_M3 = 1.184
 # Стандартное атмосферное давление, Па
 P_ATM_PA = 101325.0
 
-# Рекомендуемая скорость для расчёта площади пэда (практический оптимум η/ΔP)
-V_REC_MS = 1.25
+# Проектная скорость через панель для расчёта рекомендуемой площади, м/с, по толщине
+# (UGA, Czarick: 350 fpm ≈ 1.78 м/с для 150 мм и 225 fpm ≈ 1.14 м/с для 100 мм —
+# https://thepoultrysite.com/articles/evaporative-cooling-pad-design-spreadsheet).
+# Раньше одна скорость 1.25 м/с для всех толщин: для 150 мм площадь выходила
+# в 1.4 раза больше нужной (аудит 2026-10-18). Между опорами — линейно,
+# за их пределами — ближайшая опора (других данных у UGA нет).
+_V_DESIGN_BY_THICKNESS = [(100, 1.14), (150, 1.78)]
+
+
+def design_pad_velocity_ms(thickness_mm: float) -> float:
+    """Проектная скорость воздуха через панель данной толщины, м/с."""
+    (t0, v0), (t1, v1) = _V_DESIGN_BY_THICKNESS
+    if thickness_mm <= t0:
+        return v0
+    if thickness_mm >= t1:
+        return v1
+    return v0 + (v1 - v0) * (thickness_mm - t0) / (t1 - t0)
 
 
 # ─────────────────────────────────────────────────────────────────
@@ -180,7 +195,7 @@ class EvapCoolingResult:
     temp_margin_c: float           # Запас температуры (T_target - T_pad), °C
 
     # --- Рекомендации ---
-    recommended_pad_area_m2: float  # Рекомендуемая площадь пэда для скорости V_REC_MS
+    recommended_pad_area_m2: float  # Рекомендуемая площадь панели для проектной скорости толщины
     status_code: str               # pad_too_small | pad_too_large | cooling_insufficient | cooling_marginal | ok
     status_level: str              # ok | warn | danger — цвет бейджа на клиенте
 
@@ -355,8 +370,8 @@ def calculate_evap_cooling(inp: EvapCoolingInput) -> EvapCoolingResult:
     temp_margin = inp.t_inside_target_c - t_pad_out
     cooling_sufficient = t_pad_out <= inp.t_inside_target_c
 
-    # Рекомендуемая площадь пэда для скорости V_REC_MS
-    recommended_pad_area = q_m3s / V_REC_MS
+    # Рекомендуемая площадь панели — для проектной скорости этой толщины
+    recommended_pad_area = q_m3s / design_pad_velocity_ms(inp.pad_thickness_mm)
 
     # Общая оценка
     if not velocity_ok and air_velocity_ms > v_max:
