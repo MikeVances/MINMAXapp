@@ -1,0 +1,5 @@
+# Браузерный smoke-тест интерфейса (backend/tests/e2e). Отдельно от
+# requirements-dev.txt: Playwright тянет браузер (~150 МБ) — локально он нужен
+# не всем, в CI ставится всегда (см. .github/workflows/tests.yml).
+# После установки: python -m playwright install chromium
+playwright==1.51.0

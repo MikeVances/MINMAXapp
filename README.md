@@ -148,6 +148,11 @@ theme reaches dynamic status colours too. A test fails if inline styles creep ba
 
 ## Contributing
 
+**Tests.** `make test` runs the suite (physics references, API, page code; some tests run the
+real `i18n.js` in Node). `make test-e2e` adds a browser smoke test: it starts its own server on
+temporary data, opens every page in Chromium, presses the main buttons and fails on any JS error.
+GitHub Actions runs both on every push (Python 3.11, as on Render).
+
 Issues and pull requests are welcome. If you work in poultry production and notice something wrong with the numbers — please open an issue with the flock parameters and expected values. Real-world corrections are the most valuable contribution.
 
 ---

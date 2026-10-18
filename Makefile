@@ -2,7 +2,7 @@ PY?=python3
 PIP?=$(PY) -m pip
 VENV?=.venv
 
-.PHONY: venv run-api test test-smoke
+.PHONY: venv run-api test test-e2e test-smoke
 
 venv: $(VENV)/bin/activate
 
@@ -18,6 +18,12 @@ run-api: venv
 test: venv
 	. $(VENV)/bin/activate; $(PIP) install -q -r requirements-dev.txt
 	. $(VENV)/bin/activate; $(PY) -m pytest
+
+# Браузерный smoke-тест страниц (Playwright + Chromium; сервер поднимает сам)
+test-e2e: venv
+	. $(VENV)/bin/activate; $(PIP) install -q -r requirements-dev.txt -r requirements-e2e.txt
+	. $(VENV)/bin/activate; $(PY) -m playwright install chromium
+	. $(VENV)/bin/activate; $(PY) -m pytest backend/tests/e2e
 
 # Проверка ЖИВОГО сервера (сначала make run-api)
 test-smoke: venv

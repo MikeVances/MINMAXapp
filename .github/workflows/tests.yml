@@ -1,0 +1,39 @@
+# Тесты на каждый push и pull request.
+#
+# Python 3.11 — как на Render (render.yaml: PYTHON_VERSION). Node ставится явно:
+# часть тестов запускает настоящие i18n.js/ui.js в node и без него пропускается —
+# в CI пропуск выглядел бы зелёным прогоном. Chromium — для браузерного
+# smoke-теста (backend/tests/e2e): env CI превращает его пропуск в ошибку.
+name: tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+            requirements-e2e.txt
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install -r requirements-dev.txt -r requirements-e2e.txt
+          python -m playwright install --with-deps chromium
+
+      - name: Run tests
+        run: python -m pytest -q -rs
