@@ -29,6 +29,7 @@ const elHeaterStatus  = document.getElementById('heaterStatus');
 
 const elTOutside    = document.getElementById('tOutside');
 const elSaveCalibrationBtn = document.getElementById('saveCalibrationBtn');
+const elSaveCalStatus     = document.getElementById('saveCalibrationStatus');
 const elCalibrationResult  = document.getElementById('calibrationResult');
 
 const elTInsideTarget      = document.getElementById('tInsideTarget');
@@ -149,6 +150,7 @@ function startTest() {
   lastResult = null;
   elSaveCalibrationBtn.disabled = true;
   elCalibrationResult.innerHTML = '';
+  setStatus(elSaveCalStatus, null);   // «Сохранено» относилось к прошлому тесту
   elTimerDisplay.classList.add('is-running');
   setTone(elTimerStatus, null);
   elTimerStatus.textContent   = t(zoneCount() > 1 ? 'mz_timer_running' : 'timer_running', { n: zoneCount() });
@@ -427,7 +429,7 @@ elSaveHeaterBtn.addEventListener('click', async () => {
 
 // Save calibration
 elSaveCalibrationBtn.addEventListener('click', async () => {
-  if (!lastResult) { alert(t('err_calc_first')); return; }
+  if (!lastResult) { setStatus(elSaveCalStatus, () => t('err_calc_first'), 'danger'); return; }
   if (curveSaveBlocked(lastResult)) return;   // кнопка и так неактивна — на случай гонки
   try {
     const config = await loadConfig();
@@ -449,10 +451,11 @@ elSaveCalibrationBtn.addEventListener('click', async () => {
       method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(config),
     });
     if (!resp.ok) throw await apiError(resp);
-    alert(t('cal_saved_alert'));
+    setStatus(elSaveCalStatus, () => t('cal_saved_alert'), 'ok');
     await loadAndDisplayConfig();
   } catch (e) {
-    alert(t('err_save_cal') + e.message);
+    const msg = e.message;
+    setStatus(elSaveCalStatus, () => t('err_save_cal') + msg, 'danger');
   }
 });
 

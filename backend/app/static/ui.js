@@ -23,4 +23,23 @@
   window.setTone = (el, tone) => swapTone(el, 'c-', tone);      // цвет текста
   window.setBg   = (el, tone) => swapTone(el, 'bg-', tone);     // фон
   window.setEdge = (el, tone) => swapTone(el, 'edge-', tone);   // цвет левой кромки
+
+  // Строка статуса вместо alert(). alert блокирует страницу и пропадает после
+  // нажатия «OK» — на телефоне его закрывают не читая, и что случилось, уже не
+  // узнать. Статус остаётся рядом с кнопкой, которая его вызвала.
+  //
+  // Текст задаётся функцией, а не строкой: при смене языка (событие i18n:change)
+  // все показанные статусы пересобираются на новом языке. textFn = null — скрыть.
+  const shown = new Set();
+  window.setStatus = (el, textFn, tone) => {
+    if (!el) return;
+    el._statusText = textFn || null;
+    if (textFn) shown.add(el); else shown.delete(el);
+    el.textContent = textFn ? textFn() : '';
+    el.hidden = !textFn;
+    swapTone(el, 'c-', textFn ? tone : null);
+  };
+  document.addEventListener('i18n:change', () => {
+    shown.forEach(el => { if (el._statusText) el.textContent = el._statusText(); });
+  });
 })();

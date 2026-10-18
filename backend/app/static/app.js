@@ -53,6 +53,7 @@ let active = 0;
 
 const elTabs       = document.getElementById('tabs');
 const elAddTab     = document.getElementById('addTab');
+const elTabsStatus = document.getElementById('tabsStatus');
 const elDelTab     = document.getElementById('delTab');
 const elHouse      = document.getElementById('house');
 const elBirds      = document.getElementById('birds');
@@ -192,9 +193,10 @@ elAddTab.onclick = () => {
   if (!commitBeforeLeaving()) return;
   if (tabs.length >= MAX_HOUSES) {
     // Не даём накапливать сотни корпусов и ломать вёрстку
-    alert(t('err_max_houses', { max: MAX_HOUSES }));
+    setStatus(elTabsStatus, () => t('err_max_houses', { max: MAX_HOUSES }), 'danger');
     return;
   }
+  setStatus(elTabsStatus, null);
   // Новый корпус получает имя на языке интерфейса («New house 3» / «Новое помещение 3»).
   // Номер подбираем так, чтобы имя не совпало с существующим: id — ключ данных корпуса
   const existing = new Set(tabs.map(x => String(x.id)));
@@ -207,6 +209,7 @@ elAddTab.onclick = () => {
 };
 
 elDelTab.onclick = () => {
+  setStatus(elTabsStatus, null);   // после удаления лимит уже не достигнут
   const tab = tabs[active];
   const name = houseLabel(tab?.id ?? (active + 1));
   pendingDeleteIndex = active;
