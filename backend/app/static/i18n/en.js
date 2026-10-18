@@ -549,4 +549,7 @@
     srv_calibration_implausible:     'mean envelope U = {u} W/(m²·K) is outside the physical range {min}–{max} — check the test and house dimensions',
     srv_calibration_other_house:     'the calibration belongs to house \'{house_id}\'',
     cal_ignored_note:                'Heat-loss calibration is not used in calculations: {reason}.',
+
+    // ── Pad thickness validation ──
+    srv_pad_thickness_unavailable: 'Pad {pad_type} is not made {thickness} mm thick; available: {allowed} mm',
 };

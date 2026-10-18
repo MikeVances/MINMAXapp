@@ -548,4 +548,7 @@
     srv_calibration_implausible:     'średnie U przegród {u} W/(m²·K) poza zakresem fizycznym {min}–{max} — sprawdź test i wymiary kurnika',
     srv_calibration_other_house:     'kalibracja dotyczy kurnika \'{house_id}\'',
     cal_ignored_note:                'Kalibracja strat ciepła nie jest używana w obliczeniach: {reason}.',
+
+    // ── Pad thickness validation ──
+    srv_pad_thickness_unavailable: 'Panel {pad_type} nie występuje w grubości {thickness} mm; dostępne: {allowed} mm',
 };

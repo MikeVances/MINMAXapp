@@ -121,10 +121,8 @@ class EvapCoolingRequest(BaseModel):
         # недопустимая пара (5090/200, 7090/125) падала KeyError → 500
         allowed = SANHE_PADS[self.pad_type]["thicknesses"]
         if self.pad_thickness_mm not in allowed:
-            raise ValueError(
-                f"pad_thickness_mm={self.pad_thickness_mm} недоступна для {self.pad_type}; "
-                f"допустимо: {', '.join(map(str, allowed))} мм"
-            )
+            raise CalcError("pad_thickness_unavailable", thickness=self.pad_thickness_mm,
+                            pad_type=self.pad_type, allowed=", ".join(map(str, allowed)))
         return self
 
 

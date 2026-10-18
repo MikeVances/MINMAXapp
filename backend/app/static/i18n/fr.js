@@ -548,4 +548,7 @@
     srv_calibration_implausible:     'U moyen de l’enveloppe {u} W/(m²·K) hors de la plage physique {min}–{max} — vérifiez le test et les dimensions du bâtiment',
     srv_calibration_other_house:     'la calibration concerne le bâtiment \'{house_id}\'',
     cal_ignored_note:                'La calibration des pertes thermiques n’est pas utilisée dans les calculs : {reason}.',
+
+    // ── Pad thickness validation ──
+    srv_pad_thickness_unavailable: 'Le panneau {pad_type} n’existe pas en {thickness} mm ; disponible : {allowed} mm',
 };

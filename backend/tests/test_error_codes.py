@@ -89,16 +89,28 @@ def test_pydantic_validator_exposes_code_in_ctx(client):
 
 def test_no_cyrillic_in_raised_errors_source():
     """
-    Страховка от возврата русских строк в ошибки: любая строка с raise или
-    detail= в коде приложения не должна содержать кириллицу (текст — в словарях).
+    Страховка от возврата русских строк в ошибки: ни одна строковая константа
+    внутри raise … и внутри detail=… не содержит кириллицу (текст — в словарях).
+    Разбор синтаксического дерева, а не строк файла: построчная проверка
+    пропускала сообщение на строке продолжения многострочного raise (аудит
+    2026-10-18 нашёл так валидатор толщины панели).
     """
+    import ast
+
     app_dir = Path(__file__).resolve().parents[1] / "app"
     offenders = []
     for path in app_dir.rglob("*.py"):
-        for lineno, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
-            code = line.split("#", 1)[0]   # комментарии по-русски — норма проекта
-            if ("raise " in code or "detail=" in code) and CYRILLIC.search(code):
-                offenders.append(f"{path.relative_to(app_dir)}:{lineno}: {line.strip()}")
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            targets = []
+            if isinstance(node, ast.Raise) and node.exc is not None:
+                targets.append(node.exc)
+            if isinstance(node, ast.keyword) and node.arg == "detail":
+                targets.append(node.value)
+            for target in targets:
+                for sub in ast.walk(target):
+                    if isinstance(sub, ast.Constant) and isinstance(sub.value, str) and CYRILLIC.search(sub.value):
+                        offenders.append(f"{path.relative_to(app_dir)}:{sub.lineno}: {sub.value[:60]}")
 
     assert not offenders, "\n".join(offenders)
 

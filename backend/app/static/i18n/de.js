@@ -548,4 +548,7 @@
     srv_calibration_implausible:     'mittlerer Hüllen-U-Wert {u} W/(m²·K) außerhalb des physikalischen Bereichs {min}–{max} — Test und Stallmaße prüfen',
     srv_calibration_other_house:     'die Kalibrierung gehört zu Stall \'{house_id}\'',
     cal_ignored_note:                'Die Wärmeverlust-Kalibrierung wird in Berechnungen nicht verwendet: {reason}.',
+
+    // ── Pad thickness validation ──
+    srv_pad_thickness_unavailable: 'Pad {pad_type} gibt es nicht in {thickness} mm Stärke; verfügbar: {allowed} mm',
 };

@@ -549,4 +549,7 @@
     srv_calibration_implausible:     'средний U оболочки {u} Вт/(м²·К) вне физического диапазона {min}–{max} — проверьте тест и размеры корпуса',
     srv_calibration_other_house:     'калибровка относится к корпусу \'{house_id}\'',
     cal_ignored_note:                'Калибровка теплопотерь не используется в расчётах: {reason}.',
+
+    // ── Pad thickness validation ──
+    srv_pad_thickness_unavailable: 'Панель {pad_type} не выпускается толщиной {thickness} мм; доступно: {allowed} мм',
 };
