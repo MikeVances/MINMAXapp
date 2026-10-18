@@ -169,7 +169,9 @@ function fillForm() {
 function readFormToTab() {
   const tab = tabs[active];
   const idVal = (elHouse.value || '').trim();
+  const oldId = tab.id;
   tab.id       = idVal !== '' ? idVal : tab.id;
+  if (String(oldId) !== String(tab.id)) moveHouseThermal(String(oldId), String(tab.id));
   // Число из поля для хранилища; пустое поле → ifEmpty. Неразобранное сюда не
   // доходит: кнопка «Сохранить» сначала проверяет форму (NumField.validate).
   // Раньше Number("12,5") = NaN уходил в localStorage как null — размер пропадал молча.
@@ -194,6 +196,22 @@ function readFormToTab() {
   formDirty = false;
 }
 
+
+// Корпус переименован: его калибровка и горелки лежат на сервере под старым id
+// (список корпусов — здесь, в браузере). Без переноса они осиротели бы и перестали
+// применяться к корпусу. Ошибку показываем, но имя в браузере не откатываем.
+async function moveHouseThermal(oldId, newId) {
+  try {
+    const r = await fetch('./thermal/rename-house', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ old_house_id: oldId, new_house_id: newId }),
+    });
+    if (!r.ok) {
+      const err = await apiError(r);
+      setStatus(elTabsStatus, () => err.message, 'danger');
+    }
+  } catch (e) { /* сеть: запись останется под старым именем — как было до переноса */ }
+}
 
 const MAX_HOUSES = 30; // разумный предел для одной фермы
 

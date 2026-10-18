@@ -19,7 +19,9 @@ from ..core.building_thermal import (
     CalibrationTest,
     ThermalConfig,
     HeatBalance,
+    HouseIdTaken,
     load_thermal_config,
+    rename_house,
     save_thermal_config,
     calibration_problem,
     calculate_heat_balance,
@@ -337,3 +339,18 @@ def analyze_heaters(req: HeaterAnalysisRequest):
         status_level         = result.status_level,
         heater_deficit_kw    = result.heater_deficit_kw,
     )
+
+
+class HouseRenameRequest(BaseModel):
+    old_house_id: str = Field(..., min_length=1, max_length=64, pattern=HOUSE_ID_PATTERN)
+    new_house_id: str = Field(..., min_length=1, max_length=64, pattern=HOUSE_ID_PATTERN)
+
+
+@router.post("/rename-house", dependencies=[Depends(require_write_token)])
+def rename_house_config(req: HouseRenameRequest):
+    """Корпус переименован на главной — его теплотехника переезжает под новое имя."""
+    try:
+        moved = rename_house(req.old_house_id, req.new_house_id)
+    except HouseIdTaken:
+        raise api_error(409, "thermal_house_exists", id=req.new_house_id)
+    return {"moved": moved}

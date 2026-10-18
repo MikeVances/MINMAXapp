@@ -112,6 +112,11 @@ all visitors. On a public instance set `WRITE_TOKEN` in the environment: endpoin
 saved data then require the `X-Write-Token` header (the UI asks for the token once and remembers
 it). Calculations stay open. Without `WRITE_TOKEN` writes are open — fine for local use.
 
+**Where data lives.** The list of houses (sizes, birds, fans) is kept in each browser's local
+storage — every device has its own. Heat-loss data — dimensions, heaters and the UA calibration —
+is stored on the server per house id (`data/thermal_config.json`, `{"houses": {...}}`); renaming a
+house on the home page moves its record. Settings and growth profiles are shared server-side.
+
 **Behind a reverse proxy.** The feedback form allows 5 messages per 10 minutes per client address.
 A proxy appends the address it saw to the end of `X-Forwarded-For`; everything to the left is
 whatever the client sent. Set `TRUSTED_PROXY_HOPS` to the number of entries your own proxies append

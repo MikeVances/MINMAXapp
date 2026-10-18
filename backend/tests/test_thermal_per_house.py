@@ -60,3 +60,26 @@ def test_calculation_takes_the_heater_of_its_own_house(client, thermal_path):
 
 def test_get_rejects_house_id_with_markup(client, thermal_path):
     assert client.get("/thermal/config", params={"house_id": "<img src=x>"}).status_code == 422
+
+
+# ─── Переименование корпуса (список корпусов — в браузере, id = имя) ─────────
+
+def test_renaming_a_house_moves_its_thermal_record(client, thermal_path):
+    client.put("/thermal/config", json={"house_id": "A", "building": DIMS,
+                                        "heater": {"heater_type": "gas_open", "total_power_kw": 300}})
+    r = client.post("/thermal/rename-house", json={"old_house_id": "A", "new_house_id": "Корпус 1"})
+    assert r.status_code == 200 and r.json() == {"moved": True}
+    assert client.get("/thermal/config", params={"house_id": "Корпус 1"}).json()["heater"]["total_power_kw"] == 300
+    assert client.get("/thermal/config", params={"house_id": "A"}).json()["heater"] is None
+
+
+def test_rename_does_not_merge_into_a_house_that_has_data(client, thermal_path):
+    for hid in ("A", "B"):
+        client.put("/thermal/config", json={"house_id": hid, "building": DIMS})
+    r = client.post("/thermal/rename-house", json={"old_house_id": "A", "new_house_id": "B"})
+    assert r.status_code == 409 and r.json()["detail"]["code"] == "thermal_house_exists"
+
+
+def test_rename_of_a_house_without_data_is_a_no_op(client, thermal_path):
+    r = client.post("/thermal/rename-house", json={"old_house_id": "X", "new_house_id": "Y"})
+    assert r.status_code == 200 and r.json() == {"moved": False}

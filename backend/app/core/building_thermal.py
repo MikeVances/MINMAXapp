@@ -527,3 +527,25 @@ def save_thermal_config(config: ThermalConfig, path: str = THERMAL_CONFIG_PATH) 
     else:
         houses.pop(key, None)
     atomic_write_json(path, {"houses": houses})
+
+
+class HouseIdTaken(ValueError):
+    """У корпуса с новым именем уже есть своя теплотехника — слить молча нельзя."""
+
+
+def rename_house(old_id: str, new_id: str, path: str = THERMAL_CONFIG_PATH) -> bool:
+    """
+    Перенос теплотехники при переименовании корпуса. Список корпусов живёт в браузере,
+    а их id — редактируемое «имя птичника»: без переноса калибровка и горелки
+    оставались под старым именем и к корпусу больше не применялись.
+    True — запись перенесена, False — у старого имени записи не было.
+    """
+    store = load_thermal_store(path)
+    if old_id not in store or old_id == new_id:
+        return False
+    if new_id in store:
+        raise HouseIdTaken(new_id)
+    houses = {hid: _config_to_dict(cfg) for hid, cfg in store.items()}
+    houses[new_id] = houses.pop(old_id)
+    atomic_write_json(path, {"houses": houses})
+    return True

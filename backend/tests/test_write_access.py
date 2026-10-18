@@ -21,6 +21,7 @@ WRITE_ROUTES = [
     ("DELETE", "/profiles/my-profile"),
     ("PUT", "/settings/app-config"),
     ("PUT", "/thermal/config"),
+    ("POST", "/thermal/rename-house"),
 ]
 
 

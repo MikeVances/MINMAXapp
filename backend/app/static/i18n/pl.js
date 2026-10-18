@@ -534,6 +534,7 @@
     srv_profile_day_missing:       'Profil \'{id}\' nie ma masy ani temperatury na dzień {day}',
     srv_builtin_profile_read_only: 'Profile hodowców są tylko do odczytu — zrób kopię',
     srv_profile_is_default:        'Ten profil jest domyślny dla fermy — najpierw wybierz inny w ustawieniach',
+    srv_thermal_house_exists:      'Kurnik „{id}” ma już własne dane strat ciepła — wybierz inną nazwę',
     srv_fan_25pa_above_free_air:   'Wydajność wentylatora przy 25 Pa musi być mniejsza niż przy 0 Pa',
     val_missing:                   'pole wymagane',
     val_greater_than:              'musi być > {gt}',

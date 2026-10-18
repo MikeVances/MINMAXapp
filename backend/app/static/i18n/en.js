@@ -535,6 +535,7 @@
     srv_profile_day_missing:       'Profile \'{id}\' has no weight or temperature for day {day}',
     srv_builtin_profile_read_only: 'Breeder profiles are read-only — make a copy',
     srv_profile_is_default:        'This profile is the farm default — choose another default in Farm Settings first',
+    srv_thermal_house_exists:      'House “{id}” already has its own heat-loss data — choose another name',
     srv_fan_25pa_above_free_air:   'Fan capacity at 25 Pa must be lower than the free-air capacity',
     val_missing:                   'required',
     val_greater_than:              'must be > {gt}',

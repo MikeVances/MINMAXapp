@@ -534,6 +534,7 @@
     srv_profile_day_missing:       'Le profil \'{id}\' n\'a ni poids ni température pour le jour {day}',
     srv_builtin_profile_read_only: 'Les profils des sélectionneurs sont en lecture seule — faites une copie',
     srv_profile_is_default:        'Ce profil est le profil par défaut de l’exploitation — choisissez d’abord un autre profil dans les réglages',
+    srv_thermal_house_exists:      'Le bâtiment « {id} » a déjà ses propres données de déperditions — choisissez un autre nom',
     srv_fan_25pa_above_free_air:   'Le débit du ventilateur à 25 Pa doit être inférieur au débit à 0 Pa',
     val_missing:                   'champ obligatoire',
     val_greater_than:              'doit être > {gt}',

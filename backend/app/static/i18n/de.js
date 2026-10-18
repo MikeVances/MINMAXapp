@@ -534,6 +534,7 @@
     srv_profile_day_missing:       'Profil \'{id}\' hat keine Masse oder Temperatur für Tag {day}',
     srv_builtin_profile_read_only: 'Züchterprofile sind schreibgeschützt — erstellen Sie eine Kopie',
     srv_profile_is_default:        'Dieses Profil ist der Standard des Betriebs — wählen Sie zuerst in den Einstellungen ein anderes',
+    srv_thermal_house_exists:      'Stall „{id}“ hat bereits eigene Wärmeverlustdaten — wählen Sie einen anderen Namen',
     srv_fan_25pa_above_free_air:   'Die Lüfterleistung bei 25 Pa muss unter der Leistung bei 0 Pa liegen',
     val_missing:                   'Pflichtfeld',
     val_greater_than:              'muss > {gt} sein',
