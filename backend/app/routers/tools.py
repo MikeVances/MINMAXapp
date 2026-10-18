@@ -127,10 +127,18 @@ class EvapCoolingRequest(BaseModel):
         None, ge=1, le=40,
         description="Температура воды подачи на пэд, °C (скважина ≈ 8–12, бак летом до 35)"
     )
+    # Вторая точка паспорта системы вентиляторов: расход в рабочей точке с сопротивлением панели
+    total_fan_25pa_m3h: float = Field(0.0, ge=0, description="Суммарный расход вентиляторов при 25 Па, м³/ч (0 = неизвестен)")
     # Поголовье и расчётный день — для нагрева воздуха от панелей до вентиляторов
     num_birds: int = Field(0, ge=0, le=200_000, description="Поголовье (0 = нагрев вдоль корпуса не учитывать)")
     bird_age_days: Optional[int] = Field(None, ge=1, le=63, description="Расчётный день — масса из профиля роста")
     growth_profile_id: Optional[str] = Field(None, description="Профиль роста (по умолчанию — из настроек)")
+
+    @model_validator(mode="after")
+    def _fan_25pa_below_free_air(self):
+        if self.total_fan_25pa_m3h and self.total_fan_25pa_m3h >= self.total_fan_m3h:
+            raise CalcError("fan_25pa_above_free_air")
+        return self
 
     @model_validator(mode="after")
     def _thickness_exists_for_pad_type(self):
@@ -177,6 +185,8 @@ class EvapCoolingResponse(BaseModel):
     water_regime:        Optional[str]   # 'safe' | 'condensation_risk'
     air_temp_rise_c:     float = 0.0     # нагрев воздуха от панелей до вентиляторов
     t_fan_end_c:         float = 0.0     # T у вентиляторов — по ней оценка достаточности
+    airflow_m3h:         float = 0.0     # расход, по которому считаны скорость, КПД и вода
+    airflow_basis:       str = "rated_0pa"   # operating_point | rated_0pa
 
 
 @router.post(
@@ -214,6 +224,7 @@ def calc_evap_cooling(req: EvapCoolingRequest) -> EvapCoolingResponse:
         t_inside_target_c = req.t_inside_target_c,
         water_supply_t_c  = req.water_supply_t_c,
         num_birds         = req.num_birds if req.bird_age_days else 0,
+        total_fan_25pa_m3h = req.total_fan_25pa_m3h,
         bird_weight_kg    = _bird_weight_kg(req.bird_age_days, req.growth_profile_id) if req.num_birds and req.bird_age_days else 0.0,
     )
     r: EvapCoolingResult = calculate_evap_cooling(inp)
@@ -241,6 +252,8 @@ def calc_evap_cooling(req: EvapCoolingRequest) -> EvapCoolingResponse:
         water_regime            = r.water_regime,
         air_temp_rise_c         = r.air_temp_rise_c,
         t_fan_end_c             = r.t_fan_end_c,
+        airflow_m3h             = r.airflow_m3h,
+        airflow_basis           = r.airflow_basis,
     )
 
 

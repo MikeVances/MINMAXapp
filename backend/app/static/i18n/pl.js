@@ -556,4 +556,10 @@
     lbl_air_rise:      'Powietrze przy wentylatorach (ogrzane przez ptaki)',
     tn_rise_val:       '{t} °C (+{rise} °C)',
     tn_rise_excessive: 'Ponad 2.8 °C między końcami kurnika (Cobb) — za mało powietrza dla takiej masy ptaków',
+
+    // ── Pad cooling: fan operating point with pad resistance ──
+    label_ev_fans25:     'Łączna wydajność przy 25 Pa, m³/h (opcjonalnie)',
+    hint_ev_fans25:      'Drugi punkt charakterystyki wentylatorów (0.10" sł. wody). Z nim przepływ liczony jest w punkcie pracy z oporem panelu.',
+    ev_basis_operating:  'przepływ w punkcie pracy z oporem panelu: {q} m³/h',
+    ev_basis_rated_note: 'przepływ wg katalogu przy 0 Pa — zawyżony; podaj wydajność przy 25 Pa',
 };

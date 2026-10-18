@@ -67,3 +67,29 @@ def test_pad_cooling_sufficiency_is_judged_at_the_fan_end(client):
     assert r["air_temp_rise_c"] == pytest.approx(rise, abs=0.1)
     assert r["temp_margin_c"] == pytest.approx(plain["temp_margin_c"] - rise, abs=0.1)
     assert plain["air_temp_rise_c"] == 0.0                      # без поголовья — как раньше
+
+
+def test_pad_airflow_at_operating_point_includes_pad_resistance(client):
+    """
+    Аудит 2026-10-18: расход брался по паспорту при 0 Па, хотя панель сама даёт
+    десятки Па. Система 500 000 м³/ч при 0 Па и 400 000 при 25 Па → s = 4 000 м³/ч на Па.
+    Панель 7090/150 мм, 40 × 1.8 = 72 м²; ΔP по кривой SANHE (0.5…3.0 м/с → 10…90 Па).
+    В рабочей точке Q = Q₀ − s · ΔP(Q / A).
+    """
+    v_tab = [0.5, 1.0, 1.5, 2.0, 2.5, 3.0]
+    dp_tab = [10, 18, 32, 48, 68, 90]
+
+    def dp(v):
+        for (v0, d0), (v1, d1) in zip(zip(v_tab, dp_tab), zip(v_tab[1:], dp_tab[1:])):
+            if v <= v1:
+                return d0 + (d1 - d0) * (v - v0) / (v1 - v0)
+        return dp_tab[-1]
+
+    body = {**_EVAP, "pad_type": "7090", "pad_thickness_mm": 150, "total_fan_25pa_m3h": 400_000}
+    r = client.post("/calc/tools/evap_cooling", json=body).json()
+
+    q = r["airflow_m3h"]
+    assert r["airflow_basis"] == "operating_point"
+    assert q == pytest.approx(500_000 - 4_000 * dp(q / 3600 / 72), rel=1e-3)
+    assert r["air_velocity_ms"] == pytest.approx(q / 3600 / 72, abs=0.01)
+    assert q < 500_000 * 0.85        # больше 15 % теряется на сопротивлении панели

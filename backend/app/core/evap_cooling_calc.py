@@ -170,6 +170,10 @@ class EvapCoolingInput:
     num_birds: int = 0
     bird_weight_kg: float = 0.0
 
+    # Суммарный расход вентиляторов при 25 Па (вторая точка паспорта), м³/ч; 0 = неизвестен.
+    # С ним расход считается в рабочей точке — с сопротивлением самой панели
+    total_fan_25pa_m3h: float = 0.0
+
     # Опционально: температура воды подачи (скважина / бак)
     # None = стандартный адиабатический расчёт (как в UGA)
     water_supply_t_c: Optional[float] = None
@@ -214,6 +218,8 @@ class EvapCoolingResult:
     water_regime: Optional[str]
     air_temp_rise_c: float = 0.0   # нагрев воздуха от панелей до вентиляторов, °C
     t_fan_end_c: float = 0.0       # T воздуха у вентиляторов — по ней оценка достаточности
+    airflow_m3h: float = 0.0       # расход, по которому считаны скорость, КПД и вода
+    airflow_basis: str = "rated_0pa"   # operating_point (с сопротивлением панели) | rated_0pa
 
 
 # ─────────────────────────────────────────────────
@@ -329,6 +335,41 @@ def _dew_point(t_db: float, rh_pct: float) -> float:
     return 243.5 * ln_pv / (17.67 - ln_pv)
 
 
+FAN_RATING_POINT_PA = 25.0   # вторая точка паспорта вентилятора (≈ 0.10" вод. ст.)
+
+
+def _pad_pressure_pa(velocities: list[float], dp_table: list[float], v: float) -> float:
+    """
+    Сопротивление панели при скорости v, Па. Ниже первой точки таблицы — линейно к нулю
+    (зажим к dp(0.5 м/с) давал бы сопротивление и у неподвижного воздуха).
+    """
+    if v < velocities[0]:
+        return dp_table[0] * v / velocities[0]
+    return _interp_linear(velocities, dp_table, v)
+
+
+def pad_operating_airflow_m3s(q0_m3s: float, q25_m3s: float, pad_area_m2: float,
+                              velocities: list[float], dp_table: list[float]) -> float:
+    """
+    Расход системы вентиляторов в рабочей точке с сопротивлением панели, м³/с.
+
+    Характеристика (линейно по двум точкам паспорта): Q = Q₀ − s·P, s = (Q₀ − Q₂₅)/25 Па.
+    Сопротивление: ΔP панели по кривой производителя при v = Q / A. Раньше брался
+    паспортный расход при 0 Па, хотя панель 150 мм при 1.8 м/с сама даёт ~40 Па —
+    скорость, КПД и расход воды были завышены (аудит 2026-10-18).
+    Бисекция: g(Q) = Q₀ − s·ΔP(Q/A) − Q убывает, g(0) = Q₀ > 0.
+    """
+    s_slope = (q0_m3s - q25_m3s) / FAN_RATING_POINT_PA
+    lo, hi = 0.0, q0_m3s
+    for _ in range(60):
+        mid = 0.5 * (lo + hi)
+        if q0_m3s - s_slope * _pad_pressure_pa(velocities, dp_table, mid / pad_area_m2) - mid > 0:
+            lo = mid
+        else:
+            hi = mid
+    return lo
+
+
 def calculate_evap_cooling(inp: EvapCoolingInput) -> EvapCoolingResult:
     """Расчёт системы испарительного охлаждения птичника."""
 
@@ -349,7 +390,15 @@ def calculate_evap_cooling(inp: EvapCoolingInput) -> EvapCoolingResult:
         pad_area_m2 = 0.001  # защита от деления на ноль
 
     # Скорость воздуха через пэд: Q / A
-    q_m3s = inp.total_fan_m3h / 3600.0
+    q0_m3s = inp.total_fan_m3h / 3600.0
+    q25_m3s = inp.total_fan_25pa_m3h / 3600.0
+    if 0.0 < q25_m3s < q0_m3s:
+        q_m3s = pad_operating_airflow_m3s(q0_m3s, q25_m3s, pad_area_m2, velocities, dp_table)
+        airflow_basis = "operating_point"
+    else:
+        q_m3s = q0_m3s
+        airflow_basis = "rated_0pa"      # завышен: паспорт без сопротивления панели
+    q_m3h = q_m3s * 3600.0
     air_velocity_ms = q_m3s / pad_area_m2
 
     # Интерполяция η и ΔP по фактической скорости
@@ -371,7 +420,7 @@ def calculate_evap_cooling(inp: EvapCoolingInput) -> EvapCoolingResult:
         velocity_status = "ok"
 
     # Водопотребление (психрометрический массовый баланс)
-    water_lpm = _water_flow_lpm(inp.total_fan_m3h, inp.t_outdoor_db_c, inp.rh_outdoor_pct, t_wb, eta)
+    water_lpm = _water_flow_lpm(q_m3h, inp.t_outdoor_db_c, inp.rh_outdoor_pct, t_wb, eta)
     water_per_hour = water_lpm * 60.0
 
     # Оценка эффективности — у вентиляторов: охлаждённый воздух по пути нагревается
@@ -423,6 +472,8 @@ def calculate_evap_cooling(inp: EvapCoolingInput) -> EvapCoolingResult:
         temp_margin_c           = round(temp_margin, 1),
         air_temp_rise_c         = round(air_rise, 1),
         t_fan_end_c             = round(t_fan_end, 1),
+        airflow_m3h             = round(q_m3h, 0),
+        airflow_basis           = airflow_basis,
         recommended_pad_area_m2 = round(recommended_pad_area, 2),
         status_code             = status_code,
         status_level            = status_level,

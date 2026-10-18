@@ -556,4 +556,10 @@
     lbl_air_rise:      'Luft am Lüfterende (von Tieren erwärmt)',
     tn_rise_val:       '{t} °C (+{rise} °C)',
     tn_rise_excessive: 'Mehr als 2.8 °C zwischen den Stallenden (Cobb) — zu wenig Luft für diese Tiermasse',
+
+    // ── Pad cooling: fan operating point with pad resistance ──
+    label_ev_fans25:     'Gesamtleistung bei 25 Pa, m³/h (optional)',
+    hint_ev_fans25:      'Zweiter Kennlinienpunkt der Lüfter (0.10" WS). Damit wird der Volumenstrom im Betriebspunkt mit Pad-Widerstand berechnet.',
+    ev_basis_operating:  'Volumenstrom im Betriebspunkt mit Pad-Widerstand: {q} m³/h',
+    ev_basis_rated_note: 'Volumenstrom nach Datenblatt bei 0 Pa — überschätzt; Leistung bei 25 Pa angeben',
 };

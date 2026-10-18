@@ -557,4 +557,10 @@
     lbl_air_rise:      'Air at the fan end (heated by birds)',
     tn_rise_val:       '{t} °C (+{rise} °C)',
     tn_rise_excessive: 'More than 2.8 °C between house ends (Cobb) — the air moves too little for this bird mass',
+
+    // ── Pad cooling: fan operating point with pad resistance ──
+    label_ev_fans25:     'Total capacity at 25 Pa, m³/h (optional)',
+    hint_ev_fans25:      'Second point of the fan rating (0.10" w.c.). With it, airflow is computed at the operating point including the pad resistance.',
+    ev_basis_operating:  'airflow at the operating point with pad resistance: {q} m³/h',
+    ev_basis_rated_note: 'airflow from the 0 Pa rating — overstated; enter capacity at 25 Pa',
 };

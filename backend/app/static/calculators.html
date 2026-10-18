@@ -236,6 +236,10 @@
             <span data-i18n="label_total_fans">Total fan capacity, m³/h</span>
             <input id="ev-fans" type="number" step="100" min="1000" placeholder="180000" required />
           </label>
+          <label>
+            <span data-i18n="label_ev_fans25">Total capacity at 25 Pa, m³/h (optional)</span>
+            <input id="ev-fans25" type="number" step="100" min="0" placeholder="—" data-i18n-title="hint_ev_fans25" />
+          </label>
 
           <hr class="section-divider" />
           <h3 class="hint mt-0 mb-6" data-i18n="evap_pad_grp">Pad (evaporative media)</h3>
@@ -333,7 +337,7 @@
                 <td class="ta-right" id="ev-r-area">—</td></tr>
             <tr><td class="muted py-4 px-0" data-i18n="lbl_air_vel">Air velocity</td>
                 <td class="ta-right" id="ev-r-vel">—</td></tr>
-            <tr><td class="muted px 0; py-4 px-0" colspan="2" id="ev-r-velstatus"></td></tr>
+            <tr><td class="muted py-4 px-0" colspan="2" id="ev-r-velstatus"></td></tr>
             <tr><td class="muted py-4 px-0" data-i18n="lbl_rec_area">Recommended pad area</td>
                 <td class="ta-right" id="ev-r-rec-area">—</td></tr>
             <tr><td class="muted py-4 px-0" data-i18n="lbl_pad_dp">Pad pressure drop</td>
@@ -1234,6 +1238,8 @@ document.getElementById('evap-form').addEventListener('submit', async e => {
       ...(waterTVal !== '' ? { water_supply_t_c: +waterTVal } : {}),
       // Нагрев воздуха над птицей до вентиляторов (0 голов — не учитывать)
       num_birds:         +document.getElementById('ev-birds').value || 0,
+      // Вторая точка паспорта: расход в рабочей точке с сопротивлением панели
+      total_fan_25pa_m3h: +document.getElementById('ev-fans25').value || 0,
       bird_age_days:     +document.getElementById('ev-age').value || null,
     };
 
@@ -1300,6 +1306,10 @@ function renderEvap(d) {
     v: d.air_velocity_ms.toFixed(2), v_min: d.pad_v_min_ms, v_max: d.pad_v_max_ms,
     eta: Math.round(d.pad_efficiency * 100), dp: d.pad_pressure_drop_pa.toFixed(0),
   });
+  // Откуда расход: рабочая точка с сопротивлением панели или паспорт 0 Па (завышен)
+  document.getElementById('ev-r-velstatus').textContent += ' · ' + (d.airflow_basis === 'operating_point'
+    ? t('ev_basis_operating', { q: Math.round(d.airflow_m3h).toLocaleString() })
+    : t('ev_basis_rated_note'));
   document.getElementById('ev-r-rec-area').textContent  = d.recommended_pad_area_m2.toFixed(2) + ' ' + uM2;
   if (d.pad_pressure_drop_pa != null)
     document.getElementById('ev-r-dp').textContent      = d.pad_pressure_drop_pa.toFixed(0) + ' ' + t('unit_pa');

@@ -556,4 +556,10 @@
     lbl_air_rise:      'Air côté ventilateurs (réchauffé par les oiseaux)',
     tn_rise_val:       '{t} °C (+{rise} °C)',
     tn_rise_excessive: 'Plus de 2.8 °C entre les extrémités du bâtiment (Cobb) — trop peu d’air pour cette masse d’oiseaux',
+
+    // ── Pad cooling: fan operating point with pad resistance ──
+    label_ev_fans25:     'Débit total à 25 Pa, m³/h (facultatif)',
+    hint_ev_fans25:      'Second point de la courbe des ventilateurs (0.10" CE). Le débit est alors calculé au point de fonctionnement avec la résistance du panneau.',
+    ev_basis_operating:  'débit au point de fonctionnement avec résistance du panneau : {q} m³/h',
+    ev_basis_rated_note: 'débit catalogue à 0 Pa — surestimé ; indiquez le débit à 25 Pa',
 };
