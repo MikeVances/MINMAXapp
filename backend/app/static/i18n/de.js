@@ -114,6 +114,8 @@
     geometry_missing_note: 'Stallabmessungen (Breite und Höhe) eingeben, um das Tunnel-Qmax zu berechnen — ohne sie ist Qmax gleich Qmin',
     humidity_uncontrollable_note: 'Die Außenluft ist zu feucht, um die Zielfeuchte durch Lüften zu halten — Qmin in diesen Zeilen ist das Maximum der Betriebsart (4× CO₂-Minimum vor dem Tunnelalter, danach Tunnelvolumenstrom). Zuluft erwärmen oder entfeuchten.',
     heater_insufficient_note: 'In diesen Zeilen reichen die Heizer selbst bei 100 % nicht — einschließlich der Erwärmung der Luft, die zur Verdünnung ihres CO₂ nötig ist. Mehr Heizleistung oder geringere Wärmeverluste nötig.',
+    heater_data_missing_note: 'Heizer sind an, aber Leistung und Typ sind nicht angegeben (Reiter Wärmeverlust) — ihr CO₂ ist in Qmin nicht enthalten.',
+    heater_full_duty_estimate_note: 'Ohne UA-Kalibrierung ist die Heizerlast unbekannt — die CO₂-Verdünnung ist mit 100 % Last angesetzt, eine Abschätzung nach oben. Genauer nach dem Abkühltest (Reiter Wärmeverlust).',
     label_target_rh: 'Ziel-RH im Stall, %',
     gp_temp_ref: '(bei 60 % RH; Anpassung an Ziel-RH nach gefühlter Temperatur)',
     growth_profile_lbl: 'Wachstumsprofil:',

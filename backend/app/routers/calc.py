@@ -47,6 +47,7 @@ class CalcOut(BaseModel):
     # Снаружи воздух не суше целевого: вентиляцией RH не удержать (Qmin — по CO₂)
     humidity_uncontrollable: bool = False
     heater_insufficient: bool = False   # горелок не хватает даже на 100 %
+    heater_note: str | None = None
     calibration_ignored: dict | None = None   # почему UA калибровки не применён: {code, params}
     # Qmin больше заданной мощности установки: вентиляторов не хватает даже на минимум
     capacity_insufficient: bool = False
@@ -117,6 +118,7 @@ def minmax(payload: CalcIn):
         growth_profile_id=cr.growth_profile_id,
         humidity_uncontrollable=cr.humidity_uncontrollable,
         heater_insufficient=cr.heater_insufficient,
+        heater_note=cr.heater_note,
         calibration_ignored=cr.calibration_ignored,
     )
 
@@ -163,6 +165,7 @@ class SummaryRow(BaseModel):
     house_geometry_missing: bool = False
     humidity_uncontrollable: bool = False
     heater_insufficient: bool = False   # горелок не хватает даже на 100 %
+    heater_note: str | None = None      # горелки без загрузки: heater_data_missing | heater_full_duty_estimate
     calibration_ignored: dict | None = None   # почему UA калибровки не применён: {code, params}
 
 
@@ -233,6 +236,7 @@ def summary7(payload: SummaryIn):
                 house_geometry_missing=cr.house_geometry_missing,
                 humidity_uncontrollable=cr.humidity_uncontrollable,
                 heater_insufficient=cr.heater_insufficient,
+                heater_note=cr.heater_note,
                 calibration_ignored=cr.calibration_ignored,
             )
         )

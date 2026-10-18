@@ -296,6 +296,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const heatWarn = d.rows.some(r => r.heater_insufficient)
       ? `<p class="danger fs-12 mt-8 mb-0">⚠ ${t('heater_insufficient_note')}</p>`
       : '';
+    // Горелки включены, но загрузку не найти: либо данных о горелке нет совсем (ничего
+    // не добавлено), либо UA не откалиброван (разбавление CO₂ — оценка сверху при 100 %)
+    const heaterNote = ['heater_data_missing', 'heater_full_duty_estimate']
+      .find(code => d.rows.some(r => r.heater_note === code));
+    const heaterNoteHtml = heaterNote
+      ? `<p class="warn fs-12 mt-8 mb-0">⚠ ${t(heaterNote + '_note')}</p>`
+      : '';
     // Туннельный Qmax считается из сечения корпуса — без размеров он равен Qmin
     const geomWarn = d.rows.some(r => r.house_geometry_missing)
       ? `<p class="warn fs-12 mt-8 mb-0">⚠ ${t('geometry_missing_note')}</p>`
@@ -354,6 +361,7 @@ document.addEventListener('DOMContentLoaded', () => {
       ${capWarn}
       ${humWarn}
       ${heatWarn}
+      ${heaterNoteHtml}
       ${calWarn}
       ${geomWarn}
       ${physBlock}

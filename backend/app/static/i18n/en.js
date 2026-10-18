@@ -114,6 +114,8 @@
     geometry_missing_note: 'Enter house dimensions (width and height) to compute tunnel Qmax — without them Qmax equals Qmin',
     humidity_uncontrollable_note: 'Outside air is too humid to hold the indoor target RH by ventilation — Qmin in these rows is the regime maximum (4× CO₂ minimum before tunnel age, tunnel flow after). Heat the incoming air or dehumidify.',
     heater_insufficient_note: 'Heaters are insufficient even at 100 % in these rows — including heating of the air needed to dilute their CO₂. Add heating capacity or reduce heat loss.',
+    heater_data_missing_note: 'Heaters are on, but their power and type are not set (Heat loss tab) — their CO₂ is not included in Qmin.',
+    heater_full_duty_estimate_note: 'Heater load is unknown without a UA calibration — CO₂ dilution is taken at 100 % load, an upper estimate. Run the cooling test (Heat loss tab) for the real figure.',
     label_target_rh: 'Target house RH, %',
     gp_temp_ref: '(at 60% RH; adjusted to the target RH by apparent temperature)',
     growth_profile_lbl: 'Growth profile:',

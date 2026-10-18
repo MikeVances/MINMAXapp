@@ -114,6 +114,8 @@
     geometry_missing_note: 'Saisissez les dimensions du bâtiment (largeur et hauteur) pour calculer le Qmax tunnel — sans elles, Qmax est égal à Qmin',
     humidity_uncontrollable_note: "L'air extérieur est trop humide pour tenir l'humidité cible par la ventilation — le Qmin de ces lignes est le maximum du mode (4× le minimum CO₂ avant l'âge tunnel, débit tunnel ensuite). Il faut chauffer l'air entrant ou déshumidifier.",
     heater_insufficient_note: "Dans ces lignes, les chauffages sont insuffisants même à 100 % — y compris le chauffage de l'air nécessaire pour diluer leur CO₂. Il faut plus de puissance ou moins de pertes thermiques.",
+    heater_data_missing_note: 'Les chauffages sont allumés, mais leur puissance et leur type ne sont pas renseignés (onglet Déperditions thermiques) — leur CO₂ n’est pas inclus dans Qmin.',
+    heater_full_duty_estimate_note: 'Sans étalonnage UA, la charge des chauffages est inconnue — la dilution de leur CO₂ est prise à 100 %, une estimation haute. Valeur exacte après le test de refroidissement (onglet Déperditions thermiques).',
     label_target_rh: 'HR cible du bâtiment, %',
     gp_temp_ref: '(à 60 % HR ; ajustée à la HR cible selon la température ressentie)',
     growth_profile_lbl: 'Profil de croissance :',

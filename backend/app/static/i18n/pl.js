@@ -114,6 +114,8 @@
     geometry_missing_note: 'Podaj wymiary budynku (szerokość i wysokość), aby obliczyć Qmax tunelu — bez nich Qmax równa się Qmin',
     humidity_uncontrollable_note: 'Powietrze zewnętrzne jest zbyt wilgotne, by wentylacją utrzymać docelową wilgotność — Qmin w tych wierszach to maksimum trybu (4× minimum wg CO₂ przed wiekiem tunelowym, potem przepływ tunelowy). Potrzebne podgrzanie powietrza nawiewanego lub osuszanie.',
     heater_insufficient_note: 'W tych wierszach nagrzewnic nie wystarcza nawet przy 100 % — wliczając ogrzanie powietrza potrzebnego do rozcieńczenia ich CO₂. Potrzebna większa moc grzewcza lub mniejsze straty ciepła.',
+    heater_data_missing_note: 'Nagrzewnice są włączone, ale ich moc i typ nie są podane (zakładka Straty ciepła) — ich CO₂ nie jest wliczone do Qmin.',
+    heater_full_duty_estimate_note: 'Bez kalibracji UA obciążenie nagrzewnic jest nieznane — rozcieńczenie ich CO₂ przyjęto przy 100 %, to oszacowanie z góry. Dokładnie po teście stygnięcia (zakładka Straty ciepła).',
     label_target_rh: 'Docelowa RH w budynku, %',
     gp_temp_ref: '(przy 60% RH; korekta do docelowej RH wg temperatury odczuwalnej)',
     growth_profile_lbl: 'Profil wzrostu:',

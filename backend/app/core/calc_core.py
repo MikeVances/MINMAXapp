@@ -142,6 +142,8 @@ class CalcResult:
     humidity_uncontrollable: bool = False
     # Горелок не хватает даже на 100 % (с учётом подогрева их же воздуха разбавления)
     heater_insufficient: bool = False
+    # Как учтены горелки без найденной загрузки: heater_data_missing | heater_full_duty_estimate
+    heater_note: Optional[str] = None
     # Почему калибровка UA не применена: {code, params} или None
     calibration_ignored: Optional[dict] = None
     # Профиль роста, по которому шёл расчёт (видно, какие данные кросса использованы)
@@ -373,12 +375,24 @@ def compute(ci: CalcInput) -> CalcResult:
             elif heater_air > 0:
                 qmin_basis = "co2"
 
-    # Fallback: нет calibration данных → эмпирическая поправка на поголовье
+    # Горелки включены, но загрузку не найти — нет калибровки UA или данных о горелке.
+    # Раньше здесь добавлялось 0.10 / 0.05 / 0.025 м³/ч на голову по возрасту: числа
+    # без источника, и добавлялись они даже электрическим обогревателям, у которых
+    # CO₂ нет вовсе (аудит 2026-10-18). Теперь — только то, что следует из данных:
+    heater_note: Optional[str] = None
     if ci.heater_on and duty_cycle is None:
-        delta_per_bird = 0.10 if age <= 14 else (0.05 if age <= 28 else 0.025)
-        heater_air     = birds_eff * delta_per_bird
-        q_min         += heater_air
-        per_bird_min  += delta_per_bird
+        heater = _thermal_cfg.heater if _thermal_cfg is not None else None
+        if heater is None:
+            # Ни мощности, ни типа: добавить нечего — так и говорим, а не угадываем
+            heater_note = "heater_data_missing"
+        elif heater.heater_type == "gas_open":
+            # Мощность известна, загрузки нет (UA не откалиброван): разбавление CO₂ при
+            # 100 % — оценка СВЕРХУ, в безопасную для птицы сторону
+            heater_air = heater_co2_dilution_m3h(heater.total_power_kw, 1.0, heater.heater_type)
+            if q_min_co2 + heater_air > q_min:
+                q_min, qmin_basis = q_min_co2 + heater_air, "co2"
+            heater_note = "heater_full_duty_estimate"
+        # Электрические и непрямого нагрева воздух птичника не загрязняют — поправки нет
 
     # Влажность упёрлась в потолок, а потолок без размеров корпуса только оценён
     if humidity_uncontrollable and ceiling_needs_geometry:
@@ -410,6 +424,7 @@ def compute(ci: CalcInput) -> CalcResult:
         house_geometry_missing=house_geometry_missing,
         growth_profile_id=profile_id,
         humidity_uncontrollable=humidity_uncontrollable,
+        heater_note=heater_note,
         heater_insufficient=heater_insufficient,
         calibration_ignored=calibration_ignored,
     )
