@@ -7,6 +7,7 @@ from ..api_errors import api_error, from_calc_error
 from ..core.calc_core import compute, CalcInput, CalcResult
 from ..core.growth_profiles import ProfileNotFound
 from ..core.survival import survival_fraction
+from ..core.tunnel_speed_calc import target_speed_range
 from ..core.app_config import load_app_config
 
 
@@ -171,6 +172,11 @@ class SummaryOut(BaseModel):
     user_max_m3h: float | None
     growth_profile_id: str | None = None  # профиль роста, по которому шёл расчёт
     rows: list[SummaryRow]
+    # Цель скорости туннеля на последний день цикла — та же таблица, что у вкладки
+    # туннеля: физическая проверка профиля судит установленную мощность по ней
+    tunnel_target_day: int = 0
+    tunnel_target_v_min_ms: float = 0.0
+    tunnel_target_v_max_ms: float = 0.0
 
 
 @router.post("/summary7", response_model=SummaryOut)
@@ -231,10 +237,14 @@ def summary7(payload: SummaryIn):
             )
         )
 
+    v_min_target, v_max_target = target_speed_range(cycle)
     return SummaryOut(
         house=payload.house,
         birds=payload.birds,
         user_max_m3h=payload.user_max_m3h,
         growth_profile_id=cr.growth_profile_id,
         rows=rows,
+        tunnel_target_day=cycle,
+        tunnel_target_v_min_ms=v_min_target,
+        tunnel_target_v_max_ms=v_max_target,
     )

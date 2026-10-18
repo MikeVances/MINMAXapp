@@ -27,8 +27,8 @@ async function updateUaBadge(tabId) {
 
 // ── Simple in-memory + localStorage tabs for houses ──────────────────────────
 const defaultTabs = [
-  { id: '1', birds: 35000, age_days: 21, outside_t: 10, cap: 1000000 },
-  { id: '2', birds: 32000, age_days: 21, outside_t: 25, cap: 800000 },
+  { id: '1', birds: 35000, age_days: 21, cap: 1000000 },
+  { id: '2', birds: 32000, age_days: 21, cap: 800000 },
 ];
 
 const storeKey = 'vent_mvp_tabs_v1';
@@ -163,7 +163,7 @@ elAddTab.onclick = () => {
   const existing = new Set(tabs.map(x => String(x.id)));
   let n = tabs.length + 1, nextId;
   do { nextId = t('house_new_name', { n: n++ }); } while (existing.has(nextId));
-  tabs.push({ id: nextId, birds: 30000, age_days: 21, outside_t: 10, cap: null });
+  tabs.push({ id: nextId, birds: 30000, age_days: 21, cap: null });
   active = tabs.length - 1;
   saveTabs(tabs);
   renderTabs(); fillForm();
@@ -182,7 +182,7 @@ elDelTab.onclick = () => {
 function applyDelete(index) {
   if (index == null) return;
   if (tabs.length <= 1) {
-    tabs = [{ id: '1', birds: 30000, age_days: 21, outside_t: 10, cap: null }];
+    tabs = [{ id: '1', birds: 30000, age_days: 21, cap: null }];
     active = 0;
   } else {
     tabs.splice(index, 1);

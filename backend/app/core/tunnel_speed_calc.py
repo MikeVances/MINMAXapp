@@ -317,7 +317,15 @@ def _fan_operating_flow_m3s(
     return (-1.0 + math.sqrt(1.0 + 4.0 * a * q0_m3s)) / (2.0 * a)
 
 
-def _target_speed(age_days: int) -> tuple[float, float]:
+def target_speed_range(age_days: int) -> tuple[float, float]:
+    """
+    Целевой диапазон скорости туннеля (v_min, v_max) для возраста, м/с.
+
+    Единственный источник цели: по нему судят и вкладка туннеля, и физическая
+    проверка профиля (/calc/summary7). Раньше профиль сравнивал скорость с
+    зашитыми «≥3.0 м/с», а туннель — с этой таблицей, и один корпус получал на
+    соседних вкладках разные вердикты (аудит 2026-10-18).
+    """
     for max_age, v_min, v_max in _SPEED_TARGETS:
         if age_days <= max_age:
             return v_min, v_max
@@ -435,7 +443,7 @@ def calculate_tunnel_speed(inp: TunnelSpeedInput) -> TunnelSpeedResult:
     p_total = p_dynamic + inlet_sp
 
     # Рекомендации по скорости
-    v_min_t, v_max_t = _target_speed(inp.bird_age_days)
+    v_min_t, v_max_t = target_speed_range(inp.bird_age_days)
     if v_ms < v_min_t * 0.8:
         velocity_status = "too_low"
     elif v_ms < v_min_t:

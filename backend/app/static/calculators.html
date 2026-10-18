@@ -400,7 +400,7 @@
               <input id="tn-width" type="text" data-num inputmode="decimal" data-min="5" data-max="30" placeholder="12" required />
             </label>
             <label>
-              <span data-i18n="label_tn_height">Free cross-section height, m</span>
+              <span data-i18n="label_tn_height">Average cross-section height, m</span>
               <input id="tn-height" type="text" data-num inputmode="decimal" data-min="1" data-max="8" placeholder="2.0"
                      data-i18n-title="hint_tn_height" required />
             </label>
@@ -624,6 +624,19 @@ function initHouseSelector(selId, onSelect) {
 
 function _setVal(id, v) { if (v != null && v !== '') { const el = document.getElementById(id); if (el) el.value = v; } }
 
+// Средняя высота сечения корпуса, м — ОДНО правило для расчёта профиля и вкладки
+// туннеля: стена, а при двускатной крыше (конёк выше стены) — (стена + конёк) / 2.
+// Раньше туннель умножал её ещё на 0.80 «на оборудование», а профиль — нет: один
+// корпус получал на соседних вкладках 1.96 и 2.47 м/с (аудит 2026-10-18). Скорость
+// туннеля считают по полному сечению; поправка завышала её на 25 % при той же
+// мощности — ошибка в опасную сторону. Подвесной потолок пользователь вводит сам.
+function houseSectionHeight(tab) {
+  const wall  = Number(tab.height_wall_m)  || null;
+  const ridge = Number(tab.height_ridge_m) || null;
+  if (wall && ridge && ridge > wall) return (wall + ridge) / 2;
+  return wall || ridge;
+}
+
 // ─────── Tab switching ───────
 document.querySelectorAll('.tool-tab:not([disabled])').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -702,10 +715,8 @@ document.querySelectorAll('.tool-tab:not([disabled])').forEach(btn => {
     } catch (e) { /* не запомнится — не критично */ }
     const mode      = document.getElementById('prof-view-mode').value;
 
-    // Сечение корпуса для туннельного расхода: ширина × средняя высота (стена+конёк)/2
-    const hWall  = Number(tab.height_wall_m) || null;
-    const hRidge = Number(tab.height_ridge_m) || null;
-    const hAvg   = (hWall && hRidge) ? (hWall + hRidge) / 2 : (hWall || hRidge);
+    // Сечение корпуса для туннельного расхода: ширина × средняя высота
+    const hAvg = houseSectionHeight(tab);
 
     const payload = {
       house:        tab.id,
@@ -741,14 +752,13 @@ document.querySelectorAll('.tool-tab:not([disabled])').forEach(btn => {
   function renderProfileHtml(d, tab, mode, outsideT, outsideRH) {
     // Геометрия птичника
     const L = tab.length_m, W = tab.width_m;
-    const Hw = tab.height_wall_m, Hr = tab.height_ridge_m;
     const S_floor = (L && W) ? L * W : null;
-    const H_eff   = (Hw && Hr) ? (Hw + Hr) / 2 : (Hw || Hr || null);
+    const H_eff   = houseSectionHeight(tab);
     const V_house = (S_floor && H_eff) ? S_floor * H_eff : null;
     const S_cross = (W && H_eff) ? W * H_eff : null;
 
     const head = `
-      <div class="kv"><span>${t('sum_outdoor')}</span><span>${outsideT} °C / ${outsideRH ?? 60} %</span></div>
+      <div class="kv"><span>${t('sum_outdoor')}</span><span>${fmtNum(outsideT, 1)} °C / ${fmtNum(outsideRH ?? 60, 0)} %</span></div>
       <div class="kv"><span>${t('sum_house_birds')}</span><span>${d.house} / ${fmtNum(d.birds)}</span></div>
       <div class="kv"><span>${t('sum_sys_max')}</span><span>${d.user_max_m3h ?? '—'} ${t('unit_m3h_plain')}</span></div>`;
 
@@ -824,10 +834,16 @@ document.querySelectorAll('.tool-tab:not([disabled])').forEach(btn => {
 
       const hasSysCap = !!d.user_max_m3h;
       const cls_qmin  = '';
+      // Цель скорости — с сервера, из той же таблицы по возрасту, что у вкладки
+      // туннеля (на последний день цикла). Раньше здесь были зашиты «≥3.0 м/с»,
+      // а туннель для того же корпуса и дня судил по 2.5–3.0.
+      const vMin = d.tunnel_target_v_min_ms, vMax = d.tunnel_target_v_max_ms;
       const cls_qmax  = hasSysCap && qMaxM2 != null ? (qMaxM2 >= 150 ? 'ok' : qMaxM2 >= 100 ? '' : 'warn') : '';
       const cls_texch = hasSysCap && T_exch != null ? (T_exch <= 60 ? 'ok' : T_exch <= 90 ? '' : 'warn') : '';
-      // Цель ≥3.0 м/с (Cobb §9.7) — ниже 3 плохо, не "≤2.5 хорошо"
-      const cls_vtun  = hasSysCap && v_tun != null ? (v_tun >= 3.0 ? 'ok' : v_tun >= 2.0 ? '' : 'warn') : '';
+      // Пороги — как у вердикта вкладки туннеля: ≥ v_min — норма, ≥ 0.8·v_min — мало, ниже — плохо
+      const cls_vtun  = hasSysCap && v_tun != null && vMin
+        ? (v_tun >= vMin ? 'ok' : v_tun >= 0.8 * vMin ? '' : 'warn') : '';
+      const vTarget   = vMin ? t('phys_airspeed_target', { min: vMin, max: vMax, day: d.tunnel_target_day }) : '';
 
       physBlock = `
         <div class="mt-14 pt-12 bt-1">
@@ -839,9 +855,9 @@ document.querySelectorAll('.tool-tab:not([disabled])').forEach(btn => {
             ${qMinM2 != null ? `<div class="kv"><span>${t('phys_min_vent_check')}</span><span class="${cls_qmin}">${fmtNum(qMinM2, 1)} ${t('unit_m3h_m2')} <span class="muted">[≥18]</span></span></div>` : ''}
             ${qMaxM2 != null ? `<div class="kv"><span>${t('phys_max_vent_check')}</span><span class="${cls_qmax}">${fmtNum(qMaxM2, 1)} ${t('unit_m3h_m2')} <span class="muted">[165–200]</span></span></div>` : ''}
             ${T_exch  != null ? `<div class="kv"><span>${t('phys_exchange_time')}</span><span class="${cls_texch}">${T_exch} ${t('unit_sec')} <span class="muted">[40–60]</span></span></div>` : ''}
-            ${v_tun   != null ? `<div class="kv"><span>${t('phys_airspeed_tunnel')}</span><span class="${cls_vtun}">${fmtNum(v_tun, 2)} ${t('unit_ms')} <span class="muted">[${t('phys_airspeed_target')}]</span></span></div>` : ''}
+            ${v_tun   != null ? `<div class="kv"><span>${t('phys_airspeed_tunnel')}</span><span class="${cls_vtun}">${fmtNum(v_tun, 2)} ${t('unit_ms')} ${vTarget ? `<span class="muted">[${vTarget}]</span>` : ''}</span></div>` : ''}
           </div>
-          <p class="muted fs-10 mt-8 mb-0">${t('phys_cobb_source')}</p>
+          <p class="muted fs-10 mt-8 mb-0">${t('phys_cobb_source')}${hasSysCap ? '' : ' · ' + t('phys_needs_sys_cap')}</p>
         </div>`;
     } else {
       physBlock = `<p class="muted fs-11 mt-10">${t('phys_dims_needed')}</p>`;
@@ -873,7 +889,7 @@ document.querySelectorAll('.tool-tab:not([disabled])').forEach(btn => {
 // Каждый инструмент подтягивает из профиля то что хранится:
 // leakage ← length, width, fan_cap_m3h (один вентилятор для теста)
 // evap    ← length, width, cap (полная мощность системы)
-// tunnel  ← width, num_fans, fan_cap_m3h, age_days, outside_t
+// tunnel  ← width, height, num_fans, fan_cap_m3h, birds (наружные T и RH — только вручную)
 initHouseSelector('l-house-sel', tab => {
   _setVal('l-length',  tab.length_m);
   _setVal('l-width',   tab.width_m);
@@ -900,19 +916,16 @@ initHouseSelector('tn-house-sel', tab => {
   _setVal('tn-width',  tab.width_m);
   // Для оценки готовности птичника всегда используем последний день цикла
   _setVal('tn-age',    profileCfg.cycle_days ?? 42);
-  _setVal('tn-tdb',    tab.outside_t);
+  // Наружную температуру НЕ подставляем: у вкладки корпуса такого поля в
+  // интерфейсе нет, а старые вкладки хранят скрытое outside_t = 10 °C — для
+  // летней проверки туннеля это ложная расчётная точка (аудит 2026-10-18)
   _setVal('tn-birds',  tab.birds);
 
-  // Высота свободного сечения туннеля:
-  // Если задан конёк — среднее сечение гребневой крыши: (стена + конёк) / 2
-  // Только стена — прямоугольное сечение. В обоих случаях × 0.80 (оборудование, шторы)
+  // Высота сечения — то же правило, что в расчёте профиля (houseSectionHeight)
   const hintHeight = document.getElementById('tn-height-hint');
   if (tab.height_wall_m) {
     const hasRidge = tab.height_ridge_m && tab.height_ridge_m > tab.height_wall_m;
-    const baseH  = hasRidge
-      ? (tab.height_wall_m + tab.height_ridge_m) / 2
-      : tab.height_wall_m;
-    const freeH = +(baseH * 0.80).toFixed(1);
+    const freeH = Math.round(houseSectionHeight(tab) * 100) / 100;
     _setVal('tn-height', freeH);
     if (hintHeight) {
       hintHeight.textContent = hasRidge
