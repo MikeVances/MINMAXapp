@@ -112,6 +112,12 @@ all visitors. On a public instance set `WRITE_TOKEN` in the environment: endpoin
 saved data then require the `X-Write-Token` header (the UI asks for the token once and remembers
 it). Calculations stay open. Without `WRITE_TOKEN` writes are open — fine for local use.
 
+**Behind a reverse proxy.** The feedback form allows 5 messages per 10 minutes per client address.
+A proxy appends the address it saw to the end of `X-Forwarded-For`; everything to the left is
+whatever the client sent. Set `TRUSTED_PROXY_HOPS` to the number of entries your own proxies append
+(`1` for a single nginx or the Render load balancer — `render.yaml` sets it). With `0` (the default)
+the header is ignored and the connection address is used: without a proxy the header is untrusted.
+
 ---
 
 ## Customizing the look

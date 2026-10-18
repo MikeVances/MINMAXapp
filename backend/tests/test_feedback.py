@@ -64,9 +64,51 @@ def test_rate_limit_per_client(client, sent):
 
     assert r.status_code == 429
     assert len(sent) == feedback.RATE_LIMIT
-    # Другой адрес — свой лимит
-    other = client.post("/feedback", json={"message": "hi"}, headers={"X-Forwarded-For": "10.0.0.9"})
-    assert other.status_code == 200
+
+
+# ─── Адрес клиента за прокси ─────────────────────────────────────────────────
+# Прокси дописывает адрес в конец X-Forwarded-For; всё левее прислал клиент сам.
+
+def _post(client, xff):
+    return client.post("/feedback", json={"message": "hi"}, headers={"X-Forwarded-For": xff})
+
+
+def test_spoofed_left_entries_do_not_reset_the_limit(client, sent, monkeypatch):
+    """Раньше ключом была первая запись — новый выдуманный адрес в каждом запросе снимал лимит."""
+    monkeypatch.setenv("TRUSTED_PROXY_HOPS", "1")
+    codes = [_post(client, f"6.6.6.{i}, 203.0.113.5").status_code for i in range(feedback.RATE_LIMIT + 1)]
+    assert codes[-1] == 429 and len(sent) == feedback.RATE_LIMIT
+    # Другой настоящий адрес (его дописал прокси) — свой лимит
+    assert _post(client, "6.6.6.99, 198.51.100.7").status_code == 200
+
+
+def test_header_is_ignored_without_trusted_proxy(client, sent, monkeypatch):
+    """Без прокси (TRUSTED_PROXY_HOPS=0) заголовок целиком пишет клиент — ему не верим."""
+    monkeypatch.delenv("TRUSTED_PROXY_HOPS", raising=False)
+    codes = [_post(client, f"10.0.0.{i}").status_code for i in range(feedback.RATE_LIMIT + 1)]
+    assert codes[-1] == 429
+
+
+def test_short_chain_falls_back_to_the_peer(monkeypatch):
+    monkeypatch.setenv("TRUSTED_PROXY_HOPS", "2")
+    req = type("R", (), {"headers": {"x-forwarded-for": "203.0.113.5"},
+                         "client": type("C", (), {"host": "10.9.9.9"})()})()
+    assert feedback._client_key(req) == "10.9.9.9"
+    monkeypatch.setenv("TRUSTED_PROXY_HOPS", "2")
+    req.headers = {"x-forwarded-for": "6.6.6.6, 203.0.113.5, 10.0.0.1"}
+    assert feedback._client_key(req) == "203.0.113.5"
+
+
+def test_tracked_clients_are_bounded(monkeypatch):
+    """Словарь адресов не растёт без предела: истёкшие окна выбрасываются при переполнении."""
+    monkeypatch.setattr(feedback, "MAX_TRACKED_CLIENTS", 3)
+    feedback._recent.clear()
+    for k in "abc":
+        assert feedback._allow(k, 0.0)
+    assert not feedback._allow("d", 1.0)                       # все окна живые
+    assert feedback._allow("d", feedback.RATE_WINDOW_S + 1.0)  # истёкшие выброшены
+    assert set(feedback._recent) == {"d"}
+    feedback._recent.clear()
 
 
 def test_rate_window_expires():

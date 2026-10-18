@@ -1,6 +1,7 @@
 import os
 import json
 import asyncio
+import logging
 import threading
 import time
 import urllib.request
@@ -12,6 +13,7 @@ from ..api_errors import api_error
 from pydantic import BaseModel, Field
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 # Telegram принимает до 4096 символов; 2000 с запасом на заголовок и адрес страницы
 MAX_MESSAGE_LEN = 2000
@@ -24,24 +26,60 @@ RATE_WINDOW_S = 600
 _recent: dict[str, deque] = defaultdict(deque)
 _recent_lock = threading.Lock()
 
+# Больше адресов в памяти не держим: при переполнении выбрасываем тех, чьё окно
+# уже истекло. Иначе поток запросов с разных адресов растил бы словарь без предела
+MAX_TRACKED_CLIENTS = 10_000
+
+# Длина цепочки X-Forwarded-For пишется в журнал один раз — по ней на живой
+# площадке видно, сколько узлов дописывает прокси (сами адреса не пишем)
+_chain_logged = False
+
 
 class FeedbackPayload(BaseModel):
     message: str = Field(..., max_length=MAX_MESSAGE_LEN)
     page: str = Field("", max_length=200)
 
 
+def _trusted_hops() -> int:
+    """Сколько записей в конце X-Forwarded-For дописали НАШИ прокси (env TRUSTED_PROXY_HOPS).
+
+    Читается при каждом запросе, как WRITE_TOKEN: меняется в панели площадки без
+    правки кода. 0 — заголовок не учитывается вовсе (без прокси ему нельзя верить).
+    """
+    try:
+        return max(int(os.getenv("TRUSTED_PROXY_HOPS", "0")), 0)
+    except ValueError:
+        return 0
+
+
 def _client_key(request: Request) -> str:
-    # За прокси Render адрес клиента — первый в X-Forwarded-For. Заголовок можно
-    # подделать, но для защиты чата от случайного флуда этого достаточно
+    # Прокси ДОПИСЫВАЕТ адрес того, кто к нему пришёл, в конец X-Forwarded-For и
+    # не очищает то, что прислал клиент. Поэтому первая запись — что угодно, что
+    # клиент написал сам: с ней лимит обходился подстановкой нового адреса в каждом
+    # запросе. Верить можно только записи, которую добавил наш последний прокси:
+    # она стоит на позиции hops с конца. Короче цепочка — заголовок поддельный
+    # или прокси не наш, берём адрес соединения
+    global _chain_logged
+    peer = request.client.host if request.client else "unknown"
+    hops = _trusted_hops()
     forwarded = request.headers.get("x-forwarded-for", "")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-    return request.client.host if request.client else "unknown"
+    if not hops or not forwarded:
+        return peer
+    chain = [part.strip() for part in forwarded.split(",") if part.strip()]
+    if not _chain_logged:
+        logger.info("feedback: X-Forwarded-For из %d записей, TRUSTED_PROXY_HOPS=%d", len(chain), hops)
+        _chain_logged = True
+    return chain[-hops] if len(chain) >= hops else peer
 
 
 def _allow(key: str, now: float) -> bool:
     """Скользящее окно: старые отметки выбрасываются, новая добавляется, если есть место."""
     with _recent_lock:
+        if len(_recent) >= MAX_TRACKED_CLIENTS and key not in _recent:
+            for stale in [k for k, s in _recent.items() if not s or now - s[-1] > RATE_WINDOW_S]:
+                del _recent[stale]
+            if len(_recent) >= MAX_TRACKED_CLIENTS:
+                return False   # все окна живые — новый адрес ждёт, а не растит память
         stamps = _recent[key]
         while stamps and now - stamps[0] > RATE_WINDOW_S:
             stamps.popleft()
