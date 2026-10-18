@@ -21,39 +21,51 @@ Step-by-step analysis of the thermal envelope:
 4. **Heater cycle analysis** — required heating power vs. installed capacity at any outside temperature, bird age and stocking density
 
 ### Evaporative Cooling (Pad & Fan)
-Calculates effective temperature reduction from wet pad systems. Accounts for outside humidity and pad efficiency.
+Pad outlet temperature, airflow at the fan operating point with pad resistance, water use and recommended pad area; sufficiency is judged at the fan end.
 
 ### Tunnel Ventilation
-Minimum cross-section airspeed for effective tunnel mode. Flags when evaporative cooling becomes necessary.
+Air speed, wind cooling and THVI at the fan end, tunnel temperature limit. Flags when pad cooling becomes necessary.
 
 ---
 
 ## Physics
 
-The app uses first-principles heat balance, not lookup tables:
+The app uses first-principles balances, not lookup tables. One house-level heat model
+(CIGR 2002) feeds every balance:
 
 ```
-Q_heater = Q_walls + Q_ventilation − Q_birds
-
-Q_walls        = UA × ΔT                          (W)
-Q_ventilation  = V̇_min × 0.335 × ΔT              (W)
-Q_birds        = 6.90 × W^0.75 × N                (W)   ← CIGR standard
+f_T     = (1000 + 20 × (20 − T_in)) / 1000                 total heat vs 20 °C (+2 %/°C below)
+Q_sens  = [0.61 × (1000 + 20 × (20 − T_in)) − 0.228 × T_in²] / 1000 × 10.62 × W^0.75   (W/bird)
+Q_lat   = 10.62 × W^0.75 × f_T − Q_sens                     (W/bird, birds + litter)
 ```
 
-Where:
-- `UA` — overall heat transfer coefficient of the building envelope (W/K), measured by calibration
-- `V̇_min` — minimum ventilation rate (m³/h)
-- `W` — average bird weight (kg), `N` — number of birds
-- `0.335` — volumetric heat capacity of air (Wh/m³·K)
-
-Minimum ventilation is the larger of two limits:
+Minimum ventilation is the larger of two limits, with open-flame burners in both:
 
 ```
-Q_min,CO2      = 10.62 × W^0.75 × 0.153 / 2.6 × safety      (m³/h per bird, CIGR 1984)
-Q_min,moisture = G / (ρ × (W_in − W_out))                    (m³/h)
-G              = 10.62 × W^0.75 × (1 − f_s(T)) / h_fg × N    (vapour from birds and litter)
-f_s(T)         = [0.61 × (1000 + 20 × (20 − T)) − 0.228 × T²] / 1000   (CIGR 2002, house level)
+Q_min,CO2      = 10.62 × W^0.75 × 0.153 / 2.6 × 1.5 × N_eff  + Q_dilution(d)   (CIGR 1984)
+Q_min,moisture = (G_birds + G_burner(d)) / (ρ_in × (W_in − W_out))  ≤  Q_ceiling
+Q_ceiling      = 4 × Q_min,CO2 before tunnel age, tunnel flow after
 ```
+
+Maximum ventilation is the sensible heat balance, capped by the same ceiling:
+
+```
+Q_max = (N_eff × Q_sens − UA × ΔT) × 3600 / (ρ_in × 1006 × ΔT)
+```
+
+Burner duty `d` is solved together with the burners' own CO₂-dilution air
+(≈ 58 m³/h per kW), which has to be heated as well:
+
+```
+P × d = UA × ΔT + ρ_in × 1006 × ΔT × Q_min(d) / 3600 − N_eff × Q_sens
+```
+
+Where `UA` is the building heat-loss coefficient (W/K) from a cooling-curve test in the
+empty house — used only for its own house and only if plausible (test ≥ 10 min, mean
+envelope U 0.1–8 W/(m²·K)). Tunnel mode starts when the heat balance needs more than half
+of the tunnel flow (transitional ventilation covers 40–50 %, Ross 2025), with air speed
+limited by age (Cobb 2021). Tunnel and pad checks are judged at the fan end, where the air
+is warmer by `N × Q_sens / (ρ × Cp × Q)`.
 
 Growth curves (body weight by day) come from breeder performance objectives; the
 temperature setpoint follows the Ross Broiler Handbook 2025 apparent-temperature table
