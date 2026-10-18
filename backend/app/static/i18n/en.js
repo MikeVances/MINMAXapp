@@ -322,7 +322,7 @@
     btn_leakage_busy:     'Calculating…',
 
     // Evap cooling tool
-    evap_info_html:   '<strong>Evaporative cooling (Pad &amp; Fan)</strong><br>Air is cooled by evaporating water through a cellulose pad. The cooling limit is the wet-bulb temperature (T<sub>wb</sub>). Saturation efficiency at rated velocity (UGA): <strong>100 mm η ≈ 73%</strong> (1.14 m/s), <strong>150 mm η ≈ 75%</strong> (1.78 m/s). η decreases at higher velocities. Recommended face velocity: <strong>1.0–1.8 m/s</strong> depending on pad thickness.',
+    evap_info_html:   '<strong>Evaporative cooling (Pad & Fan)</strong><br>Air is cooled by evaporating water through a cellulose pad. The cooling limit is the wet-bulb temperature (T<sub>wb</sub>). Saturation efficiency at rated velocity (UGA): <strong>100 mm η ≈ 73%</strong> (1.14 m/s), <strong>150 mm η ≈ 75%</strong> (1.78 m/s). η decreases at higher velocities. Recommended face velocity: <strong>1.0–1.8 m/s</strong> depending on pad thickness.',
     evap_h2:          'System parameters',
     evap_dims_grp:    'House dimensions',
     evap_climate_grp: 'Outdoor climate',
@@ -426,7 +426,10 @@
     lbl_tunnel_limit:     'Tunnel effective up to',
     tunnel_limit_no_limit:'≥ 42 °C (always sufficient)',
     tn_note_ok:           'Tunnel ventilation is sufficient. At current air speed and humidity it handles outdoor temperatures up to {limit} °C. Above this — evaporative cooling (Pad & Fan) recommended.',
-    tn_note_need_evap:    'Current outdoor conditions exceed tunnel capacity. Effective temperature is above the bird comfort target. Evaporative cooling (Pad & Fan) recommended.',
+    tn_note_need_evap: 'Air speed is on target, but the outdoor air is too hot: effective temperature at the fans is {t_eff} °C, above the {target} °C target. More fans will not help — evaporative cooling (Pad & Fan) is needed.',
+    tn_note_add_fans: 'Birds are not too hot now (effective {t_eff} °C, target {target} °C), but air speed {v} m/s is below the {v_min} m/s target — there is no reserve for hotter weather. Add fans: {v_min} m/s needs {n} fans in total.',
+    tn_note_add_fans_heat: 'It is too hot because the air speed is short ({v} m/s, target {v_min} m/s). At {v_min} m/s the effective temperature would be {t_eff_target} °C — the tunnel copes without pads. Add fans: {n} in total.',
+    tn_note_add_fans_and_pads: 'Air speed {v} m/s is below the {v_min} m/s target, and even at target speed the effective temperature would be {t_eff_target} °C against a {target} °C target. Both more fans ({n} in total for {v_min} m/s) and evaporative cooling (Pad & Fan) are needed.',
     btn_go_to_evap:       '→ Evaporative cooling calculator',
 
     // ── Feedback ───────────────────────────────────────────────────────────────

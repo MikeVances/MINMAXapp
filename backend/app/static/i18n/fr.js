@@ -322,7 +322,7 @@
     btn_leakage_busy:     'Calcul en cours…',
 
     // Evap cooling tool
-    evap_info_html:   '<strong>Refroidissement évaporatif (Pad &amp; Fan)</strong><br>L\'air est refroidi par évaporation de l\'eau à travers un panneau en cellulose. La limite de refroidissement est la température de bulbe humide (T<sub>bh</sub>). Efficacité de saturation à la vitesse nominale (UGA) : <strong>100 mm η ≈ 73 %</strong> (1,14 m/s), <strong>150 mm η ≈ 75 %</strong> (1,78 m/s). η diminue à des vitesses plus élevées. Vitesse frontale recommandée : <strong>1,0–1,8 m/s</strong> selon l\'épaisseur du panneau.',
+    evap_info_html:   '<strong>Refroidissement évaporatif (Pad & Fan)</strong><br>L\'air est refroidi par évaporation de l\'eau à travers un panneau en cellulose. La limite de refroidissement est la température de bulbe humide (T<sub>bh</sub>). Efficacité de saturation à la vitesse nominale (UGA) : <strong>100 mm η ≈ 73 %</strong> (1,14 m/s), <strong>150 mm η ≈ 75 %</strong> (1,78 m/s). η diminue à des vitesses plus élevées. Vitesse frontale recommandée : <strong>1,0–1,8 m/s</strong> selon l\'épaisseur du panneau.',
     evap_h2:          'Paramètres du système',
     evap_dims_grp:    'Dimensions du bâtiment',
     evap_climate_grp: 'Climat extérieur',
@@ -426,7 +426,10 @@
     lbl_tunnel_limit:     'Tunnel efficace jusqu\'à',
     tunnel_limit_no_limit:'≥ 42 °C (toujours suffisant)',
     tn_note_ok:           'La ventilation en tunnel est suffisante. À la vitesse d\'air et à l\'humidité actuelles, elle gère les températures extérieures jusqu\'à {limit} °C. Au-delà — le refroidissement évaporatif (Pad & Fan) est recommandé.',
-    tn_note_need_evap:    'Les conditions extérieures actuelles dépassent la capacité du tunnel. La température ressentie est supérieure à l\'objectif de confort des animaux. Le refroidissement évaporatif (Pad & Fan) est recommandé.',
+    tn_note_need_evap: 'La vitesse d\'air est correcte, mais l\'air extérieur est trop chaud : température ressentie aux ventilateurs {t_eff} °C, au-dessus de l\'objectif {target} °C. Plus de ventilateurs n\'aidera pas — le refroidissement évaporatif (Pad & Fan) est nécessaire.',
+    tn_note_add_fans: 'Les animaux n\'ont pas trop chaud pour l\'instant (ressenti {t_eff} °C, objectif {target} °C), mais la vitesse {v} m/s est sous l\'objectif {v_min} m/s — aucune réserve en cas de chaleur. Ajoutez des ventilateurs : {n} au total pour {v_min} m/s.',
+    tn_note_add_fans_heat: 'Trop chaud faute de vitesse d\'air ({v} m/s, objectif {v_min} m/s). À {v_min} m/s, le ressenti serait de {t_eff_target} °C — le tunnel suffit sans pads. Ajoutez des ventilateurs : {n} au total.',
+    tn_note_add_fans_and_pads: 'Vitesse {v} m/s sous l\'objectif {v_min} m/s, et même à la vitesse cible le ressenti serait de {t_eff_target} °C pour un objectif de {target} °C. Il faut plus de ventilateurs ({n} au total pour {v_min} m/s) et le refroidissement évaporatif (Pad & Fan).',
     btn_go_to_evap:       '→ Calculateur de refroidissement évaporatif',
 
     // ── Retour ─────────────────────────────────────────────────────────────────

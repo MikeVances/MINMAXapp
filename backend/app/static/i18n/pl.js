@@ -322,7 +322,7 @@
     btn_leakage_busy:     'Obliczanie…',
 
     // Narzędzie chłodzenia ewaporacyjnego
-    evap_info_html:   '<strong>Chłodzenie ewaporacyjne (Pad &amp; Fan)</strong><br>Powietrze jest chłodzone przez odparowanie wody w wkładzie celulozowym. Granicą chłodzenia jest temperatura mokrego termometru (T<sub>wb</sub>). Sprawność nasycenia przy nominalnej prędkości (UGA): <strong>100 mm η ≈ 73%</strong> (1,14 m/s), <strong>150 mm η ≈ 75%</strong> (1,78 m/s). η maleje przy wyższych prędkościach. Zalecana prędkość czołowa: <strong>1,0–1,8 m/s</strong> zależnie od grubości wkładu.',
+    evap_info_html:   '<strong>Chłodzenie ewaporacyjne (Pad & Fan)</strong><br>Powietrze jest chłodzone przez odparowanie wody w wkładzie celulozowym. Granicą chłodzenia jest temperatura mokrego termometru (T<sub>wb</sub>). Sprawność nasycenia przy nominalnej prędkości (UGA): <strong>100 mm η ≈ 73%</strong> (1,14 m/s), <strong>150 mm η ≈ 75%</strong> (1,78 m/s). η maleje przy wyższych prędkościach. Zalecana prędkość czołowa: <strong>1,0–1,8 m/s</strong> zależnie od grubości wkładu.',
     evap_h2:          'Parametry systemu',
     evap_dims_grp:    'Wymiary kurnika',
     evap_climate_grp: 'Klimat zewnętrzny',
@@ -426,7 +426,10 @@
     lbl_tunnel_limit:     'Tunel skuteczny do',
     tunnel_limit_no_limit:'≥ 42 °C (zawsze wystarczający)',
     tn_note_ok:           'Wentylacja tunelowa jest wystarczająca. Przy aktualnej prędkości powietrza i wilgotności radzi sobie z temperaturami zewnętrznymi do {limit} °C. Powyżej — zalecane chłodzenie ewaporacyjne (Pad & Fan).',
-    tn_note_need_evap:    'Aktualne warunki zewnętrzne przekraczają możliwości tunelu. Temperatura odczuwalna przekracza docelowy komfort ptaków. Zalecane chłodzenie ewaporacyjne (Pad & Fan).',
+    tn_note_need_evap: 'Prędkość powietrza jest prawidłowa, ale powietrze zewnętrzne jest zbyt gorące: temperatura odczuwalna przy wentylatorach {t_eff} °C, powyżej celu {target} °C. Więcej wentylatorów nie pomoże — potrzebne chłodzenie ewaporacyjne (Pad & Fan).',
+    tn_note_add_fans: 'Ptakom nie jest teraz za gorąco (odczuwalna {t_eff} °C, cel {target} °C), ale prędkość {v} m/s jest poniżej celu {v_min} m/s — brak rezerwy na upał. Dodaj wentylatory: dla {v_min} m/s potrzeba łącznie {n} szt.',
+    tn_note_add_fans_heat: 'Za gorąco z powodu zbyt małej prędkości powietrza ({v} m/s, cel {v_min} m/s). Przy {v_min} m/s odczuwalna wyniesie {t_eff_target} °C — tunel poradzi sobie bez pad. Dodaj wentylatory: łącznie {n} szt.',
+    tn_note_add_fans_and_pads: 'Prędkość {v} m/s poniżej celu {v_min} m/s, a nawet przy prędkości docelowej odczuwalna wyniesie {t_eff_target} °C przy celu {target} °C. Potrzebne są zarówno wentylatory (dla {v_min} m/s łącznie {n} szt.), jak i chłodzenie ewaporacyjne (Pad & Fan).',
     btn_go_to_evap:       '→ Kalkulator chłodzenia ewaporacyjnego',
 
     // ── Opinie ─────────────────────────────────────────────────────────────────

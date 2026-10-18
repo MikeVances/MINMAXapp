@@ -1140,9 +1140,12 @@ function renderTunnel(d, t_real) {
   const noteEl   = document.getElementById('tn-decision-note');
   const evapBtn  = document.getElementById('tn-to-evap-btn');
   const limitOk  = d.tunnel_sufficient;
-  const limitTone = limitOk ? 'ok' : 'danger';
+  // Отклонение ощущаемой — тоном ТЕПЛОВОЙ проверки: при нехватке одной скорости
+  // птице может быть не жарко, и красный «−2 °C» читался бы как перегрев
+  const heatTone  = d.heat_sufficient ? 'ok' : 'danger';
 
-  setEdge(decCard, limitTone);
+  // Птице не жарко, не хватает только скорости — предупреждение, а не авария
+  setEdge(decCard, limitOk ? 'ok' : d.tunnel_action === 'add_fans' ? 'warn' : 'danger');
   decCard.hidden = false;
 
   document.getElementById('tn-r-comfort-target').textContent =
@@ -1152,7 +1155,7 @@ function renderTunnel(d, t_real) {
   const marginSign = d.temp_margin_c >= 0 ? '−' : '+';
   document.getElementById('tn-r-margin').innerHTML =
     `${fmtNum(d.effective_temp_c, 1)} °C &nbsp;` +
-    `<span class="c-${limitTone}">(${marginSign}${marginAbs} °C)</span>`;
+    `<span class="c-${heatTone}">(${marginSign}${marginAbs} °C)</span>`;
 
   const atCap = d.t_outdoor_tunnel_limit_c >= 42;
   document.getElementById('tn-r-tunnel-limit').textContent =
@@ -1160,13 +1163,20 @@ function renderTunnel(d, t_real) {
   setTone(document.getElementById('tn-r-tunnel-limit'),
     atCap || d.t_outdoor_tunnel_limit_c > t_real ? 'ok' : 'danger');
 
-  if (limitOk) {
-    noteEl.textContent = t('tn_note_ok', { limit: fmtNum(d.t_outdoor_tunnel_limit_c, 1) });
-    evapBtn.hidden = true;
-  } else {
-    noteEl.textContent = t('tn_note_need_evap');
-    evapBtn.hidden = false;
-  }
+  // Совет по причине провала (сервер различает): не хватает скорости — вентиляторы,
+  // жарко при нормальной скорости — панели. Раньше при любом провале — панели.
+  const NOTE_KEY = {
+    ok: 'tn_note_ok', pads: 'tn_note_need_evap', add_fans: 'tn_note_add_fans',
+    add_fans_heat: 'tn_note_add_fans_heat', add_fans_and_pads: 'tn_note_add_fans_and_pads',
+  };
+  const action = NOTE_KEY[d.tunnel_action] ? d.tunnel_action : (limitOk ? 'ok' : 'pads');
+  noteEl.textContent = t(NOTE_KEY[action], {
+    limit: fmtNum(d.t_outdoor_tunnel_limit_c, 1),
+    t_eff: fmtNum(d.effective_temp_c, 1), target: fmtNum(d.bird_comfort_target_c, 1),
+    t_eff_target: fmtNum(d.effective_temp_at_target_speed_c, 1),
+    v: fmtNum(d.air_velocity_ms, 1), v_min: fmtNum(d.target_v_min_ms, 1), n: d.fans_needed_for_target,
+  });
+  evapBtn.hidden = !(action === 'pads' || action === 'add_fans_and_pads');
 
   document.getElementById('tn-results').hidden = false;
 }

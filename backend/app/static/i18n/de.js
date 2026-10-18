@@ -322,7 +322,7 @@
     btn_leakage_busy:     'Berechnung läuft…',
 
     // Evap cooling tool
-    evap_info_html:   '<strong>Verdunstungskühlung (Pad &amp; Fan)</strong><br>Luft wird durch Verdunstung von Wasser in einem Zellulose-Pad gekühlt. Die Kühlobergrenze ist die Feuchtkugeltemperatur (T<sub>wb</sub>). Sättigungseffizienz bei Nennluftgeschwindigkeit (UGA): <strong>100 mm η ≈ 73%</strong> (1,14 m/s), <strong>150 mm η ≈ 75%</strong> (1,78 m/s). η sinkt bei höheren Geschwindigkeiten. Empfohlene Anströmgeschwindigkeit: <strong>1,0–1,8 m/s</strong> je nach Paddicke.',
+    evap_info_html:   '<strong>Verdunstungskühlung (Pad & Fan)</strong><br>Luft wird durch Verdunstung von Wasser in einem Zellulose-Pad gekühlt. Die Kühlobergrenze ist die Feuchtkugeltemperatur (T<sub>wb</sub>). Sättigungseffizienz bei Nennluftgeschwindigkeit (UGA): <strong>100 mm η ≈ 73%</strong> (1,14 m/s), <strong>150 mm η ≈ 75%</strong> (1,78 m/s). η sinkt bei höheren Geschwindigkeiten. Empfohlene Anströmgeschwindigkeit: <strong>1,0–1,8 m/s</strong> je nach Paddicke.',
     evap_h2:          'Systemparameter',
     evap_dims_grp:    'Stallabmessungen',
     evap_climate_grp: 'Außenklima',
@@ -425,8 +425,11 @@
     lbl_eff_temp_margin:  'Gefühlte Temperatur / Abstand',
     lbl_tunnel_limit:     'Tunnel wirksam bis',
     tunnel_limit_no_limit:'≥ 42 °C (immer ausreichend)',
-    tn_note_ok:           'Tunnellüftung ist ausreichend. Bei aktueller Luftgeschwindigkeit und Feuchte werden Außentemperaturen bis {limit} °C bewältigt. Darüber — Verdunstungskühlung (Pad &amp; Fan) empfohlen.',
-    tn_note_need_evap:    'Aktuelle Außenbedingungen übersteigen die Tunnelkapazität. Die gefühlte Temperatur liegt über dem Tierwohl-Zielwert. Verdunstungskühlung (Pad &amp; Fan) empfohlen.',
+    tn_note_ok:           'Tunnellüftung ist ausreichend. Bei aktueller Luftgeschwindigkeit und Feuchte werden Außentemperaturen bis {limit} °C bewältigt. Darüber — Verdunstungskühlung (Pad & Fan) empfohlen.',
+    tn_note_need_evap: 'Die Luftgeschwindigkeit stimmt, aber die Außenluft ist zu heiß: gefühlte Temperatur an den Ventilatoren {t_eff} °C, Zielwert {target} °C. Mehr Ventilatoren helfen nicht — Verdunstungskühlung (Pad & Fan) erforderlich.',
+    tn_note_add_fans: 'Den Tieren ist jetzt nicht zu warm (gefühlt {t_eff} °C, Ziel {target} °C), aber die Luftgeschwindigkeit {v} m/s liegt unter dem Ziel {v_min} m/s — keine Reserve für mehr Hitze. Ventilatoren ergänzen: für {v_min} m/s insgesamt {n} Stück.',
+    tn_note_add_fans_heat: 'Zu warm wegen zu geringer Luftgeschwindigkeit ({v} m/s, Ziel {v_min} m/s). Bei {v_min} m/s läge die gefühlte Temperatur bei {t_eff_target} °C — der Tunnel reicht ohne Pads. Ventilatoren ergänzen: insgesamt {n} Stück.',
+    tn_note_add_fans_and_pads: 'Luftgeschwindigkeit {v} m/s unter dem Ziel {v_min} m/s, und selbst bei Zielgeschwindigkeit läge die gefühlte Temperatur bei {t_eff_target} °C (Ziel {target} °C). Nötig sind mehr Ventilatoren (für {v_min} m/s insgesamt {n} Stück) und Verdunstungskühlung (Pad & Fan).',
     btn_go_to_evap:       '→ Verdunstungskühlungs-Rechner',
 
     // ── Feedback ───────────────────────────────────────────────────────────────

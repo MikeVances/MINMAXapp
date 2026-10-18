@@ -188,6 +188,13 @@ class TunnelSpeedResult:
     air_temp_rise_c:          float = 0.0
     t_fan_end_c:              float = 0.0   # T воздуха у вентиляторов — по ней ощущаемая и THVI
     end_to_end_rise_excessive: bool = False # > 2.8 °C (Cobb): нужно больше воздуха
+    # Две проверки tunnel_sufficient по отдельности — у них разные лекарства
+    speed_sufficient:         bool = True   # скорость ≥ нижней цели по возрасту
+    heat_sufficient:          bool = True   # ощущаемая у вентиляторов ≤ цели комфорта
+    # Ощущаемая при нижней целевой скорости (с её меньшим нагревом вдоль корпуса)
+    effective_temp_at_target_speed_c: float = 0.0
+    # Что делать: ok | add_fans | add_fans_heat | add_fans_and_pads | pads
+    tunnel_action:            str = "ok"
 
 
 # ─────────────────────────────────────────────────
@@ -452,7 +459,25 @@ def calculate_tunnel_speed(inp: TunnelSpeedInput) -> TunnelSpeedResult:
     # Туннель достаточен только если ОБА условия выполнены:
     # 1. Скорость воздуха >= минимальной проектной (обеспечивает ветровое охлаждение)
     # 2. Ощущаемая T <= целевой комфортной T для данного возраста
-    tunnel_ok      = (v_ms >= v_min_t) and (t_eff <= comfort_target)
+    speed_ok       = v_ms >= v_min_t
+    heat_ok        = t_eff <= comfort_target
+    tunnel_ok      = speed_ok and heat_ok
+
+    # Лекарство зависит от того, ЧТО не выполнено (аудит 2026-10-18: карточка при
+    # любом провале советовала панели, хотя при низкой скорости не хватает вентиляторов).
+    # Если скорость ниже цели — проверяем, справится ли туннель на целевой скорости:
+    # ветровое охлаждение растёт, а нагрев вдоль корпуса падает (больше воздуха).
+    q_target_m3s   = v_min_t * cross_section
+    rise_at_target = air_temperature_rise_c(inp.num_birds, inp.bird_weight_kg, inp.t_outdoor_db_c, q_target_m3s)
+    t_eff_at_target = _effective_temperature(inp.t_outdoor_db_c + rise_at_target, inp.rh_outdoor_pct, v_min_t)
+    if speed_ok:
+        tunnel_action = "ok" if heat_ok else "pads"
+    elif heat_ok:
+        tunnel_action = "add_fans"            # птице сейчас не жарко, но скорость ниже проектной
+    elif t_eff_at_target <= comfort_target:
+        tunnel_action = "add_fans_heat"       # жарко из-за нехватки скорости — панели не нужны
+    else:
+        tunnel_action = "add_fans_and_pads"
     # Предел — по наружной T: у вентиляторов воздух теплее на air_rise
     t_limit        = round(_find_tunnel_temp_limit(inp.rh_outdoor_pct, v_ms, comfort_target) - air_rise, 1)
 
@@ -505,4 +530,8 @@ def calculate_tunnel_speed(inp: TunnelSpeedInput) -> TunnelSpeedResult:
         air_temp_rise_c           = round(air_rise, 1),
         t_fan_end_c               = round(t_fan_end, 1),
         end_to_end_rise_excessive = air_rise > MAX_END_TO_END_RISE_C,
+        speed_sufficient          = speed_ok,
+        heat_sufficient           = heat_ok,
+        effective_temp_at_target_speed_c = round(t_eff_at_target, 1),
+        tunnel_action             = tunnel_action,
     )

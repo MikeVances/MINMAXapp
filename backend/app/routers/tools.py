@@ -335,6 +335,10 @@ class TunnelSpeedResponse(BaseModel):
     air_temp_rise_c:          float = 0.0
     t_fan_end_c:              float = 0.0
     end_to_end_rise_excessive: bool = False
+    speed_sufficient:         bool = True
+    heat_sufficient:          bool = True
+    effective_temp_at_target_speed_c: float = 0.0
+    tunnel_action:            str = "ok"     # ok | add_fans | add_fans_heat | add_fans_and_pads | pads
     bird_weight_kg:           float = 0.0   # масса из профиля, по которой считан нагрев
 
 
@@ -408,6 +412,10 @@ def calc_tunnel_speed(req: TunnelSpeedRequest) -> TunnelSpeedResponse:
         air_temp_rise_c           = r.air_temp_rise_c,
         t_fan_end_c               = r.t_fan_end_c,
         end_to_end_rise_excessive = r.end_to_end_rise_excessive,
+        speed_sufficient          = r.speed_sufficient,
+        heat_sufficient           = r.heat_sufficient,
+        effective_temp_at_target_speed_c = r.effective_temp_at_target_speed_c,
+        tunnel_action             = r.tunnel_action,
         bird_weight_kg            = round(weight_kg, 3),
         velocity_basis            = r.velocity_basis,
         fan_operating_m3h         = r.fan_operating_m3h,

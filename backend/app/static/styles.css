@@ -338,3 +338,4 @@ input[type="number"], input[type="text"], select, textarea { font-size: 16px; }
 /* Цвет левой кромки карточки-решения; ширину задаёт bl-3/bl-4 */
 .edge-ok     { border-left-color: var(--ok); }
 .edge-danger { border-left-color: var(--danger); }
+.edge-warn   { border-left-color: var(--warn); }

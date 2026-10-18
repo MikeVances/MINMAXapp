@@ -142,3 +142,42 @@ def test_birds_heat_air_along_the_house_and_comfort_is_checked_at_the_fans(clien
     assert r["effective_temp_c"] == pytest.approx(_effective_temperature(32.0 + rise, 50.0, r["air_velocity_ms"]), abs=0.05)
     assert r["t_outdoor_tunnel_limit_c"] == pytest.approx(plain["t_outdoor_tunnel_limit_c"] - rise, abs=0.1)
     assert r["end_to_end_rise_excessive"] is False
+
+
+# ── Причина провала туннеля (аудит 2026-10-18) ────────────────────────────────
+# tunnel_sufficient = (скорость ≥ цели) И (ощущаемая ≤ цели), а карточка при любом
+# провале писала «ощущаемая выше целевой → панели». При нехватке одной скорости
+# это неверно: птице не жарко, а лечится всё вентиляторами, не панелями.
+# День 35: цель скорости 2.0 м/с, комфорт ≤ 25 °C; сечение 18 × 3 = 54 м².
+TUNNEL_35D = dict(house_width_m=18, tunnel_height_m=3.0, fan_capacity_m3h=40_000,
+                  rh_outdoor_pct=50, bird_age_days=35, num_inlets=2, inlet_width_m=20, inlet_height_m=1.5)
+
+
+@pytest.mark.parametrize("fans, t_out, action, speed_ok, heat_ok", [
+    (6, 24, "add_fans", False, True),             # 1.23 м/с, ощущаемая 20.6 < 25 — НЕ жарко
+    (6, 33, "add_fans_heat", False, False),       # жарко, но при 2.0 м/с — 23.6 ≤ 25
+    (6, 36, "add_fans_and_pads", False, False),   # и при 2.0 м/с — 30.0 > 25
+    (12, 36, "pads", True, False),                # 2.47 м/с, а всё равно 30.0 > 25
+    (12, 30, "ok", True, True),
+])
+def test_tunnel_verdict_names_what_is_missing(client, fans, t_out, action, speed_ok, heat_ok):
+    r = client.post("/calc/tools/tunnel_speed",
+                    json={**TUNNEL_35D, "num_fans": fans, "t_outdoor_db_c": t_out}).json()
+    assert (r["tunnel_action"], r["speed_sufficient"], r["heat_sufficient"]) == (action, speed_ok, heat_ok)
+    assert r["tunnel_sufficient"] is (speed_ok and heat_ok)
+    assert r["heat_sufficient"] is (r["effective_temp_c"] <= r["bird_comfort_target_c"])
+
+
+def test_effective_temperature_at_target_speed_matches_a_house_that_has_it():
+    """
+    Прогноз «при целевой скорости» обязан совпасть с расчётом корпуса, где эта
+    скорость реально есть — вместе с меньшим нагревом вдоль корпуса (больше воздуха).
+    """
+    birds = dict(num_birds=30_000, bird_weight_kg=2.3)
+    slow = calculate_tunnel_speed(TunnelSpeedInput(**TUNNEL_35D, **birds, num_fans=6, t_outdoor_db_c=33))
+    # 2.0 м/с × 54 м² = 108 м³/с = 388 800 м³/ч → 6 вентиляторов по 64 800
+    at_target = calculate_tunnel_speed(TunnelSpeedInput(
+        **{**TUNNEL_35D, "fan_capacity_m3h": 2.0 * 54 * 3600 / 6}, **birds, num_fans=6, t_outdoor_db_c=33))
+    assert at_target.air_velocity_ms == pytest.approx(2.0, abs=0.005)
+    assert slow.air_temp_rise_c > at_target.air_temp_rise_c
+    assert slow.effective_temp_at_target_speed_c == pytest.approx(at_target.effective_temp_c, abs=0.05)
