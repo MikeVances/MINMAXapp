@@ -245,7 +245,7 @@
     ua_recal_link:     'Recalibrate',
     cfg_house_lbl:     'Linked house',
     cal_save_hint:     'Click "Save calibration" to use these values in ventilation calculations.',
-    cal_saved_alert:   '✅ Calibration saved! Ventilation calculations will now automatically account for combustion air.',
+    cal_saved_alert:   '✅ Calibration saved — this house’s UA now enters Qmax and the heater load.',
     err_save_cal:      '❌ Save error: ',
     err_enter_all_fields:       '❌ Fill in all fields',
     label_q_min_analysis:       'Min. ventilation Q_min, m³/h',

@@ -245,7 +245,7 @@
     ua_recal_link:     'Neu kalibrieren',
     cfg_house_lbl:     'Verknüpfter Stall',
     cal_save_hint:     '„Kalibrierung speichern" klicken, um diese Werte in den Lüftungsberechnungen zu verwenden.',
-    cal_saved_alert:   '✅ Kalibrierung gespeichert! Die Lüftungsberechnungen berücksichtigen ab sofort die Verbrennungsluft.',
+    cal_saved_alert:   '✅ Kalibrierung gespeichert — der UA-Wert dieses Stalls geht jetzt in Qmax und die Heizerlast ein.',
     err_save_cal:      '❌ Speicherfehler: ',
     err_enter_all_fields:       '❌ Alle Felder ausfüllen',
     label_q_min_analysis:       'Mindestlüftung Q_min, m³/h',

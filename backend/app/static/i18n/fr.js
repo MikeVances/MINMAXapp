@@ -245,7 +245,7 @@
     ua_recal_link:     'Recalibrer',
     cfg_house_lbl:     'Bâtiment associé',
     cal_save_hint:     'Cliquer sur « Enregistrer la calibration » pour utiliser ces valeurs dans les calculs de ventilation.',
-    cal_saved_alert:   '✅ Calibration enregistrée ! Les calculs de ventilation prendront désormais automatiquement en compte l\'air de combustion.',
+    cal_saved_alert:   '✅ Étalonnage enregistré — l’UA de ce bâtiment entre désormais dans Qmax et la charge des chauffages.',
     err_save_cal:      '❌ Erreur d\'enregistrement : ',
     err_enter_all_fields:       '❌ Remplir tous les champs',
     label_q_min_analysis:       'Ventilation minimale Q_min, m³/h',

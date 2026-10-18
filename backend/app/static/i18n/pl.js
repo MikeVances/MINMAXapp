@@ -245,7 +245,7 @@
     ua_recal_link:     'Kalibruj ponownie',
     cfg_house_lbl:     'Powiązany kurnik',
     cal_save_hint:     'Kliknij „Zapisz kalibrację", aby użyć tych wartości w obliczeniach wentylacji.',
-    cal_saved_alert:   '✅ Kalibracja zapisana! Obliczenia wentylacji będą teraz automatycznie uwzględniać powietrze do spalania.',
+    cal_saved_alert:   '✅ Kalibracja zapisana — UA tego kurnika jest teraz uwzględniane w Qmax i obciążeniu nagrzewnic.',
     err_save_cal:      '❌ Błąd zapisu: ',
     err_enter_all_fields:       '❌ Wypełnij wszystkie pola',
     label_q_min_analysis:       'Wentylacja min. Q_min, m³/h',
