@@ -415,7 +415,7 @@
     lbl_treal:          'Actual temperature',
     lbl_wind_chill:     'Wind cooling',
     lbl_eff_temp:       'Effective temperature',
-    thi_scale: '(0.85·T + 0.15·T_wb)·V^−0.058, °C: <35 normal · 35–38 alert · 38–40 danger · >40 critical (90 min exposure)',
+    thi_scale: '(0.85·T + 0.15·T_wb)·V^−0.058, °C: <35 normal · 35–38 alert · 38–40 danger · >40 critical (thresholds for 90 min exposure; in hours-long heat the same index is more dangerous — read the category as a lower bound)',
     lbl_dyn_pa:         'Dynamic pressure',
     lbl_tot_pa:         'Estimated fan pressure',
     tunnel_inlet_res_h3:  'Inlet system',

@@ -415,7 +415,7 @@
     lbl_treal:          'Temperatura rzeczywista',
     lbl_wind_chill:     'Chłodzenie prędkością powietrza',
     lbl_eff_temp:       'Temperatura odczuwalna',
-    thi_scale: '(0.85·T + 0.15·T_m)·V^−0.058, °C: <35 norma · 35–38 alarm · 38–40 zagrożenie · >40 krytyczne (ekspozycja 90 min)',
+    thi_scale: '(0.85·T + 0.15·T_m)·V^−0.058, °C: <35 norma · 35–38 alarm · 38–40 zagrożenie · >40 krytyczne (progi dla 90 min ekspozycji; przy wielogodzinnym upale ten sam indeks jest groźniejszy — kategorię czytać jako dolną granicę)',
     lbl_dyn_pa:         'Ciśnienie dynamiczne',
     lbl_tot_pa:         'Szacowane ciśnienie wentylatora',
     tunnel_inlet_res_h3:  'System wlotów',

@@ -415,7 +415,7 @@
     lbl_treal:          'Tatsächliche Temperatur',
     lbl_wind_chill:     'Windkühlung',
     lbl_eff_temp:       'Gefühlte Temperatur',
-    thi_scale: '(0.85·T + 0.15·T_f)·V^−0.058, °C: <35 normal · 35–38 Warnung · 38–40 Gefahr · >40 kritisch (90 min Exposition)',
+    thi_scale: '(0.85·T + 0.15·T_f)·V^−0.058, °C: <35 normal · 35–38 Warnung · 38–40 Gefahr · >40 kritisch (Schwellen für 90 min Exposition; bei stundenlanger Hitze ist derselbe Index gefährlicher — Kategorie als Untergrenze lesen)',
     lbl_dyn_pa:         'Dynamischer Druck',
     lbl_tot_pa:         'Geschätzter Ventilatordruckbedarf',
     tunnel_inlet_res_h3:  'Einlasssystem',

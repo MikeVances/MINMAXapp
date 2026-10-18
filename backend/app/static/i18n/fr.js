@@ -415,7 +415,7 @@
     lbl_treal:          'Température réelle',
     lbl_wind_chill:     'Refroidissement par effet de vent',
     lbl_eff_temp:       'Température ressentie',
-    thi_scale: '(0.85·T + 0.15·T_h)·V^−0.058, °C : <35 normal · 35–38 alerte · 38–40 danger · >40 critique (exposition 90 min)',
+    thi_scale: '(0.85·T + 0.15·T_h)·V^−0.058, °C : <35 normal · 35–38 alerte · 38–40 danger · >40 critique (seuils pour 90 min d’exposition ; par chaleur de plusieurs heures, le même indice est plus dangereux — lire la catégorie comme une borne basse)',
     lbl_dyn_pa:         'Pression dynamique',
     lbl_tot_pa:         'Pression estimée du ventilateur',
     tunnel_inlet_res_h3:  'Système d\'entrées d\'air',
