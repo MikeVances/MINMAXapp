@@ -551,4 +551,9 @@
 
     // ── Pad thickness validation ──
     srv_pad_thickness_unavailable: 'Panel {pad_type} nie występuje w grubości {thickness} mm; dostępne: {allowed} mm',
+
+    // ── Air warming along the house (tunnel) ──
+    lbl_air_rise:      'Powietrze przy wentylatorach (ogrzane przez ptaki)',
+    tn_rise_val:       '{t} °C (+{rise} °C)',
+    tn_rise_excessive: 'Ponad 2.8 °C między końcami kurnika (Cobb) — za mało powietrza dla takiej masy ptaków',
 };

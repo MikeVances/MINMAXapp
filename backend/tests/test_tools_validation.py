@@ -47,3 +47,23 @@ def test_recommended_pad_area_uses_design_velocity_of_thickness(client, thicknes
 
     assert body["recommended_pad_area_m2"] == pytest.approx(
         _EVAP["total_fan_m3h"] / 3600.0 / v_design, abs=0.01)
+
+
+def test_pad_cooling_sufficiency_is_judged_at_the_fan_end(client):
+    """
+    Аудит 2026-10-18: охлаждённый воздух по пути к вентиляторам нагревается теплом
+    птицы, а достаточность сравнивалась с T сразу за панелью. 30 000 голов, день 42
+    (test-breed: 2.998 кг), Q = 500 000 м³/ч: ΔT = H_явн(T_панели) / (ρ·Cp·Q).
+    """
+    base = {**_EVAP, "pad_type": "7090", "pad_thickness_mm": 150, "t_inside_target_c": 28}
+    plain = client.post("/calc/tools/evap_cooling", json=base).json()
+    r = client.post("/calc/tools/evap_cooling", json={**base, "num_birds": 30_000, "bird_age_days": 42}).json()
+
+    t_pad = r["t_pad_out_c"]
+    f_s = (0.61 * (1000 + 20 * (20 - t_pad)) - 0.228 * t_pad ** 2) / 1000
+    heat_w = 10.62 * 2.998 ** 0.75 * f_s * 30_000
+    rise = heat_w / (353.05 / (t_pad + 273.15) * 1006 * (500_000 / 3600))
+
+    assert r["air_temp_rise_c"] == pytest.approx(rise, abs=0.1)
+    assert r["temp_margin_c"] == pytest.approx(plain["temp_margin_c"] - rise, abs=0.1)
+    assert plain["air_temp_rise_c"] == 0.0                      # без поголовья — как раньше

@@ -551,4 +551,9 @@
 
     // ── Pad thickness validation ──
     srv_pad_thickness_unavailable: 'Le panneau {pad_type} n’existe pas en {thickness} mm ; disponible : {allowed} mm',
+
+    // ── Air warming along the house (tunnel) ──
+    lbl_air_rise:      'Air côté ventilateurs (réchauffé par les oiseaux)',
+    tn_rise_val:       '{t} °C (+{rise} °C)',
+    tn_rise_excessive: 'Plus de 2.8 °C entre les extrémités du bâtiment (Cobb) — trop peu d’air pour cette masse d’oiseaux',
 };

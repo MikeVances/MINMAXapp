@@ -552,4 +552,9 @@
 
     // ── Pad thickness validation ──
     srv_pad_thickness_unavailable: 'Панель {pad_type} не выпускается толщиной {thickness} мм; доступно: {allowed} мм',
+
+    // ── Air warming along the house (tunnel) ──
+    lbl_air_rise:      'Воздух у вентиляторов (нагрет птицей)',
+    tn_rise_val:       '{t} °C (+{rise} °C)',
+    tn_rise_excessive: 'Больше 2.8 °C между торцами корпуса (Cobb) — воздуха мало для такой массы птицы',
 };

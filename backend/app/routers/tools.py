@@ -9,7 +9,10 @@ from fastapi import APIRouter
 from pydantic import BaseModel, Field, model_validator
 from typing import Literal, Optional
 
+from ..api_errors import api_error
+from ..core.app_config import load_app_config
 from ..core.errors import CalcError
+from ..core.growth_profiles import ProfileNotFound, load_profile
 from ..core.leakage_calc import LeakageInput, LeakageResult, calculate_leakage
 from ..core.evap_cooling_calc import (
     SANHE_PADS, EvapCoolingInput, EvapCoolingResult, calculate_evap_cooling,
@@ -64,6 +67,16 @@ class LeakageResponse(BaseModel):
 # Калькулятор испарительного охлаждения (Pad & Fan)
 # ─────────────────────────────────────────────
 
+def _bird_weight_kg(age_days: int, profile_id: Optional[str]) -> float:
+    """Масса птицы на расчётный день из профиля роста, кг — как в расчёте Qmin/Qmax."""
+    profile_id = profile_id or load_app_config().default_growth_profile
+    try:
+        point = load_profile(profile_id).point_for_day(age_days)
+    except ProfileNotFound:
+        raise api_error(404, "profile_not_found", id=profile_id)
+    return (point.body_weight_g or 0.0) / 1000.0
+
+
 class EvapCoolingRequest(BaseModel):
     # Птичник (для контекста/аудита)
     house_length_m: float = Field(..., gt=0, description="Длина птичника, м")
@@ -114,6 +127,10 @@ class EvapCoolingRequest(BaseModel):
         None, ge=1, le=40,
         description="Температура воды подачи на пэд, °C (скважина ≈ 8–12, бак летом до 35)"
     )
+    # Поголовье и расчётный день — для нагрева воздуха от панелей до вентиляторов
+    num_birds: int = Field(0, ge=0, le=200_000, description="Поголовье (0 = нагрев вдоль корпуса не учитывать)")
+    bird_age_days: Optional[int] = Field(None, ge=1, le=63, description="Расчётный день — масса из профиля роста")
+    growth_profile_id: Optional[str] = Field(None, description="Профиль роста (по умолчанию — из настроек)")
 
     @model_validator(mode="after")
     def _thickness_exists_for_pad_type(self):
@@ -158,6 +175,8 @@ class EvapCoolingResponse(BaseModel):
     # Режим подачи воды (None если не задана)
     water_supply_t_c:    Optional[float]
     water_regime:        Optional[str]   # 'safe' | 'condensation_risk'
+    air_temp_rise_c:     float = 0.0     # нагрев воздуха от панелей до вентиляторов
+    t_fan_end_c:         float = 0.0     # T у вентиляторов — по ней оценка достаточности
 
 
 @router.post(
@@ -194,6 +213,8 @@ def calc_evap_cooling(req: EvapCoolingRequest) -> EvapCoolingResponse:
         pad_height_m      = req.pad_height_m,
         t_inside_target_c = req.t_inside_target_c,
         water_supply_t_c  = req.water_supply_t_c,
+        num_birds         = req.num_birds if req.bird_age_days else 0,
+        bird_weight_kg    = _bird_weight_kg(req.bird_age_days, req.growth_profile_id) if req.num_birds and req.bird_age_days else 0.0,
     )
     r: EvapCoolingResult = calculate_evap_cooling(inp)
     return EvapCoolingResponse(
@@ -218,6 +239,8 @@ def calc_evap_cooling(req: EvapCoolingRequest) -> EvapCoolingResponse:
         t_dew_c                 = r.t_dew_c,
         water_supply_t_c        = r.water_supply_t_c,
         water_regime            = r.water_regime,
+        air_temp_rise_c         = r.air_temp_rise_c,
+        t_fan_end_c             = r.t_fan_end_c,
     )
 
 
@@ -257,6 +280,10 @@ class TunnelSpeedRequest(BaseModel):
         description="Производительность одного вентилятора при 25 Па, м³/ч (0 = неизвестна → расчёт по 0 Па)",
     )
 
+    # Поголовье — для нагрева воздуха вдоль корпуса; масса — из профиля роста по возрасту
+    num_birds: int = Field(0, ge=0, le=200_000, description="Поголовье (0 = нагрев вдоль корпуса не учитывать)")
+    growth_profile_id: Optional[str] = Field(None, description="Профиль роста для массы птицы (по умолчанию — из настроек)")
+
     @model_validator(mode="after")
     def _rating_point_below_free_air(self):
         # При 25 Па вентилятор не может дать больше, чем при 0 Па
@@ -292,6 +319,10 @@ class TunnelSpeedResponse(BaseModel):
     temp_margin_c:            float
     velocity_basis:           str
     fan_operating_m3h:        float
+    air_temp_rise_c:          float = 0.0
+    t_fan_end_c:              float = 0.0
+    end_to_end_rise_excessive: bool = False
+    bird_weight_kg:           float = 0.0   # масса из профиля, по которой считан нагрев
 
 
 @router.post(
@@ -303,10 +334,9 @@ def calc_tunnel_speed(req: TunnelSpeedRequest) -> TunnelSpeedResponse:
     """
     Рассчитывает скорость воздуха в туннеле, ветровое охлаждение и THVI (Tao & Xin 2003).
 
-    **Ветровое охлаждение:**
-    Ощущаемая температура рассчитывается по российской нормативной таблице
-    (трилинейная интерполяция по T × RH × V), учитывающей испарение со слизистых.
-    Эффект значительно сильнее линейного UGA-приближения (100 FPM = -1°F).
+    **Ветровое охлаждение:** таблица T × RH × V; выше 29.4 °C эффект не растёт (UGA),
+    к 37.8 °C гаснет (температура поверхности птицы). Оценка — у вентиляторов: воздух
+    нагрет теплом птицы по пути (num_birds > 0).
 
     **THVI (Tao & Xin 2003, бройлеры):** (0.85·T_db + 0.15·T_wb)·V^−0.058
     - < 35 — Норма
@@ -319,6 +349,8 @@ def calc_tunnel_speed(req: TunnelSpeedRequest) -> TunnelSpeedResponse:
     - 22–35 дней: 2.0–2.5 м/с
     - 36–42 дня: 2.5–3.0 м/с
     """
+    weight_kg = _bird_weight_kg(req.bird_age_days, req.growth_profile_id) if req.num_birds > 0 else 0.0
+
     inp = TunnelSpeedInput(
         house_width_m    = req.house_width_m,
         tunnel_height_m  = req.tunnel_height_m,
@@ -331,6 +363,8 @@ def calc_tunnel_speed(req: TunnelSpeedRequest) -> TunnelSpeedResponse:
         inlet_width_m    = req.inlet_width_m,
         inlet_height_m   = req.inlet_height_m,
         fan_capacity_25pa_m3h = req.fan_capacity_25pa_m3h,
+        num_birds        = req.num_birds,
+        bird_weight_kg   = weight_kg,
     )
     r: TunnelSpeedResult = calculate_tunnel_speed(inp)
     return TunnelSpeedResponse(
@@ -358,6 +392,10 @@ def calc_tunnel_speed(req: TunnelSpeedRequest) -> TunnelSpeedResponse:
         tunnel_sufficient         = r.tunnel_sufficient,
         t_outdoor_tunnel_limit_c  = r.t_outdoor_tunnel_limit_c,
         temp_margin_c             = r.temp_margin_c,
+        air_temp_rise_c           = r.air_temp_rise_c,
+        t_fan_end_c               = r.t_fan_end_c,
+        end_to_end_rise_excessive = r.end_to_end_rise_excessive,
+        bird_weight_kg            = round(weight_kg, 3),
         velocity_basis            = r.velocity_basis,
         fan_operating_m3h         = r.fan_operating_m3h,
     )

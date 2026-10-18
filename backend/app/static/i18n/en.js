@@ -552,4 +552,9 @@
 
     // ── Pad thickness validation ──
     srv_pad_thickness_unavailable: 'Pad {pad_type} is not made {thickness} mm thick; available: {allowed} mm',
+
+    // ── Air warming along the house (tunnel) ──
+    lbl_air_rise:      'Air at the fan end (heated by birds)',
+    tn_rise_val:       '{t} °C (+{rise} °C)',
+    tn_rise_excessive: 'More than 2.8 °C between house ends (Cobb) — the air moves too little for this bird mass',
 };

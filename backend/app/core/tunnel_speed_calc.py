@@ -41,6 +41,7 @@ import math
 from dataclasses import dataclass
 
 from .evap_cooling_calc import _wet_bulb_stull
+from .building_thermal import air_temperature_rise_c
 
 # ─────────────────────────────────────────────────
 # Таблица ощущаемой температуры [°C]
@@ -138,6 +139,14 @@ class TunnelSpeedInput:
     inlet_height_m: float = 0.0 # Высота одного проёма, м (0 = авто: высота туннеля)
     # Производительность одного вентилятора при 25 Па, м³/ч (0 = неизвестна)
     fan_capacity_25pa_m3h: float = 0.0
+    # Поголовье и масса: для нагрева воздуха вдоль корпуса (0 = не учитывать)
+    num_birds:      int   = 0
+    bird_weight_kg: float = 0.0
+
+
+# Допустимая разница температур между торцами корпуса в тоннельном режиме, °C
+# (Cobb Broiler Guide 2021, с. 75: ≤ 2.8 °C в самый жаркий день при птице убойного возраста)
+MAX_END_TO_END_RISE_C = 2.8
 
 
 @dataclass
@@ -173,6 +182,10 @@ class TunnelSpeedResult:
     # Откуда расход: "operating_point" (с учётом давления) или "rated_0pa" (паспорт, завышен)
     velocity_basis:           str = "rated_0pa"
     fan_operating_m3h:        float = 0.0   # расход одного вентилятора в рабочей точке
+    # Нагрев воздуха вдоль корпуса (0 — поголовье не задано)
+    air_temp_rise_c:          float = 0.0
+    t_fan_end_c:              float = 0.0   # T воздуха у вентиляторов — по ней ощущаемая и THVI
+    end_to_end_rise_excessive: bool = False # > 2.8 °C (Cobb): нужно больше воздуха
 
 
 # ─────────────────────────────────────────────────
@@ -382,12 +395,17 @@ def calculate_tunnel_speed(inp: TunnelSpeedInput) -> TunnelSpeedResult:
     v_ms = total_m3s / cross_section if cross_section > 0 else 0.0
     v_fpm = v_ms * 196.85
 
-    # Ощущаемая температура из таблицы (трилинейная интерполяция)
-    t_eff = _effective_temperature(inp.t_outdoor_db_c, inp.rh_outdoor_pct, v_ms)
-    wind_chill = inp.t_outdoor_db_c - t_eff   # положительное = охлаждение
+    # Худшее место корпуса — у вентиляторов: воздух нагрет теплом птицы по пути.
+    # RH оставляем как на входе (нагретый воздух суше — оценка в безопасную сторону)
+    air_rise = air_temperature_rise_c(inp.num_birds, inp.bird_weight_kg, inp.t_outdoor_db_c, total_m3s)
+    t_fan_end = inp.t_outdoor_db_c + air_rise
 
-    # THVI по фактическим T и RH: скорость входит в индекс сама
-    thi_val, thi_status = _calc_thvi(inp.t_outdoor_db_c, inp.rh_outdoor_pct, v_ms)
+    # Ощущаемая температура у вентиляторов (таблица, см. _effective_temperature)
+    t_eff = _effective_temperature(t_fan_end, inp.rh_outdoor_pct, v_ms)
+    wind_chill = t_fan_end - t_eff   # положительное = охлаждение
+
+    # THVI по T и RH у вентиляторов: скорость входит в индекс сама
+    thi_val, thi_status = _calc_thvi(t_fan_end, inp.rh_outdoor_pct, v_ms)
 
     # Динамическое давление в туннеле
     p_dynamic = 0.5 * RHO_AIR_KG_M3 * v_ms ** 2
@@ -433,7 +451,8 @@ def calculate_tunnel_speed(inp: TunnelSpeedInput) -> TunnelSpeedResult:
     # 1. Скорость воздуха >= минимальной проектной (обеспечивает ветровое охлаждение)
     # 2. Ощущаемая T <= целевой комфортной T для данного возраста
     tunnel_ok      = (v_ms >= v_min_t) and (t_eff <= comfort_target)
-    t_limit        = _find_tunnel_temp_limit(inp.rh_outdoor_pct, v_ms, comfort_target)
+    # Предел — по наружной T: у вентиляторов воздух теплее на air_rise
+    t_limit        = round(_find_tunnel_temp_limit(inp.rh_outdoor_pct, v_ms, comfort_target) - air_rise, 1)
 
     # Общая оценка — согласована с tunnel_ok, чтобы бейдж не противоречил карточке
     in_range = v_min_t <= v_ms <= v_max_t
@@ -481,4 +500,7 @@ def calculate_tunnel_speed(inp: TunnelSpeedInput) -> TunnelSpeedResult:
         temp_margin_c             = round(temp_margin, 1),
         velocity_basis            = velocity_basis,
         fan_operating_m3h         = round(q_fan_m3s * 3600.0, 0),
+        air_temp_rise_c           = round(air_rise, 1),
+        t_fan_end_c               = round(t_fan_end, 1),
+        end_to_end_rise_excessive = air_rise > MAX_END_TO_END_RISE_C,
     )

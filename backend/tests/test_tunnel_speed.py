@@ -117,3 +117,28 @@ def test_tunnel_limit_for_market_birds_is_below_bird_surface_temperature():
     limit = _find_tunnel_temp_limit(50.0, 2.5, 24.0)
 
     assert limit == pytest.approx(33.4, abs=0.15)
+
+
+def test_birds_heat_air_along_the_house_and_comfort_is_checked_at_the_fans(client):
+    """
+    Аудит 2026-10-18: проверки сравнивали с целью воздух на ВХОДЕ, а у вентиляторов
+    он теплее на тепло птицы. 35 000 голов, день 42 (профиль test-breed: 2.998 кг), 32 °C:
+      явное тепло корпуса CIGR 2002 при 32 °C: f_s = (0.61 × 760 − 0.228 × 32²)/1000 = 0.2301
+      H   = 10.62 × 2.998^0.75 × 0.2301 × 35 000 = 194 136 Вт
+      Q   = 10 × 40 000 / 3600 = 111.11 м³/с,  ρ(32 °C) = 353.05 / 305.15 = 1.1570
+      ΔT  = H / (ρ · 1006 · Q) = 1.50 °C
+    """
+    body = dict(house_width_m=15, tunnel_height_m=2.5, num_fans=10, fan_capacity_m3h=40_000,
+                t_outdoor_db_c=32.0, rh_outdoor_pct=50.0, bird_age_days=42)
+    plain = client.post("/calc/tools/tunnel_speed", json=body).json()
+    r = client.post("/calc/tools/tunnel_speed", json={**body, "num_birds": 35_000}).json()
+
+    f_s = (0.61 * 760 - 0.228 * 32 ** 2) / 1000
+    heat_w = 10.62 * 2.998 ** 0.75 * f_s * 35_000
+    rise = heat_w / (353.05 / 305.15 * 1006 * (400_000 / 3600))
+
+    assert r["air_temp_rise_c"] == pytest.approx(rise, abs=0.05)
+    assert r["t_fan_end_c"] == pytest.approx(32.0 + rise, abs=0.05)
+    assert r["effective_temp_c"] == pytest.approx(_effective_temperature(32.0 + rise, 50.0, r["air_velocity_ms"]), abs=0.05)
+    assert r["t_outdoor_tunnel_limit_c"] == pytest.approx(plain["t_outdoor_tunnel_limit_c"] - rise, abs=0.1)
+    assert r["end_to_end_rise_excessive"] is False

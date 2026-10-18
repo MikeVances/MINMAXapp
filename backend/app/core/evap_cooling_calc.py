@@ -42,6 +42,8 @@ import math
 from dataclasses import dataclass
 from typing import Optional
 
+from .building_thermal import air_temperature_rise_c
+
 # Плотность воздуха при +25°C, кг/м³
 RHO_AIR_KG_M3 = 1.184
 
@@ -164,6 +166,10 @@ class EvapCoolingInput:
     # Целевая температура внутри (для оценки эффективности)
     t_inside_target_c: float       # Целевая температура внутри птичника, °C
 
+    # Поголовье и масса — для нагрева воздуха от панелей до вентиляторов (0 = не учитывать)
+    num_birds: int = 0
+    bird_weight_kg: float = 0.0
+
     # Опционально: температура воды подачи (скважина / бак)
     # None = стандартный адиабатический расчёт (как в UGA)
     water_supply_t_c: Optional[float] = None
@@ -192,7 +198,7 @@ class EvapCoolingResult:
 
     # --- Оценка условий в птичнике ---
     cooling_sufficient: bool       # Охлаждение достаточное (T_pad < T_target)
-    temp_margin_c: float           # Запас температуры (T_target - T_pad), °C
+    temp_margin_c: float           # Запас температуры (T_target − T у вентиляторов), °C
 
     # --- Рекомендации ---
     recommended_pad_area_m2: float  # Рекомендуемая площадь панели для проектной скорости толщины
@@ -206,6 +212,8 @@ class EvapCoolingResult:
     # 'condensation_risk'— T_вода < T_dp, конденсация на пэде, потеря эффективности насыщения
     # None               — температура воды не указана
     water_regime: Optional[str]
+    air_temp_rise_c: float = 0.0   # нагрев воздуха от панелей до вентиляторов, °C
+    t_fan_end_c: float = 0.0       # T воздуха у вентиляторов — по ней оценка достаточности
 
 
 # ─────────────────────────────────────────────────
@@ -366,9 +374,12 @@ def calculate_evap_cooling(inp: EvapCoolingInput) -> EvapCoolingResult:
     water_lpm = _water_flow_lpm(inp.total_fan_m3h, inp.t_outdoor_db_c, inp.rh_outdoor_pct, t_wb, eta)
     water_per_hour = water_lpm * 60.0
 
-    # Оценка эффективности
-    temp_margin = inp.t_inside_target_c - t_pad_out
-    cooling_sufficient = t_pad_out <= inp.t_inside_target_c
+    # Оценка эффективности — у вентиляторов: охлаждённый воздух по пути нагревается
+    # теплом птицы, и сравнивать с целью воздух сразу за панелью оптимистично
+    air_rise = air_temperature_rise_c(inp.num_birds, inp.bird_weight_kg, t_pad_out, q_m3s)
+    t_fan_end = t_pad_out + air_rise
+    temp_margin = inp.t_inside_target_c - t_fan_end
+    cooling_sufficient = t_fan_end <= inp.t_inside_target_c
 
     # Рекомендуемая площадь панели — для проектной скорости этой толщины
     recommended_pad_area = q_m3s / design_pad_velocity_ms(inp.pad_thickness_mm)
@@ -410,6 +421,8 @@ def calculate_evap_cooling(inp: EvapCoolingInput) -> EvapCoolingResult:
         water_per_hour_l        = round(water_per_hour, 0),
         cooling_sufficient      = cooling_sufficient,
         temp_margin_c           = round(temp_margin, 1),
+        air_temp_rise_c         = round(air_rise, 1),
+        t_fan_end_c             = round(t_fan_end, 1),
         recommended_pad_area_m2 = round(recommended_pad_area, 2),
         status_code             = status_code,
         status_level            = status_level,

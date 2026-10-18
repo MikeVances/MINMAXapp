@@ -252,6 +252,20 @@ def heater_co2_dilution_m3h(
 # ─────────────────────────────────────────────────────────────────────────────
 
 # Параметры воздуха (стандарт +15°C)
+def air_temperature_rise_c(num_birds: int, bird_weight_kg: float, t_air_c: float, airflow_m3s: float) -> float:
+    """
+    Нагрев воздуха по длине корпуса (от входа до вентиляторов), °C: явное тепло
+    корпуса (CIGR 2002, bird_heat) / (ρ · Cp · Q). Птица у вентиляторов дышит этим,
+    более тёплым воздухом — раньше туннель и панели сравнивали с целью воздух на
+    ВХОДЕ (аудит 2026-10-18). Явная доля берётся при T входа: она убывает с T,
+    так что подъём чуть завышен (в безопасную сторону).
+    """
+    if num_birds <= 0 or bird_weight_kg <= 0 or airflow_m3s <= 0:
+        return 0.0
+    sensible_w = house_heat_per_bird(bird_weight_kg, t_air_c).sensible_w * num_birds
+    return sensible_w / (air_density_kg_m3(t_air_c) * AIR_CP_J_PER_KG_K * airflow_m3s)
+
+
 def ventilation_heat_w(q_m3h: float, t_inside_c: float, t_outside_c: float) -> float:
     """
     Тепло, уносимое вентиляцией при нагреве приточного воздуха до T_in, Вт.

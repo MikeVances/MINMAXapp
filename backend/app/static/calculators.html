@@ -272,6 +272,18 @@
             <span data-i18n="label_target_t">Target indoor temperature, °C</span>
             <input id="ev-target" type="number" step="0.5" min="15" max="40" value="28" required />
           </label>
+          <!-- Поголовье и расчётный день: воздух после панели ещё греется над птицей —
+               достаточность охлаждения оценивается у вентиляторов -->
+          <div class="field-row">
+            <label>
+              <span data-i18n="label_tn_age">Design day (last cycle day), days</span>
+              <input id="ev-age" type="number" step="1" min="1" max="63" value="42" />
+            </label>
+            <label>
+              <span data-i18n="label_tn_birds">Bird count</span>
+              <input id="ev-birds" type="number" step="1" min="0" max="200000" placeholder="35000" />
+            </label>
+          </div>
 
           <hr class="section-divider" />
           <h3 class="hint mt-0 mb-6" data-i18n="evap_water_src_grp">Water supply (optional)</h3>
@@ -301,6 +313,8 @@
                 <td class="ta-right" id="ev-r-tdew">—</td></tr>
             <tr><td class="muted py-4 px-0" data-i18n="lbl_tpad">Air temperature after pad</td>
                 <td class="ta-right fs-18 fw-700" id="ev-r-tpad">—</td></tr>
+            <tr id="ev-row-rise" hidden><td class="muted py-4 px-0" data-i18n="lbl_air_rise">Air at the fan end (heated by birds)</td>
+                <td class="ta-right" id="ev-r-rise">—</td></tr>
             <tr><td class="muted py-4 px-0" data-i18n="lbl_cooling">Cooling achieved</td>
                 <td class="ta-right" id="ev-r-cool">—</td></tr>
             <tr><td class="muted py-4 px-0" data-i18n="lbl_max_cooling">Max possible cooling (T_wb limit)</td>
@@ -481,6 +495,8 @@
           <table class="res-table">
             <tr><td class="muted py-4 px-0" data-i18n="lbl_treal">Actual temperature</td>
                 <td class="ta-right" id="tn-r-treal">—</td></tr>
+            <tr id="tn-row-rise" hidden><td class="muted py-4 px-0" data-i18n="lbl_air_rise">Air at the fan end (heated by birds)</td>
+                <td class="ta-right" id="tn-r-rise">—</td></tr>
             <tr><td class="muted py-4 px-0" data-i18n="lbl_wind_chill">Wind cooling</td>
                 <td class="ta-right c-ok" id="tn-r-windchill">—</td></tr>
             <tr><td class="muted py-4 px-0" data-i18n="lbl_eff_temp">Effective temperature</td>
@@ -881,6 +897,7 @@ initHouseSelector('ev-house-sel', tab => {
     ? tab.num_fans * tab.fan_cap_m3h
     : tab.cap;
   _setVal('ev-fans', totalCap);
+  _setVal('ev-birds', tab.birds);
 });
 
 // Глобальный объект конфига — обновляется IIFE профиля при загрузке настроек
@@ -1023,6 +1040,8 @@ document.getElementById('tunnel-form').addEventListener('submit', async e => {
       inlet_width_m:    +document.getElementById('tn-inlet-w').value  || 0,
       inlet_height_m:   +document.getElementById('tn-inlet-h').value  || 0,
       fan_capacity_25pa_m3h: +document.getElementById('tn-fan-cap25').value || 0,
+      // Поголовье — для нагрева воздуха вдоль корпуса (оценка у вентиляторов)
+      num_birds:        +document.getElementById('tn-birds').value || 0,
     };
 
     const resp = await fetch('./calc/tools/tunnel_speed', {
@@ -1076,6 +1095,15 @@ function renderTunnel(d, t_real) {
 
   // Wind cooling
   document.getElementById('tn-r-treal').textContent     = t_real.toFixed(1) + ' °C';
+  // Воздух у вентиляторов теплее входного на тепло птицы — по нему ощущаемая T и THVI
+  const riseRow = document.getElementById('tn-row-rise');
+  riseRow.hidden = !(d.air_temp_rise_c > 0);
+  if (!riseRow.hidden) {
+    const riseEl = document.getElementById('tn-r-rise');
+    riseEl.textContent = t('tn_rise_val', { t: d.t_fan_end_c.toFixed(1), rise: d.air_temp_rise_c.toFixed(1) });
+    setTone(riseEl, d.end_to_end_rise_excessive ? 'danger' : null);
+    riseEl.title = d.end_to_end_rise_excessive ? t('tn_rise_excessive') : '';
+  }
   // Знак явный: при влажном воздухе и слабом потоке «охлаждение» отрицательное (ощущается жарче)
   const wc = d.wind_chill_c;
   document.getElementById('tn-r-windchill').textContent = (wc >= 0 ? '−' : '+') + Math.abs(wc).toFixed(1) + ' °C';
@@ -1204,6 +1232,9 @@ document.getElementById('evap-form').addEventListener('submit', async e => {
       t_inside_target_c: +document.getElementById('ev-target').value,
       // Опционально: температура воды. null = стандартный адиабатический расчёт
       ...(waterTVal !== '' ? { water_supply_t_c: +waterTVal } : {}),
+      // Нагрев воздуха над птицей до вентиляторов (0 голов — не учитывать)
+      num_birds:         +document.getElementById('ev-birds').value || 0,
+      bird_age_days:     +document.getElementById('ev-age').value || null,
     };
 
     const resp = await fetch('./calc/tools/evap_cooling', {
@@ -1242,6 +1273,9 @@ function renderEvap(d) {
   document.getElementById('ev-r-twb').textContent     = d.t_wb_c.toFixed(1) + ' °C';
   document.getElementById('ev-r-tdew').textContent    = d.t_dew_c.toFixed(1) + ' °C';
   document.getElementById('ev-r-tpad').textContent    = d.t_pad_out_c.toFixed(1) + ' °C';
+  // Запас и достаточность считаются у вентиляторов — показываем, откуда разница
+  document.getElementById('ev-row-rise').hidden = !(d.air_temp_rise_c > 0);
+  document.getElementById('ev-r-rise').textContent = t('tn_rise_val', { t: d.t_fan_end_c.toFixed(1), rise: d.air_temp_rise_c.toFixed(1) });
   document.getElementById('ev-r-cool').textContent    = d.cooling_achieved_c.toFixed(1) + ' °C';
   // Максимально достижимое охлаждение (предел T_wb) и % реализации потенциала
   // t_outdoor_db_c не возвращается API — восстанавливаем из cooling_achieved + t_pad_out

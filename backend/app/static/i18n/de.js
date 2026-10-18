@@ -551,4 +551,9 @@
 
     // ── Pad thickness validation ──
     srv_pad_thickness_unavailable: 'Pad {pad_type} gibt es nicht in {thickness} mm Stärke; verfügbar: {allowed} mm',
+
+    // ── Air warming along the house (tunnel) ──
+    lbl_air_rise:      'Luft am Lüfterende (von Tieren erwärmt)',
+    tn_rise_val:       '{t} °C (+{rise} °C)',
+    tn_rise_excessive: 'Mehr als 2.8 °C zwischen den Stallenden (Cobb) — zu wenig Luft für diese Tiermasse',
 };
