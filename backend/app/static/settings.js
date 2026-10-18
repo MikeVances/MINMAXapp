@@ -1,6 +1,6 @@
 async function fetchJSON(url, opts) {
   const r = await fetch(url, opts);
-  if (!r.ok) throw await apiError(r);   // код ошибки сервера → текст на языке интерфейса
+  if (!r.ok) throw await apiError(r, opts && opts.body);   // код ошибки сервера → текст на языке интерфейса
   return r.json();
 }
 

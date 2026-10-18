@@ -126,6 +126,7 @@
     profile_name_lbl: 'Nom du profil',
     prompt_profile_name: 'Nom du nouveau profil :',
     confirm_delete_profile: 'Supprimer ce profil ? Action irréversible.',
+    confirm_discard_profile_edits: 'Le tableau du profil contient des modifications non enregistrées. Les abandonner ?',
     write_token_prompt: "L'enregistrement est protégé. Saisissez le jeton d'écriture :",
 
     // ── SETTINGS PAGE ────────────────────────────────

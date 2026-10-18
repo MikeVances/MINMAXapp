@@ -117,5 +117,7 @@
     document.querySelectorAll('input[data-num].is-invalid').forEach(mark);
   });
 
-  window.NumField = { parse, problem, validate, value };
+  // check — пересобрать подсветку поля после программной записи value
+  // (значение из хранилища не порождает input/focusout)
+  window.NumField = { parse, problem, validate, value, check: mark };
 })();

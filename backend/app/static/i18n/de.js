@@ -126,6 +126,7 @@
     profile_name_lbl: 'Profilname',
     prompt_profile_name: 'Name des neuen Profils:',
     confirm_delete_profile: 'Dieses Profil löschen? Dies kann nicht rückgängig gemacht werden.',
+    confirm_discard_profile_edits: 'Die Profiltabelle enthält ungespeicherte Änderungen. Verwerfen?',
     write_token_prompt: 'Speichern ist geschützt. Schreib-Token eingeben:',
 
     // ── SETTINGS PAGE ──────────────────────────────

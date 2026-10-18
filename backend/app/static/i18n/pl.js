@@ -126,6 +126,7 @@
     profile_name_lbl: 'Nazwa profilu',
     prompt_profile_name: 'Nazwa nowego profilu:',
     confirm_delete_profile: 'Usunąć ten profil? Tej operacji nie można cofnąć.',
+    confirm_discard_profile_edits: 'Tabela profilu ma niezapisane zmiany. Odrzucić je?',
     write_token_prompt: 'Zapis jest chroniony. Wprowadź token zapisu:',
 
     // ── STRONA USTAWIEŃ ────────────────────────────

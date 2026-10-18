@@ -586,6 +586,38 @@ function badgeClass(level) {
 // инструмент после успешного расчёта кладёт сюда замыкание «перерисовать
 // последний результат», а смена языка вызывает их все.
 const rerenderOnLang = {};
+
+// Ошибка калькулятора — над его результатом, а не alert(): alert блокировал
+// страницу, а прежний результат оставался на экране рядом с ошибкой, будто он
+// относится к новому вводу (аудит 2026-10-18). textFn вызывается заново при
+// смене языка — текст собирается из словаря, а не хранится готовой строкой.
+function showToolError(tool, resultsId, textFn) {
+  const results = document.getElementById(resultsId);
+  if (results) results.hidden = true;
+  let box = document.getElementById(tool + '-error');
+  if (!box && results) {
+    box = document.createElement('p');
+    box.id = tool + '-error';
+    box.className = 'danger fs-12 mt-8';
+    box.setAttribute('role', 'alert');
+    results.parentNode.insertBefore(box, results);
+  }
+  const render = () => { if (box) { box.textContent = textFn(); box.hidden = false; } };
+  render();
+  rerenderOnLang[tool] = render;
+}
+
+function clearToolError(tool) {
+  const box = document.getElementById(tool + '-error');
+  if (box) box.hidden = true;
+}
+
+// Ответ сервера с ошибкой → функция текста (для showToolError); sent — тело
+// запроса: по нему номер точки в ошибке превращается в день
+async function apiErrorTextFn(resp, sent) {
+  const err = await apiError(resp, sent);
+  return () => t('err_prefix') + apiErrorText(err.body, err.status, sent);
+}
 document.addEventListener('i18n:change', () => {
   Object.values(rerenderOnLang).forEach(fn => { try { fn(); } catch (e) { console.warn('rerender:', e); } });
 });
@@ -984,16 +1016,17 @@ document.getElementById('l-calc-btn').addEventListener('click', async () => {
     });
 
     if (!resp.ok) {
-      alert(t('err_api') + (await apiError(resp)).message);
+      showToolError('leakage', 'l-results', await apiErrorTextFn(resp, body));
       return;
     }
 
     const leakData = await resp.json();
+    clearToolError('leakage');
     renderLeakage(leakData);
     rerenderOnLang.leakage = () => renderLeakage(leakData);
 
   } catch(e) {
-    alert(t('err_conn') + e.message);
+    showToolError('leakage', 'l-results', () => t('err_conn') + e.message);
   } finally {
     btn.textContent = t('btn_leakage_active'); btn.disabled = false;
   }
@@ -1055,16 +1088,17 @@ document.getElementById('tunnel-form').addEventListener('submit', async e => {
     });
 
     if (!resp.ok) {
-      alert(t('err_prefix') + (await apiError(resp)).message);
+      showToolError('tunnel', 'tn-results', await apiErrorTextFn(resp, payload));
       return;
     }
 
     const tunnelData = await resp.json();
+    clearToolError('tunnel');
     renderTunnel(tunnelData, payload.t_outdoor_db_c);
     rerenderOnLang.tunnel = () => renderTunnel(tunnelData, payload.t_outdoor_db_c);
   } catch (err) {
     // Сеть недоступна или ошибка отрисовки — без catch пользователь не видел ничего
-    alert(t('err_prefix') + String(err));
+    showToolError('tunnel', 'tn-results', () => t('err_prefix') + String(err));
   } finally {
     btn.disabled = false; btn.textContent = t('btn_tunnel_active');
   }
@@ -1261,15 +1295,16 @@ document.getElementById('evap-form').addEventListener('submit', async e => {
     });
 
     if (!resp.ok) {
-      alert(t('err_prefix') + (await apiError(resp)).message);
+      showToolError('evap', 'ev-results', await apiErrorTextFn(resp, payload));
       return;
     }
 
     const evapData = await resp.json();
+    clearToolError('evap');
     renderEvap(evapData);
     rerenderOnLang.evap = () => renderEvap(evapData);
   } catch (err) {
-    alert(t('err_prefix') + String(err));
+    showToolError('evap', 'ev-results', () => t('err_prefix') + String(err));
   } finally {
     btn.disabled = false; btn.textContent = t('btn_evap_active');
   }
@@ -1625,7 +1660,9 @@ function renderEvap(d) {
   // ── API helper ───────────────────────────────────────────────────────────
   async function fetchJSON(url, opts) {
     const r = await fetch(url, opts);
-    if (!r.ok) throw await apiError(r);   // код ошибки сервера → текст на языке интерфейса
+    // код ошибки сервера → текст на языке интерфейса; тело запроса — чтобы
+    // «points.8.body_weight_g» стало «День 14 · Масса, г»
+    if (!r.ok) throw await apiError(r, opts && opts.body);
     return r.json();
   }
 
@@ -1637,6 +1674,7 @@ function renderEvap(d) {
   let profilesList = [];     // [{id, name, breed, builtin, source, first_day, last_day}]
   let current      = null;   // полный профиль: {…, points: [...], days: [...]}
   let editedDays   = {};     // день → {body_weight_g, min_temp_c, rv_percent} — правки в таблице
+  let houseSelShown = null;  // корпус, для которого показан профиль: к нему возвращает отказ от сброса правок
   let chartUnit    = 'per_bird';
 
   const growthSel = document.getElementById('prof-growth-select');
@@ -1963,6 +2001,7 @@ function renderEvap(d) {
     current    = await fetchJSON(`./profiles/${encodeURIComponent(id)}`);
     editedDays = {};
     growthSel.value = id;
+    if (houseSel) houseSelShown = houseSel.value;   // корпус, к которому относится показанный профиль
     rememberForHouse(id);
     renderAll();
   }
@@ -1983,9 +2022,39 @@ function renderEvap(d) {
     }
   }
 
-  growthSel.addEventListener('change', () => selectProfile(growthSel.value).catch(e => setStatus(t('status_err') + (e.message || e))));
-  // Другой корпус — свой профиль роста
-  if (houseSel) houseSel.addEventListener('change', () => selectProfile(profileForHouse()).catch(() => {}));
+  // Несохранённые правки таблицы. Раньше смена профиля или корпуса сбрасывала
+  // их молча (аудит 2026-10-18). Сохранить за пользователя нельзя: это запись
+  // профиля на сервер, а у встроенного профиля — только «Копировать как свой».
+  function hasUnsavedEdits() { return Object.keys(editedDays).length > 0; }
+  function mayDiscardEdits() { return !hasUnsavedEdits() || window.confirm(t('confirm_discard_profile_edits')); }
+
+  growthSel.addEventListener('change', () => {
+    if (!mayDiscardEdits()) { growthSel.value = current.id; return; }
+    selectProfile(growthSel.value).catch(e => setStatus(t('status_err') + (e.message || e)));
+  });
+
+  // Другой корпус — свой профиль роста. Отказ возвращает прежний корпус и
+  // повторно шлёт change: на тот же select подписан расчёт профиля (selIdx)
+  let houseSelReverting = false;
+  if (houseSel) houseSel.addEventListener('change', () => {
+    if (houseSelReverting) return;
+    if (!mayDiscardEdits()) {
+      houseSelReverting = true;
+      houseSel.value = houseSelShown;
+      houseSel.dispatchEvent(new Event('change'));
+      houseSelReverting = false;
+      return;
+    }
+    houseSelShown = houseSel.value;
+    selectProfile(profileForHouse()).catch(() => {});
+  });
+
+  // Уход со страницы с правками — браузер переспросит
+  window.addEventListener('beforeunload', e => {
+    if (!hasUnsavedEdits()) return;
+    e.preventDefault();
+    e.returnValue = '';
+  });
 
   document.addEventListener('DOMContentLoaded', loadProfile);
 

@@ -64,13 +64,75 @@
   // строкой-кодом ('profile_not_found'), объектом {code, params} или списком
   // pydantic для 422 ([{loc, msg, type, ctx}]). Фразы — только из словаря:
   // srv_<code> для наших ошибок, val_<type> для стандартных проверок pydantic.
-  function validationItemText(item) {
+  // Поле запроса → ключ подписи того же поля в форме. Раньше ошибка начиналась
+  // с технического пути pydantic («outside_t: …», «points.8.body_weight_g») —
+  // человек его в форме не видит (аудит 2026-10-18). Поле без подписи (служебное,
+  // форма его не вводит) показываем без пути: имя переменной не помогает.
+  const FIELD_LABEL_KEY = {
+    birds: 'label_bird_count', num_birds: 'label_bird_count',
+    age_days: 'label_tn_age', bird_age_days: 'label_tn_age',
+    outside_t: 'label_outdoor_t', t_outdoor_db_c: 'label_outdoor_t',
+    t_outside: 'label_outdoor_t', t_outside_c: 'label_outdoor_t',
+    outside_rh: 'label_outdoor_rh', rh_outdoor_pct: 'label_outdoor_rh',
+    target_rh: 'label_target_rh', user_max_m3h: 'label_sys_max',
+    house_length_m: 'label_length_m', length_m: 'label_length_m',
+    house_width_m: 'label_width_m', width_m: 'label_width_m',
+    house_height_m: 'label_height_eff', height_m: 'label_height_eff',
+    tunnel_height_m: 'label_tn_height',
+    num_fans: 'label_tn_fans', fan_capacity_m3h: 'label_tn_fan_cap',
+    fan_capacity_25pa_m3h: 'label_tn_fan_cap25',
+    num_inlets: 'label_num_inlets', inlet_width_m: 'label_inlet_width', inlet_height_m: 'label_inlet_height',
+    measured_pressure_pa: 'label_test_pa',
+    total_fan_m3h: 'label_total_fans', total_fan_25pa_m3h: 'label_ev_fans25',
+    pad_type: 'label_pad_type', pad_thickness_mm: 'label_pad_thick',
+    pad_length_m: 'label_pad_length', pad_height_m: 'label_pad_height',
+    water_supply_t_c: 'label_water_t',
+    t_inside_target: 'label_t_inside', t_inside_target_c: 'label_t_inside',
+    q_min_m3h: 'label_q_min_analysis', bird_weight_kg: 'label_bird_weight_analysis',
+    heater_type: 'heater_type_lbl', total_power_kw: 'heating_cap_lbl', ua_coefficient: 'ua_coeff_lbl',
+    day: 'col_day', body_weight_g: 'col_weight', min_temp_c: 'col_min_temp', rv_percent: 'col_rh',
+    name: 'profile_name_lbl', default_growth_profile: 'growth_profile_lbl',
+    cycle_days: 'cycle_days_lbl', v_tunnel_ms: 'v_tunnel_lbl', safety_factor_qmin: 'safety_factor_lbl',
+    tunnel_min_day: 'tunnel_min_day_lbl', tunnel_min_temp_c: 'tunnel_min_temp_lbl',
+    total_mortality_pct: 'mortality_lbl',
+  };
+
+  function fieldLabel(name) {
+    const key = FIELD_LABEL_KEY[name];
+    return key && hasKey(key) ? t(key).replace(/:\s*$/, '') : null;
+  }
+
+  // loc → подпись для человека: ['body', 'points', 8, 'body_weight_g'] при
+  // отправленной точке дня 14 → «День 14 · Масса, г». sent — тело запроса
+  // (объект или JSON-строка); без него точку называем порядковым номером.
+  function locText(loc, sent) {
+    const parts = (loc || []).filter(p => p !== 'body' && p !== 'query' && p !== 'path');
+    const out = [];
+    let node = sent;
+    for (let i = 0; i < parts.length; i++) {
+      const p = parts[i];
+      const next = parts[i + 1];
+      if (typeof next === 'number') {
+        // Элемент списка: у точки профиля есть день — он понятнее индекса
+        const item = node && Array.isArray(node[p]) ? node[p][next] : null;
+        out.push(item && item.day != null ? `${t('col_day')} ${item.day}` : `№ ${next + 1}`);
+        node = item;
+        i++;
+        continue;
+      }
+      const label = fieldLabel(p);
+      if (label) out.push(label);
+      node = node && typeof node === 'object' ? node[p] : null;
+    }
+    return out.join(' · ');
+  }
+
+  function validationItemText(item, sent) {
     // Список наших ошибок (валидация записи дневника): каждая — {code, params}
     if (item && typeof item.code === 'string') {
       return hasKey('srv_' + item.code) ? t('srv_' + item.code, item.params || {}) : item.code;
     }
-    // loc = ['body', 'points', 3, 'day'] → 'points.3.day'; служебные сегменты не показываем
-    const field = (item.loc || []).filter(p => p !== 'body' && p !== 'query' && p !== 'path').join('.');
+    const field = locText(item.loc, sent);
     let text;
     // Наши проверки внутри моделей pydantic бросают CalcError: его код лежит в ctx.error
     const own = item.ctx && item.ctx.error && typeof item.ctx.error === 'object' ? item.ctx.error : null;
@@ -84,10 +146,11 @@
     return field ? field + ': ' + text : text;
   }
 
-  window.apiErrorText = function (body, status) {
+  window.apiErrorText = function (body, status, sent) {
     const detail = body && typeof body === 'object' && 'detail' in body ? body.detail : body;
     if (typeof detail === 'string' && hasKey('srv_' + detail)) return t('srv_' + detail);
-    if (Array.isArray(detail)) return detail.map(validationItemText).join('; ');
+    if (typeof sent === 'string') { try { sent = JSON.parse(sent); } catch (e) { sent = null; } }
+    if (Array.isArray(detail)) return detail.map(item => validationItemText(item, sent)).join('; ');
     if (detail && typeof detail === 'object' && typeof detail.code === 'string') {
       return hasKey('srv_' + detail.code) ? t('srv_' + detail.code, detail.params || {}) : detail.code;
     }
@@ -98,10 +161,10 @@
   };
 
   // Неуспешный Response → Error с переведённым сообщением (e.status, e.body — для разбора)
-  window.apiError = async function (resp) {
+  window.apiError = async function (resp, sent) {
     let body = null;
     try { body = await resp.json(); } catch (e) { /* тело не JSON — покажем статус */ }
-    const err = new Error(window.apiErrorText(body, resp.status));
+    const err = new Error(window.apiErrorText(body, resp.status, sent));
     err.status = resp.status;
     err.body   = body;
     return err;

@@ -126,6 +126,7 @@
     profile_name_lbl: 'Profile name',
     prompt_profile_name: 'Name of the new profile:',
     confirm_delete_profile: 'Delete this profile? This cannot be undone.',
+    confirm_discard_profile_edits: 'The profile table has unsaved edits. Discard them?',
     write_token_prompt: 'Saving is protected. Enter the write token:',
 
     // ── SETTINGS PAGE ──────────────────────────────

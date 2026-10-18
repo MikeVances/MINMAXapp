@@ -67,6 +67,34 @@ const elFanCapM3h      = document.getElementById('fanCapM3h');
 const elNumMinFans     = document.getElementById('numMinFans');
 const elMinFanCapM3h   = document.getElementById('minFanCapM3h');
 const elSum        = document.getElementById('sumBtn');
+const elForm       = document.getElementById('calcContent');
+
+// Числовые поля формы корпуса — их проверяет «Сохранить» и автосохранение
+const NUMBER_IDS = ['birds', 'cap', 'houseLength', 'houseWidth', 'houseHeightWall',
+                    'houseHeightRidge', 'numFans', 'fanCapM3h', 'numMinFans', 'minFanCapM3h'];
+
+// Форма изменена и ещё не записана во вкладку. Раньше переключение вкладки
+// молча перезаписывало ввод (20 000 голов возвращались в 35 000), а калькуляторы
+// читают корпуса из localStorage — несохранённая правка там не видна (аудит 2026-10-18).
+let formDirty = false;
+if (elForm) {
+  elForm.addEventListener('input',  () => { formDirty = true; });
+  elForm.addEventListener('change', () => { formDirty = true; });
+}
+
+// Форма верна — без побочных эффектов (без фокуса и подсказок): для beforeunload
+function formValid() {
+  return NUMBER_IDS.every(id => { const el = document.getElementById(id); return !el || !NumField.problem(el); });
+}
+
+// Перед уходом с текущей вкладки: верные правки сохраняем сами, неверные —
+// не теряем, а показываем ошибку у поля и остаёмся. true — можно уходить.
+function commitBeforeLeaving() {
+  if (!formDirty) return true;
+  if (!NumField.validate(NUMBER_IDS)) return false;
+  readFormToTab();
+  return true;
+}
 
 // modal elements
 const elModal       = document.getElementById('modal');
@@ -81,7 +109,10 @@ function renderTabs() {
     const b = document.createElement('button');
     b.className = 'tab' + (i === active ? ' active' : '');
     b.textContent = houseLabel(tab.id);
-    b.onclick = () => { active = i; fillForm(); renderTabs(); };
+    b.onclick = () => {
+      if (i === active || !commitBeforeLeaving()) return;
+      active = i; fillForm(); renderTabs();
+    };
     elTabs.appendChild(b);
   });
 }
@@ -121,6 +152,9 @@ function fillForm() {
   syncCap();
   // Показать UA badge если корпус откалиброван
   updateUaBadge(tab.id);
+  // Подсветка ошибок прошлой вкладки к этой не относится — пересобрать по новым значениям
+  NUMBER_IDS.forEach(id => { const el = document.getElementById(id); if (el) NumField.check(el); });
+  formDirty = false;
 }
 
 function readFormToTab() {
@@ -134,25 +168,28 @@ function readFormToTab() {
     const v = el ? NumField.value(el) : null;
     return v === null || Number.isNaN(v) ? ifEmpty : v;
   };
-  tab.birds    = read(elBirds, tab.birds);   // поголовье пустым не бывает — прежнее
+  tab.birds    = read(elBirds, tab.birds);   // поле обязательное (required) — пустым сюда не доходит
   tab.cap      = read(elCap, null);          // пусто = «не знаю максимум»
   tab.heater_on = !!elHeater.checked;
-  // Building dimensions (used by audit / heat-loss calibration); пусто → прежнее
-  tab.length_m        = read(elHouseLen,      tab.length_m       ?? null);
-  tab.width_m         = read(elHouseWid,      tab.width_m        ?? null);
-  tab.height_wall_m   = read(elHouseHgtWall,  tab.height_wall_m  ?? null);
-  tab.height_ridge_m  = read(elHouseHgtRidge, tab.height_ridge_m ?? null);
-  tab.num_fans        = read(elNumFans,       tab.num_fans        ?? null);
-  tab.fan_cap_m3h     = read(elFanCapM3h,     tab.fan_cap_m3h     ?? null);
-  tab.num_min_fans    = read(elNumMinFans,    tab.num_min_fans    ?? null);
-  tab.min_fan_cap_m3h = read(elMinFanCapM3h,  tab.min_fan_cap_m3h ?? null);
+  // Размеры и вентиляторы: пустое поле = «не задано». Раньше пустое молча брало
+  // прежнее значение, и ошибочно введённую длину нельзя было стереть
+  tab.length_m        = read(elHouseLen,      null);
+  tab.width_m         = read(elHouseWid,      null);
+  tab.height_wall_m   = read(elHouseHgtWall,  null);
+  tab.height_ridge_m  = read(elHouseHgtRidge, null);
+  tab.num_fans        = read(elNumFans,       null);
+  tab.fan_cap_m3h     = read(elFanCapM3h,     null);
+  tab.num_min_fans    = read(elNumMinFans,    null);
+  tab.min_fan_cap_m3h = read(elMinFanCapM3h,  null);
   saveTabs(tabs);
+  formDirty = false;
 }
 
 
 const MAX_HOUSES = 30; // разумный предел для одной фермы
 
 elAddTab.onclick = () => {
+  if (!commitBeforeLeaving()) return;
   if (tabs.length >= MAX_HOUSES) {
     // Не даём накапливать сотни корпусов и ломать вёрстку
     alert(t('err_max_houses', { max: MAX_HOUSES }));
@@ -211,8 +248,7 @@ if (elModalCancel) elModalCancel.addEventListener('click', () => {
 // Кнопка "Сохранить данные" — записывает форму в localStorage и показывает подтверждение
 elSum.onclick = () => {
   // Неверное поле — фокус и подсказка у него, а не «Сохранено» с потерянным значением
-  if (!NumField.validate(['birds', 'cap', 'houseLength', 'houseWidth', 'houseHeightWall',
-                          'houseHeightRidge', 'numFans', 'fanCapM3h', 'numMinFans', 'minFanCapM3h'])) return;
+  if (!NumField.validate(NUMBER_IDS)) return;
   readFormToTab();
   const orig = elSum.textContent;
   elSum.textContent = t('status_saved');
@@ -221,6 +257,16 @@ elSum.onclick = () => {
 
 renderTabs();
 fillForm();
+
+// Уход со страницы (ссылка на калькуляторы, закрытие вкладки): верные правки
+// сохраняем сами — запись в localStorage синхронная и успевает; неверные
+// сохранить нельзя — просим браузер переспросить, а не теряем молча
+window.addEventListener('beforeunload', e => {
+  if (!formDirty) return;
+  if (formValid()) { readFormToTab(); return; }
+  e.preventDefault();
+  e.returnValue = '';
+});
 
 // Смена языка: data-i18n переводит i18n.js, а собранное здесь в JS — перерисовываем сами
 document.addEventListener('i18n:change', () => {
