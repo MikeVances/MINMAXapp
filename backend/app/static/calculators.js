@@ -482,8 +482,9 @@ document.getElementById('l-calc-btn').addEventListener('click', async () => {
 
 function renderLeakage(d) {
   const tc  = TIGHTNESS[d.tightness_class] || TIGHTNESS.very_leaky;
-  const relClass = d.relative_leakage < 0.25 ? 'ok'
-                 : d.relative_leakage < 0.50 ? 'warn' : 'danger';
+  // Цвет — по классу с сервера: своя копия порогов здесь (0.25/0.50) разошлась
+  // бы с сервером при первой же правке шкалы
+  const relClass = { tight: 'ok', moderate: 'warn' }[d.tightness_class] || 'danger';
   const u = t('unit_m2');
 
   const badge = document.getElementById('l-badge');
