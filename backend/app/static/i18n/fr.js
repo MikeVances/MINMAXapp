@@ -366,7 +366,7 @@
     btn_evap_busy:    'Calcul en cours…',
 
     // Tunnel tool
-    tunnel_info_html:   '<strong>Ventilation en tunnel — refroidissement par effet de vent</strong><br>L\'air circulant le long du bâtiment améliore l\'évacuation de la chaleur par convection et évaporation. La température ressentie est calculée à partir du <strong>tableau normatif russe</strong> (interpolation trilinéaire T × HR × V), qui prend en compte l\'évaporation au niveau des muqueuses — l\'effet est nettement plus marqué que l\'approximation linéaire UGA. Limite pratique : <strong>3–3,5 m/s</strong>. Au-delà, les animaux subissent un stress lié au courant d\'air.',
+    tunnel_info_html:   '<strong>Ventilation en tunnel — refroidissement par effet de vent</strong><br>L\'air circulant le long du bâtiment améliore l\'évacuation de la chaleur par convection et évaporation. La température ressentie suit un tableau (T × HR × V) ; au-dessus de 29.4 °C le refroidissement par le vent n’augmente plus — d’après l’UGA, 85–95 °F donnent le même effet — et il s’annule entre 35 et 37.8 °C : un air à la température de surface des oiseaux n’évacue plus de chaleur par convection. Seul le refroidissement par panneaux aide alors. Limite pratique : <strong>3–3,5 m/s</strong>. Au-delà, les animaux subissent un stress lié au courant d\'air.',
     tunnel_h2:          'Paramètres tunnel',
     tunnel_sect_grp:    'Section transversale du tunnel',
     tunnel_fans_grp:    'Ventilateurs',

@@ -366,7 +366,7 @@
     btn_evap_busy:    'Calculating…',
 
     // Tunnel tool
-    tunnel_info_html:   '<strong>Tunnel ventilation — wind cooling</strong><br>Air moving along the house enhances convective and evaporative heat removal. Effective temperature is calculated using the <strong>Russian normative table</strong> (trilinear interpolation T × RH × V), which accounts for mucous-membrane evaporation — the effect is significantly stronger than the linear UGA approximation. Practical limit: <strong>3–3.5 m/s</strong>. Above that, birds suffer from airstream stress.',
+    tunnel_info_html:   '<strong>Tunnel ventilation — wind cooling</strong><br>Air moving along the house enhances convective and evaporative heat removal. Effective temperature uses a table (T × RH × V) that is held constant above 85 °F, as in UGA data where 85–95 °F give the same cooling, and fades to zero between 35 and 37.8 °C — air at the birds’ surface temperature removes no heat by convection. Above that only evaporative pad cooling helps. Practical limit: <strong>3–3.5 m/s</strong>. Above that, birds suffer from airstream stress.',
     tunnel_h2:          'Tunnel parameters',
     tunnel_sect_grp:    'Tunnel cross-section',
     tunnel_fans_grp:    'Fans',

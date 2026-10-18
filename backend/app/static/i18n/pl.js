@@ -366,7 +366,7 @@
     btn_evap_busy:    'Obliczanie…',
 
     // Narzędzie tunelowe
-    tunnel_info_html:   '<strong>Wentylacja tunelowa — chłodzenie prędkością powietrza</strong><br>Powietrze przepływające wzdłuż kurnika wzmaga konwekcyjne i ewaporacyjne odprowadzanie ciepła. Temperatura odczuwalna obliczana jest na podstawie <strong>rosyjskiej tablicy normatywnej</strong> (interpolacja trójliniowa T × RH × V), uwzględniająca odparowanie z błon śluzowych — efekt jest znacznie silniejszy niż liniowe przybliżenie UGA. Praktyczny limit: <strong>3–3,5 m/s</strong>. Powyżej — ptaki cierpią na stres od strumienia powietrza.',
+    tunnel_info_html:   '<strong>Wentylacja tunelowa — chłodzenie prędkością powietrza</strong><br>Powietrze przepływające wzdłuż kurnika wzmaga konwekcyjne i ewaporacyjne odprowadzanie ciepła.Temperatura odczuwalna wg tablicy (T × RH × V); powyżej 29.4 °C efekt chłodzenia wiatrem nie rośnie — wg danych UGA 85–95 °F dają ten sam efekt — a między 35 a 37.8 °C spada do zera: powietrze o temperaturze powierzchni ptaka nie odbiera ciepła konwekcją. Wtedy pomaga tylko chłodzenie panelowe. Praktyczny limit: <strong>3–3,5 m/s</strong>. Powyżej — ptaki cierpią na stres od strumienia powietrza.',
     tunnel_h2:          'Parametry tunelu',
     tunnel_sect_grp:    'Przekrój poprzeczny tunelu',
     tunnel_fans_grp:    'Wentylatory',

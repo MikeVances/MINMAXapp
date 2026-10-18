@@ -45,7 +45,8 @@ from .evap_cooling_calc import _wet_bulb_stull
 # ─────────────────────────────────────────────────
 # Таблица ощущаемой температуры [°C]
 # Структура: {(T_actual_c, rh_pct): {v_ms: T_effective_c}}
-# Источник: российская нормативная таблица для птицеводства
+# Источник: в коде значился как «российская нормативная таблица»; первоисточник
+# не установлен (аудит 2026-10-18). Как она применяется по T — см. _wind_cooling_c
 # Температуры-ключи (реальные): 21.1, 23.9, 26.6, 29.4, 32.2, 35.0 °C
 # Соответствие °F: 70, 75, 80, 85, 90, 95 — таблица изначально Fahrenheit, конвертирована
 # ─────────────────────────────────────────────────
@@ -196,51 +197,73 @@ def _interp_v(speed_dict: dict[float, float], v: float) -> float:
     return speed_dict[keys[-1]]
 
 
+# Температурные опоры охлаждения ветром (аудит 2026-10-18). Таблица выше растила
+# эффект с температурой (2.5 м/с: −5.0 °C при 21 °C, −12.8 °C при 35 °C) и линейно
+# экстраполировала его выше 35 °C — «тоннель достаточен до 38.6 °C». Физически
+# конвекция пропорциональна (T_поверхности − T_воздуха) и гаснет у температуры птицы.
+#   29.4 °C (85 °F) — UGA (Czarick): 85 °F при 500 fpm ощущаются как 72 °F; на графике
+#                     Czarick кривые 85, 90 и 95 °F дают ОДИНАКОВОЕ охлаждение
+#                     (extension.umd.edu, «Tunnel ventilation management», слайд 16) →
+#                     выше 85 °F эффект не растёт, держим значение таблицы при 29.4 °C;
+#   35.0 °C (95 °F) — нижняя граница температуры поверхности бройлера;
+#   37.8 °C (100 °F) — верхняя: «воздух в диапазоне 95–100 °F практически останавливает
+#                     теплоотдачу» (Univ. of Kentucky, AFS гл. 9) → охлаждение ветром 0.
+# Ограничение (честно): при 29.4 °C таблица даёт 8.3–9.4 °C охлаждения при 2.5 м/с,
+# UGA — ≈ 7.2 °C, Ross 2025 — ≈ 5.6 °C. Источник таблицы не установлен; это
+# оптимистичнее на 1–4 °C и требует таблицы с проверяемым источником.
+_T_WIND_PLATEAU_C   = 29.4
+_T_WIND_FADE_FROM_C = 35.0
+_T_BIRD_SURFACE_C   = 37.8
+
+
+def _table_value(t_c: float, rh_level: float, v_ms: float) -> float:
+    """Значение таблицы при T внутри её диапазона (без экстраполяции)."""
+    t_c = min(max(t_c, _T_KEYS[0]), _T_KEYS[-1])
+    for i in range(len(_T_KEYS) - 1):
+        t0, t1 = _T_KEYS[i], _T_KEYS[i + 1]
+        if t_c <= t1:
+            tt = (t_c - t0) / (t1 - t0)
+            return _lerp(_interp_v(_EFF_TEMP_TABLE[(t0, rh_level)], v_ms),
+                         _interp_v(_EFF_TEMP_TABLE[(t1, rh_level)], v_ms), tt)
+    return _interp_v(_EFF_TEMP_TABLE[(_T_KEYS[-1], rh_level)], v_ms)
+
+
+def _wind_cooling_c(t_db: float, rh_level: float, v_ms: float) -> float:
+    """
+    Охлаждение ветром, °C (≥ 0): насколько поток ниже ощущения в неподвижном воздухе.
+
+    До 29.4 °C — по таблице; 29.4…35 °C — плато на значении 29.4 °C (UGA);
+    35…37.8 °C — линейно до нуля (поверхность птицы); выше — 0. Ниже 21.1 °C —
+    значение края таблицы: прежняя экстраполяция давала отрицательное
+    «охлаждение», то есть ветер якобы грел птицу.
+    """
+    t_ref = min(max(t_db, _T_KEYS[0]), _T_WIND_PLATEAU_C)
+    cooling = max(0.0, _table_value(t_ref, rh_level, 0.0) - _table_value(t_ref, rh_level, v_ms))
+    if t_db <= _T_WIND_FADE_FROM_C:
+        return cooling
+    if t_db >= _T_BIRD_SURFACE_C:
+        return 0.0
+    return cooling * (_T_BIRD_SURFACE_C - t_db) / (_T_BIRD_SURFACE_C - _T_WIND_FADE_FROM_C)
+
+
 def _effective_temperature(t_db: float, rh: float, v_ms: float) -> float:
     """
-    Трилинейная интерполяция по таблице ощущаемой температуры.
-    За пределами диапазона T (21.1–35.0°C) — линейная экстраполяция
-    по крайнему сегменту таблицы. RH по-прежнему зажимается в [50, 70].
+    Ощущаемая температура = T + поправка влажности (неподвижный воздух) − охлаждение ветром.
 
-    Порядок:
-    1. Для каждого крайнего RH-уровня: интерполируем (или экстраполируем) по T
-    2. Интерполируем по RH между двумя результатами шага 1
+    Поправка влажности — строка v = 0 таблицы (при RH 70 % ощущается теплее
+    термометра: 35 °C → 38.3 °C); вне диапазона T таблицы берём её значение на
+    краю: в строке v = 0 ощущаемая T растёт с T с наклоном ≈ 1, то есть поправка
+    почти постоянна. Охлаждение ветром — _wind_cooling_c. RH зажимается в [50, 70].
     """
     rh_c = max(_RH_KEYS[0], min(rh, _RH_KEYS[-1]))
 
-    def interp_at_rh(rh_level: float) -> float:
-        # Экстраполяция выше верхнего предела (T > 35.0°C)
-        if t_db > _T_KEYS[-1]:
-            t0, t1 = _T_KEYS[-2], _T_KEYS[-1]
-            val0 = _interp_v(_EFF_TEMP_TABLE[(t0, rh_level)], v_ms)
-            val1 = _interp_v(_EFF_TEMP_TABLE[(t1, rh_level)], v_ms)
-            slope = (val1 - val0) / (t1 - t0)
-            return val1 + slope * (t_db - t1)
-        # Экстраполяция ниже нижнего предела (T < 21.1°C)
-        if t_db < _T_KEYS[0]:
-            t0, t1 = _T_KEYS[0], _T_KEYS[1]
-            val0 = _interp_v(_EFF_TEMP_TABLE[(t0, rh_level)], v_ms)
-            val1 = _interp_v(_EFF_TEMP_TABLE[(t1, rh_level)], v_ms)
-            slope = (val1 - val0) / (t1 - t0)
-            return val0 + slope * (t_db - t0)
-        # Нормальная интерполяция внутри диапазона
-        for i in range(len(_T_KEYS) - 1):
-            t0, t1 = _T_KEYS[i], _T_KEYS[i + 1]
-            if t_db <= t1:
-                tt = (t_db - t0) / (t1 - t0)
-                val0 = _interp_v(_EFF_TEMP_TABLE[(t0, rh_level)], v_ms)
-                val1 = _interp_v(_EFF_TEMP_TABLE[(t1, rh_level)], v_ms)
-                return _lerp(val0, val1, tt)
-        return _interp_v(_EFF_TEMP_TABLE[(_T_KEYS[-1], rh_level)], v_ms)
+    def at_rh(rh_level: float) -> float:
+        t_tab = min(max(t_db, _T_KEYS[0]), _T_KEYS[-1])
+        humidity_shift = _table_value(t_tab, rh_level, 0.0) - t_tab
+        return t_db + humidity_shift - _wind_cooling_c(t_db, rh_level, v_ms)
 
-    rh0, rh1 = _RH_KEYS[0], _RH_KEYS[-1]   # 50, 70
-    val_rh0 = interp_at_rh(rh0)
-    val_rh1 = interp_at_rh(rh1)
-    rh_t = (rh_c - rh0) / (rh1 - rh0)
-    # Без min(t_eff, t_db): таблица содержит и эффект ВЛАЖНОСТИ — при RH 70 % и
-    # слабом потоке ощущаемая температура выше термометра (35 °C → 38.3 °C при 0 м/с).
-    # Срез по T_db выбрасывал этот эффект и занижал тепловую нагрузку
-    return _lerp(val_rh0, val_rh1, rh_t)
+    rh0, rh1 = _RH_KEYS[0], _RH_KEYS[-1]
+    return _lerp(at_rh(rh0), at_rh(rh1), (rh_c - rh0) / (rh1 - rh0))
 
 
 def _calc_thvi(t_db: float, rh: float, v_ms: float) -> tuple[float, str]:

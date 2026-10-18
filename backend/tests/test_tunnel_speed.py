@@ -70,3 +70,50 @@ def test_api_rejects_rating_point_not_below_free_air(client):
     payload = {**HOUSE, "fan_capacity_25pa_m3h": 41_000}
 
     assert client.post("/calc/tools/tunnel_speed", json=payload).status_code == 422
+
+
+# ─── Охлаждение ветром не растёт с жарой и гаснет у температуры птицы (аудит 2026-10-18) ──
+
+from backend.app.core.tunnel_speed_calc import (  # noqa: E402
+    _effective_temperature, _find_tunnel_temp_limit,
+)
+
+
+@pytest.mark.parametrize("rh", [50.0, 70.0])
+def test_wind_cooling_does_not_grow_above_85F(rh):
+    """
+    UGA (Czarick): кривые 85, 90 и 95 °F дают одинаковое охлаждение. Таблица давала
+    при 2.5 м/с −9.4 °C при 29.4 °C и −12.8 °C при 35 °C (RH 50 %).
+    """
+    def cooling(t):
+        return _effective_temperature(t, rh, 0.0) - _effective_temperature(t, rh, 2.5)
+
+    assert cooling(35.0) == pytest.approx(cooling(29.4), abs=1e-9)
+    assert cooling(32.2) == pytest.approx(cooling(29.4), abs=1e-9)
+
+
+@pytest.mark.parametrize("v", [0.5, 1.5, 2.5])
+def test_wind_gives_no_cooling_at_bird_surface_temperature(v):
+    """
+    Воздух 95–100 °F практически останавливает теплоотдачу бройлера (Univ. of Kentucky,
+    AFS гл. 9). Старая экстраполяция давала при 40 °C и 2.5 м/с охлаждение 13.9 °C.
+    """
+    for t in (37.8, 40.0, 45.0):
+        assert _effective_temperature(t, 50.0, v) == pytest.approx(_effective_temperature(t, 50.0, 0.0), abs=1e-9)
+
+
+def test_wind_never_warms_birds_in_cool_air():
+    """Экстраполяция ниже 21.1 °C давала отрицательное охлаждение — «ветер греет»."""
+    for t in (0.0, 10.0, 15.0, 21.1):
+        for v in (0.5, 1.0, 2.5):
+            assert _effective_temperature(t, 50.0, v) <= _effective_temperature(t, 50.0, 0.0) + 1e-9
+
+
+def test_tunnel_limit_for_market_birds_is_below_bird_surface_temperature():
+    """
+    2.5 м/с, RH 50 %, комфорт 24 °C (42 дня): было «тоннель достаточен до 38.6 °C».
+    С плато охлаждения 9.4 °C предел 24 + 9.4 = 33.4 °C — выше этого нужны панели.
+    """
+    limit = _find_tunnel_temp_limit(50.0, 2.5, 24.0)
+
+    assert limit == pytest.approx(33.4, abs=0.15)

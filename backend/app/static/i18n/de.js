@@ -366,7 +366,7 @@
     btn_evap_busy:    'Berechnung läuft…',
 
     // Tunnel tool
-    tunnel_info_html:   '<strong>Tunnellüftung — Windkühlung</strong><br>Längsströmung durch den Stall verstärkt konvektive und evaporative Wärmeabgabe. Die gefühlte Temperatur wird über die <strong>russische normative Tabelle</strong> (trilineare Interpolation T × RH × V) berechnet, die die Verdunstung an Schleimhäuten berücksichtigt — der Effekt ist deutlich stärker als die lineare UGA-Näherung. Praktische Grenze: <strong>3–3,5 m/s</strong>. Darüber leiden die Tiere unter Luftstresssyndrom.',
+    tunnel_info_html:   '<strong>Tunnellüftung — Windkühlung</strong><br>Längsströmung durch den Stall verstärkt konvektive und evaporative Wärmeabgabe.Die gefühlte Temperatur folgt einer Tabelle (T × RH × V); oberhalb 29.4 °C wächst die Windkühlung nicht weiter — nach UGA-Daten wirken 85–95 °F gleich — und geht zwischen 35 und 37.8 °C auf null: Luft mit der Oberflächentemperatur der Tiere führt per Konvektion keine Wärme ab. Dann hilft nur Pad-Kühlung. Praktische Grenze: <strong>3–3,5 m/s</strong>. Darüber leiden die Tiere unter Luftstresssyndrom.',
     tunnel_h2:          'Tunnelparameter',
     tunnel_sect_grp:    'Tunnelquerschnitt',
     tunnel_fans_grp:    'Ventilatoren',
