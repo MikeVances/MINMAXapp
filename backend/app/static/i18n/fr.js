@@ -157,6 +157,8 @@
     step1_desc:        'Les dimensions sont chargées depuis les données du bâtiment sur la page principale. Vous pouvez les ajuster ici si nécessaire.',
     dims_from_house_lbl: 'Charger depuis le bâtiment :',
     dims_no_houses:    '(aucune donnée de bâtiment — saisir manuellement)',
+    prof_no_house:     'Le profil est calculé pour un bâtiment de la page d’accueil — ajoutez-en un d’abord.',
+    prof_no_house_link: 'Aller aux bâtiments',
     label_length_m:       'Longueur, m',
     label_width_m:        'Largeur, m',
     label_height_wall_m:  'Hauteur à la sablière, m',

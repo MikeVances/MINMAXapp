@@ -92,6 +92,11 @@
       </div>
 
       <button id="prof-calc-btn" class="btn" data-i18n="btn_calc_profile">Calculate profile</button>
+      <!-- Без корпуса считать не по чему: кнопка неактивна, а здесь сказано почему -->
+      <p id="prof-no-house" class="hint mt-8 mb-0" hidden>
+        <span data-i18n="prof_no_house">The profile is calculated for a house from the home page — add one there first.</span>
+        <a href="./" data-i18n="prof_no_house_link">Go to houses</a>
+      </p>
     </div>
 
     <!-- Results rendered here by JS -->
@@ -693,6 +698,8 @@ document.querySelectorAll('.tool-tab:not([disabled])').forEach(btn => {
   // Подписи корпусов — из словаря: при смене языка список собирается заново, выбор сохраняется
   function fillHouseOptions() {
     selEl.innerHTML = '';
+    profBtn.disabled = !profileTabs.length;
+    document.getElementById('prof-no-house').hidden = profileTabs.length > 0;
     if (!profileTabs.length) {
       const opt = document.createElement('option');
       opt.textContent = t('dims_no_houses');

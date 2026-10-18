@@ -157,6 +157,8 @@
     step1_desc:        'Wymiary są wczytywane z danych kurnika na stronie głównej. W razie potrzeby można je tutaj zmienić.',
     dims_from_house_lbl: 'Wczytaj z kurnika:',
     dims_no_houses:    '(brak danych kurnika — wprowadź ręcznie)',
+    prof_no_house:     'Profil liczy się dla kurnika ze strony głównej — najpierw dodaj go tam.',
+    prof_no_house_link: 'Do kurników',
     label_length_m:       'Długość, m',
     label_width_m:        'Szerokość, m',
     label_height_wall_m:  'Wysokość ściany, m',

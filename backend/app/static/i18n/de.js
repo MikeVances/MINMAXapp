@@ -157,6 +157,8 @@
     step1_desc:        'Die Abmessungen werden aus den Stalldaten der Hauptseite geladen. Bei Bedarf können sie hier angepasst werden.',
     dims_from_house_lbl: 'Von Stall laden:',
     dims_no_houses:    '(keine Stalldaten — manuell eingeben)',
+    prof_no_house:     'Das Profil wird für einen Stall von der Startseite berechnet — legen Sie dort zuerst einen an.',
+    prof_no_house_link: 'Zu den Ställen',
     label_length_m:       'Länge, m',
     label_width_m:        'Breite, m',
     label_height_wall_m:  'Wandhöhe, m',

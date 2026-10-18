@@ -157,6 +157,8 @@
     step1_desc:        'Dimensions are loaded from the house data on the main page. You can adjust them here if needed.',
     dims_from_house_lbl: 'Load from house:',
     dims_no_houses:    '(no house data — enter manually)',
+    prof_no_house:     'The profile is calculated for a house from the home page — add one there first.',
+    prof_no_house_link: 'Go to houses',
     label_length_m:       'Length, m',
     label_width_m:        'Width, m',
     label_height_wall_m:  'Wall height, m',

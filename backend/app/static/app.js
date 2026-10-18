@@ -50,6 +50,10 @@ function saveTabs(tabs) {
 
 let tabs = loadTabs();
 let active = 0;
+// Первый вход: примерные корпуса сразу сохраняются. Иначе главная показывала
+// «Птичник 1», а калькуляторы (читают только сохранённое) — «нет корпусов», и
+// «Рассчитать профиль» там молча ничего не делал
+try { if (!localStorage.getItem(storeKey)) saveTabs(tabs); } catch (e) { /* хранилище недоступно */ }
 
 const elTabs       = document.getElementById('tabs');
 const elAddTab     = document.getElementById('addTab');
