@@ -463,7 +463,9 @@ function renderAnalysis(data) {
   const qBirds       = data.q_birds_kw.toFixed(1);
   const qHeater      = data.q_heater_required_kw.toFixed(1);
   const birdFrac     = (data.bird_heat_fraction * 100).toFixed(0);
-  const combAir      = data.combustion_air_m3h.toFixed(0);
+  // К Qmin добавляется воздух РАЗБАВЛЕНИЯ CO₂ (~58 м³/ч на кВт), а не стехиометрический
+  // воздух горения — он в ~40 раз меньше и раньше показывался здесь по ошибке
+  const dilutionAir  = (data.dilution_air_m3h || 0).toFixed(0);
 
   // Тон duty cycle: ок → внимание → перегрузка
   const dutyTone = data.duty_cycle >= 0.95 ? 'danger'
@@ -474,10 +476,10 @@ function renderAnalysis(data) {
     ? `<div class="danger py-6 px-8 r-4 mt-4">${t('heater_overload_warn')}</div>`
     : '';
 
-  const airSection = data.combustion_air_m3h > 0
+  const airSection = data.dilution_air_m3h > 0
     ? `<div class="kv note-warn p-8">
          <span>${t('combustion_lbl')}</span>
-         <span><strong>${combAir} ${t('unit_m3h')}</strong></span>
+         <span><strong>${dilutionAir} ${t('unit_m3h')}</strong></span>
        </div>
        <p class="muted mt-4 mb-0 fs-12">${t('air_added_hint')}</p>`
     : `<p class="muted mt-8 mb-0">${t('no_combustion')}</p>`;

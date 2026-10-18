@@ -45,6 +45,7 @@ class CalcOut(BaseModel):
     growth_profile_id: str | None = None  # профиль роста, по которому шёл расчёт
     # Снаружи воздух не суше целевого: вентиляцией RH не удержать (Qmin — по CO₂)
     humidity_uncontrollable: bool = False
+    heater_insufficient: bool = False   # горелок не хватает даже на 100 %
     # Qmin больше заданной мощности установки: вентиляторов не хватает даже на минимум
     capacity_insufficient: bool = False
     # Требуемый туннельный расход корпуса v × S × 3600 (None — размеры не заданы)
@@ -112,6 +113,7 @@ def minmax(payload: CalcIn):
         house_geometry_missing=cr.house_geometry_missing,
         growth_profile_id=cr.growth_profile_id,
         humidity_uncontrollable=cr.humidity_uncontrollable,
+        heater_insufficient=cr.heater_insufficient,
     )
 
 
@@ -156,6 +158,7 @@ class SummaryRow(BaseModel):
     capacity_insufficient: bool = False
     house_geometry_missing: bool = False
     humidity_uncontrollable: bool = False
+    heater_insufficient: bool = False   # горелок не хватает даже на 100 %
 
 
 class SummaryOut(BaseModel):
@@ -218,6 +221,7 @@ def summary7(payload: SummaryIn):
                 capacity_insufficient=capacity_insufficient,
                 house_geometry_missing=cr.house_geometry_missing,
                 humidity_uncontrollable=cr.humidity_uncontrollable,
+                heater_insufficient=cr.heater_insufficient,
             )
         )
 

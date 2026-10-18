@@ -32,7 +32,7 @@ import logging
 import math
 import os
 from dataclasses import dataclass, asdict, field, fields
-from typing import Optional
+from typing import Callable, Optional
 
 from .errors import CalcError
 from .json_store import atomic_write_json
@@ -209,6 +209,63 @@ def ventilation_heat_w(q_m3h: float, t_inside_c: float, t_outside_c: float) -> f
 
 
 @dataclass
+class HeaterDuty:
+    """Согласованная загрузка горелок (см. solve_heater_duty)."""
+    duty_cycle:   float   # 0…1 — доля времени работы
+    qmin_m3h:     float   # минимальный воздухообмен ВМЕСТЕ с воздухом, который требуют сами горелки
+    heat_need_w:  float   # потребность в тепле при этой загрузке, Вт
+    insufficient: bool    # даже на полной мощности тепла не хватает
+    full_load_need_w: float  # потребность при работе на 100 % — для дефицита в UI
+
+
+def solve_heater_duty(
+    qmin_for_duty: Callable[[float], float],
+    ua_w_per_k: float,
+    t_inside_c: float,
+    t_outside_c: float,
+    birds_sensible_w: float,
+    heater_power_w: float,
+) -> HeaterDuty:
+    """
+    Загрузка горелок, согласованная с воздухом, который они сами требуют.
+
+    Открытое пламя выделяет CO₂ и пар: на каждый кВт горелки нужно ~58 м³/ч
+    воздуха на разбавление CO₂, и этот воздух тоже надо нагреть. При ΔT 30 К
+    его подогрев съедает ~58 % мощности самой горелки. Раньше duty считался по
+    Qmin БЕЗ этого воздуха, а воздух добавлялся потом — загрузка занижалась
+    в 2–2.5 раза, и «45 %» на деле означали «горелок не хватает» (аудит 2026-10-18).
+
+    Уравнение: d = потребность(d) / P, где
+        потребность(d) = UA·ΔT + ρ·Cp·ΔT·Qmin(d)/3600 − тепло птицы.
+    qmin_for_duty(d) — Qmin при загрузке d (у открытого пламени растёт с d,
+    у электрических не зависит). Решаем бисекцией: f(d) = потребность(d)/P − d,
+    f(0) ≥ 0; если f(1) ≥ 0 — мощности не хватает и горелки работают на 100 %.
+    """
+    def need_w(d: float) -> float:
+        q = qmin_for_duty(d)
+        vent = ventilation_heat_w(q, t_inside_c, t_outside_c) if t_inside_c > t_outside_c else 0.0
+        walls = ua_w_per_k * max(t_inside_c - t_outside_c, 0.0)
+        return max(0.0, walls + vent - birds_sensible_w)
+
+    full_need = need_w(1.0)
+    if heater_power_w <= 0:
+        return HeaterDuty(0.0, qmin_for_duty(0.0), need_w(0.0), need_w(0.0) > 0, full_need)
+
+    if full_need >= heater_power_w:
+        return HeaterDuty(1.0, qmin_for_duty(1.0), full_need, full_need > heater_power_w, full_need)
+
+    lo, hi = 0.0, 1.0            # f(lo) ≥ 0, f(hi) < 0
+    for _ in range(60):          # 2⁻⁶⁰ — заведомо точнее любых входных данных
+        mid = 0.5 * (lo + hi)
+        if need_w(mid) / heater_power_w - mid >= 0.0:
+            lo = mid
+        else:
+            hi = mid
+    d = lo
+    return HeaterDuty(d, qmin_for_duty(d), need_w(d), False, full_need)
+
+
+@dataclass
 class HeatBalance:
     """Результат расчёта полного теплового баланса птичника."""
     # Потери тепла
@@ -227,7 +284,8 @@ class HeatBalance:
     duty_cycle_pct:       float     # %
 
     # Газовое сжигание (только для gas_open)
-    combustion_air_m3h:   float     # воздух для горения, м³/ч
+    combustion_air_m3h:   float     # стехиометрический воздух горения, м³/ч (справочно)
+    dilution_air_m3h:     float     # воздух на разбавление CO₂ открытого пламени — ДОБАВЛЯЕТСЯ к Qmin
 
     # Диагностика
     bird_heat_fraction:   float     # доля потребности, покрытая птицей (может >1)
@@ -271,33 +329,33 @@ def calculate_heat_balance(
     """
     dt = max(t_inside_target - t_outside, 0.0)   # разница температур
 
-    # Потери через ограждения (UA × ΔT)
-    q_walls_w = ua_coefficient * dt
-    q_walls_kw = q_walls_w / 1000.0
-
-    # Потери с вентиляционным воздухом (Q_min × ρcp × ΔT), dt ≥ 0
-    q_vent_w = ventilation_heat_w(q_min_m3h, t_inside_target, t_outside) if dt > 0 else 0.0
-    q_vent_kw = q_vent_w / 1000.0
-
-    q_total_loss_kw = q_walls_kw + q_vent_kw
-
     # Метаболическое тепло птицы
     q_per_bird_w = bird_sensible_heat_w(bird_weight_kg)
-    q_birds_kw = (num_birds * q_per_bird_w) / 1000.0
+    q_birds_w = num_birds * q_per_bird_w
 
-    # Потребность в тепле от обогревателей
-    q_need_kw = max(0.0, q_total_loss_kw - q_birds_kw)
+    # q_min_m3h — минимум ПТИЦЫ; открытое пламя добавляет свой воздух разбавления,
+    # и его тоже нужно нагреть. Загрузку ищем согласованно (solve_heater_duty) —
+    # тем же решателем, что и в расчёте Qmin (calc_core), чтобы цифры совпадали
+    def qmin_for_duty(d: float) -> float:
+        return q_min_m3h + heater_co2_dilution_m3h(heater_power_kw, d, heater_type)
 
-    # Коэффициент покрытия птицей
+    sol = solve_heater_duty(qmin_for_duty, ua_coefficient, t_inside_target, t_outside,
+                            q_birds_w, heater_power_kw * 1000.0)
+    duty_cycle     = sol.duty_cycle
+    dilution_air   = qmin_for_duty(duty_cycle) - q_min_m3h
+
+    # Потери через ограждения и с вентиляционным воздухом (вместе с воздухом горелок)
+    q_walls_kw = ua_coefficient * dt / 1000.0
+    q_vent_kw  = (ventilation_heat_w(sol.qmin_m3h, t_inside_target, t_outside) / 1000.0
+                  if dt > 0 else 0.0)
+    q_total_loss_kw = q_walls_kw + q_vent_kw
+    q_birds_kw = q_birds_w / 1000.0
+
+    # Потребность: при найденной загрузке; если мощности не хватает — при работе на 100 %
+    q_need_kw = sol.heat_need_w / 1000.0
     bird_fraction = q_birds_kw / q_total_loss_kw if q_total_loss_kw > 0 else 0.0
 
-    # Duty cycle и воздух для горения
-    if heater_power_kw > 0 and q_need_kw > 0:
-        duty_cycle = min(q_need_kw / heater_power_kw, 1.0)
-    else:
-        duty_cycle = 0.0
-
-    covers = (heater_power_kw >= q_need_kw) if q_need_kw > 0 else True
+    covers = not sol.insufficient
     combustion_air = heater_air_demand(heater_power_kw, duty_cycle, heater_type)
 
     # Оценка: код + уровень, текст собирает клиент на своём языке
@@ -307,7 +365,7 @@ def calculate_heat_balance(
     elif q_need_kw == 0:
         status, level = "birds_sufficient", "ok"
     elif not covers:
-        deficit = q_need_kw - heater_power_kw
+        deficit = sol.full_load_need_w / 1000.0 - heater_power_kw
         status, level = "insufficient", "danger"
     elif duty_cycle >= 0.9:
         status, level = "near_limit", "warn"
@@ -327,6 +385,7 @@ def calculate_heat_balance(
         duty_cycle            = round(duty_cycle, 4),
         duty_cycle_pct        = round(duty_cycle * 100, 1),
         combustion_air_m3h    = round(combustion_air, 1),
+        dilution_air_m3h      = round(dilution_air, 1),
         bird_heat_fraction    = round(bird_fraction, 4),
         status_code           = status,
         status_level          = level,

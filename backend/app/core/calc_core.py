@@ -17,6 +17,7 @@ from .building_thermal import (
     load_thermal_config,
     heater_air_demand,
     heater_co2_dilution_m3h,
+    solve_heater_duty,
 )
 
 
@@ -141,6 +142,8 @@ class CalcResult:
     # Наружный воздух не суше целевого внутреннего (ΔW ≤ 0.1 г/кг): вентиляцией RH
     # не удержать при любом расходе, Qmin показан по CO₂
     humidity_uncontrollable: bool = False
+    # Горелок не хватает даже на 100 % (с учётом подогрева их же воздуха разбавления)
+    heater_insufficient: bool = False
     # Профиль роста, по которому шёл расчёт (видно, какие данные кросса использованы)
     growth_profile_id: Optional[str] = None
 
@@ -299,37 +302,56 @@ def compute(ci: CalcInput) -> CalcResult:
             q_min      = q_min_moisture_birds
             qmin_basis = "moisture"
 
-    # --- Горелки: duty_cycle + CO₂ от открытого горения ---
-    # duty_cycle учитывает ТРИ слагаемых теплового баланса:
-    #   Q_need = UA×ΔT  +  Q_vent_heat  −  Q_птиц_чувств
-    #   Q_vent_heat = Qmin [м³/ч] × ρ_вход × Cp × ΔT / 3600
-    # Qmin здесь — текущее значение после влагобаланса птиц (без пара горелок).
-    # Это главный член в холодную погоду (уносится с минимальным воздухом).
+    # --- Горелки: загрузка, согласованная с их собственным воздухом ---
+    # Открытое пламя добавляет к Qmin две вещи: воздух на разбавление CO₂ (ветка CO₂)
+    # и пар (ветка влаги). Qmin = max(CO₂ птицы + CO₂ горелок, влага птицы + пар горелок).
+    # Загрузка d зависит от Qmin (его воздух надо греть), Qmin — от d, поэтому решаем
+    # совместно (solve_heater_duty). Раньше d считался по Qmin без воздуха горелок,
+    # воздух добавлялся после, и загрузка занижалась в 2–2.5 раза (аудит 2026-10-18).
     heater_air = 0.0
     duty_cycle = None
+    heater_insufficient = False
 
     if _thermal_cfg is not None and _thermal_cfg.heater and _thermal_cfg.calibration:
-        q_birds_sensible_w = 6.90 * (weight_kg ** 0.75) * birds_eff
-        delta_t_h  = max(0.0, t_target_inside - ci.outside_t)
+        heater_kw   = _thermal_cfg.heater.total_power_kw
+        heater_type = _thermal_cfg.heater.heater_type
+        q_min_birds = q_min                     # без горелок: max(CO₂, влага) птицы
+        open_flame  = ci.heater_on and heater_type == "gas_open"
 
-        # Нагрев входящего воздуха: холодный воздух Qmin м³/ч нужно догреть до T_in
-        q_vent_heat_w  = ventilation_heat_w(q_min, t_target_inside, ci.outside_t) if delta_t_h > 0 else 0.0
+        def qmin_for_duty(d: float) -> float:
+            if not ci.heater_on:
+                return q_min_birds
+            q_co2_branch = q_min_co2 + heater_co2_dilution_m3h(heater_kw, d, heater_type)
+            q_moist_branch = 0.0
+            if open_flame and _delta_w is not None:
+                gas_m3h = heater_kw / 10.0 * d                 # LHV ≈ 10 кВт·ч/м³
+                q_moist_branch, _ = moisture_qmin_m3h(
+                    _G_birds_gph + gas_m3h * 1607.0, _rho_in, _delta_w, moisture_ceiling)
+            return max(q_co2_branch, q_moist_branch, q_min_birds)
 
-        heat_need_w = max(0.0,
-            _thermal_cfg.calibration.ua_coefficient * delta_t_h
-            + q_vent_heat_w
-            - q_birds_sensible_w
+        sol = solve_heater_duty(
+            qmin_for_duty,
+            ua_w_per_k       = _thermal_cfg.calibration.ua_coefficient,
+            t_inside_c       = t_target_inside,
+            t_outside_c      = ci.outside_t,
+            birds_sensible_w = 6.90 * (weight_kg ** 0.75) * birds_eff,
+            heater_power_w   = heater_kw * 1000.0,
         )
-        heater_power_w = _thermal_cfg.heater.total_power_kw * 1000.0
-        duty_cycle = min(heat_need_w / heater_power_w, 1.0) if heater_power_w > 0 else 0.0
+        duty_cycle          = sol.duty_cycle
+        heater_insufficient = sol.insufficient
 
         if ci.heater_on:
-            heater_air = heater_co2_dilution_m3h(
-                heater_power_kw=_thermal_cfg.heater.total_power_kw,
-                duty_cycle=duty_cycle,
-                heater_type=_thermal_cfg.heater.heater_type,
-            )
-            q_min += heater_air
+            heater_air = heater_co2_dilution_m3h(heater_kw, duty_cycle, heater_type)
+            q_min = sol.qmin_m3h
+            # Какая ветка правит при найденной загрузке: CO₂ (птица + горелки) или влага
+            if open_flame and _delta_w is not None:
+                gas_m3h = heater_kw / 10.0 * duty_cycle
+                q_moist, capped = moisture_qmin_m3h(
+                    _G_birds_gph + gas_m3h * 1607.0, _rho_in, _delta_w, moisture_ceiling)
+                humidity_uncontrollable = humidity_uncontrollable or capped
+                qmin_basis = "moisture" if q_moist > q_min_co2 + heater_air else "co2"
+            elif heater_air > 0:
+                qmin_basis = "co2"
 
     # Fallback: нет calibration данных → эмпирическая поправка на поголовье
     if ci.heater_on and duty_cycle is None:
@@ -337,22 +359,6 @@ def compute(ci: CalcInput) -> CalcResult:
         heater_air     = birds_eff * delta_per_bird
         q_min         += heater_air
         per_bird_min  += delta_per_bird
-
-    # --- Влагобаланс (ШАГ 2): добавляем пар газовых горелок ---
-    # Горелки открытого горения выбрасывают H₂O в птичник (1 м³ газа → 1.607 кг H₂O).
-    # Уточняем G_total и пересчитываем Qmin_moisture если duty_cycle известен.
-    if (_delta_w is not None
-            and ci.heater_on and duty_cycle is not None
-            and _thermal_cfg is not None and _thermal_cfg.heater
-            and _thermal_cfg.heater.heater_type == "gas_open"):
-        _gas         = (_thermal_cfg.heater.total_power_kw / 100.0) * 10.0 * duty_cycle
-        G_heater_gph = _gas * 1607.0
-        q_min_moisture_total, uncontrollable_with_heater = moisture_qmin_m3h(
-            _G_birds_gph + G_heater_gph, _rho_in, _delta_w, moisture_ceiling)
-        humidity_uncontrollable = humidity_uncontrollable or uncontrollable_with_heater
-        if q_min_moisture_total > q_min:
-            q_min      = q_min_moisture_total
-            qmin_basis = "moisture"
 
     # Влажность упёрлась в потолок, а потолок без размеров корпуса только оценён
     if humidity_uncontrollable and ceiling_needs_geometry:
@@ -384,4 +390,5 @@ def compute(ci: CalcInput) -> CalcResult:
         house_geometry_missing=house_geometry_missing,
         growth_profile_id=profile_id,
         humidity_uncontrollable=humidity_uncontrollable,
+        heater_insufficient=heater_insufficient,
     )

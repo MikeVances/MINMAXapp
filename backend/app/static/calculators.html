@@ -784,9 +784,13 @@ document.querySelectorAll('.tool-tab:not([disabled])').forEach(btn => {
     const capWarn = d.rows.some(r => r.capacity_insufficient)
       ? `<p class="danger fs-12 mt-8 mb-0">⚠ ${t('cap_insufficient_note')}</p>`
       : '';
-    // Влажный наружный воздух: вентиляцией RH не удержать — Qmin в таких строках по CO₂
+    // Влажный наружный воздух: вентиляцией RH не удержать — Qmin в таких строках равен потолку режима
     const humWarn = d.rows.some(r => r.humidity_uncontrollable)
       ? `<p class="warn fs-12 mt-8 mb-0">⚠ ${t('humidity_uncontrollable_note')}</p>`
+      : '';
+    // Горелок не хватает даже на 100 % (с подогревом их же воздуха разбавления CO₂)
+    const heatWarn = d.rows.some(r => r.heater_insufficient)
+      ? `<p class="danger fs-12 mt-8 mb-0">⚠ ${t('heater_insufficient_note')}</p>`
       : '';
     // Туннельный Qmax считается из сечения корпуса — без размеров он равен Qmin
     const geomWarn = d.rows.some(r => r.house_geometry_missing)
@@ -839,6 +843,7 @@ document.querySelectorAll('.tool-tab:not([disabled])').forEach(btn => {
       </table>
       ${capWarn}
       ${humWarn}
+      ${heatWarn}
       ${geomWarn}
       ${physBlock}
     </div>`;
