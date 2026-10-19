@@ -134,7 +134,7 @@ def test_young_birds_cap_the_tunnel_speed(client):
 
 def test_hot_young_flock_explains_why_no_tunnel(client):
     j = client.post(URL, json=_req(flock={"age_days": 10}, conditions={"outdoor_t_c": 33.0, "outdoor_rh_pct": 30.0})).json()
-    assert {"code": "tunnel_not_allowed_age", "params": {"min_day": 14}, "severity": "info"} in j["findings"]
+    assert {"code": "tunnel_not_allowed_age", "params": {"min_day": 21}, "severity": "info"} in j["findings"]
 
 
 def test_effective_temperature_in_tunnel(client):
@@ -149,18 +149,42 @@ def test_cage_age_limit_applies_to_bird_speed_not_aisle(client):
     # День 18: Cobb — до 1.8 м/с у ПТИЦЫ. В клетках у птицы половина скорости прохода,
     # значит проход до 3.6 м/с, а расход = 3.6 × 41.92 × 3600 ≈ 543 283 м³/ч.
     # Раньше предел ложился на проход: 1.8 м/с и вдвое меньше воздуха
+    # Туннель с 14-го дня — площадка задала свои правила (по умолчанию — с 21-го)
     rows = [{"count": 4, "width_m": 1.6, "height_m": 2.2}]
-    j = client.post(URL, json=_req(flock={"age_days": 18, "housing": "cages"}, house={"cage_rows": rows},
-                                   conditions={"outdoor_t_c": 32.0, "outdoor_rh_pct": 40.0})).json()
+    body = _req(flock={"age_days": 18, "housing": "cages"}, house={"cage_rows": rows},
+                conditions={"outdoor_t_c": 32.0, "outdoor_rh_pct": 40.0})
+    j = client.post(URL, json={**body, "tunnel_rules": {"min_day": 14, "min_outdoor_c": 18}}).json()
     free = 56.0 - 4 * 1.6 * 2.2
     assert j["tunnel"]["active"] is True
     assert j["tunnel"]["bird_speed_ms"]["max"] == 1.8
     assert j["qmax_m3h"] == pytest.approx(3.6 * free * 3600, abs=2)
 
 
-def test_tunnel_rules_are_reported_as_assumption(client):
+def test_tunnel_rules_default_to_farmers_practice(client):
+    # Практика птицеводов (владелец, 2026-10-19): с 21-го дня, снаружи не ниже 24 °C
     j = client.post(URL, json=REQ).json()
-    assert {"code": "tunnel_rules_default", "params": {"min_day": 14, "min_temp_c": 18.0}} in j["assumptions"]
+    assert {"code": "tunnel_rules_default", "params": {"min_day": 21, "min_temp_c": 24.0},
+            "source_id": "practice_tunnel_rules_2026"} in j["assumptions"]
+    assert "practice_tunnel_rules_2026" in {s["id"] for s in j["sources"]}
+
+
+@pytest.mark.parametrize("age, t_out, allowed", [
+    (20, 32.0, False),     # моложе 21 дня
+    (21, 32.0, True),
+    (30, 23.0, False),     # снаружи ниже 24 °C
+    (30, 24.0, True),
+])
+def test_tunnel_allowed_by_default_rules(client, age, t_out, allowed):
+    j = client.post(URL, json=_req(flock={"age_days": age}, conditions={"outdoor_t_c": t_out, "outdoor_rh_pct": 40.0})).json()
+    assert j["tunnel"]["allowed"] is allowed
+
+
+def test_request_tunnel_rules_override_defaults(client):
+    body = _req(flock={"age_days": 16}, conditions={"outdoor_t_c": 20.0, "outdoor_rh_pct": 40.0})
+    assert client.post(URL, json=body).json()["tunnel"]["allowed"] is False
+    j = client.post(URL, json={**body, "tunnel_rules": {"min_day": 14, "min_outdoor_c": 18}}).json()
+    assert j["tunnel"]["allowed"] is True
+    assert "tunnel_rules_default" not in {a["code"] for a in j["assumptions"]}
 
 
 # ─── Без состояния и ошибки ───────────────────────────────────────────────────

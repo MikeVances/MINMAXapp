@@ -4,7 +4,8 @@ const elConfigSection = document.getElementById('configSection');
 
 let cfg = {
   total_mortality_pct: 4.0, cycle_days: 42, v_tunnel_ms: 2.5, safety_factor_qmin: 1.5,
-  tunnel_min_day: 14, tunnel_min_temp_c: 18.0,
+  // Практика птицеводов: туннель с 21-го дня, снаружи не ниже 24 °C (как в app_config.py)
+  tunnel_min_day: 21, tunnel_min_temp_c: 24.0,
 };
 
 function renderConfig() {
@@ -24,8 +25,8 @@ function renderConfig() {
       <div class="d-grid gap-10">
         <label class="kv m-0"><span>${t('v_tunnel_lbl')}</span><span><input id="v_tunnel" type="text" data-num inputmode="decimal" data-min="0.5" data-max="5.0" value="${cfg.v_tunnel_ms ?? 2.5}"> ${t('unit_ms')}</span></label>
         <label class="kv m-0"><span>${t('safety_factor_lbl')}</span><span><input id="safety_factor" type="text" data-num inputmode="decimal" data-min="1.0" data-max="3.0" value="${cfg.safety_factor_qmin ?? 1.5}"></span></label>
-        <label class="kv m-0"><span>${t('tunnel_min_day_lbl')}</span><span><input id="tunnel_min_day" type="text" data-num data-int inputmode="numeric" data-min="1" data-max="42" value="${cfg.tunnel_min_day ?? 14}"> ${t('unit_days')}</span></label>
-        <label class="kv m-0"><span>${t('tunnel_min_temp_lbl')}</span><span><input id="tunnel_min_temp" type="text" data-num inputmode="decimal" data-min="0" data-max="35" value="${cfg.tunnel_min_temp_c ?? 18.0}"> ${t('unit_celsius')}</span></label>
+        <label class="kv m-0"><span>${t('tunnel_min_day_lbl')}</span><span><input id="tunnel_min_day" type="text" data-num data-int inputmode="numeric" data-min="1" data-max="42" value="${cfg.tunnel_min_day ?? 21}"> ${t('unit_days')}</span></label>
+        <label class="kv m-0"><span>${t('tunnel_min_temp_lbl')}</span><span><input id="tunnel_min_temp" type="text" data-num inputmode="decimal" data-min="0" data-max="35" value="${cfg.tunnel_min_temp_c ?? 24.0}"> ${t('unit_celsius')}</span></label>
       </div>
       <div class="mt-14 d-flex gap-10 ai-center">
         <button id="saveBtn" class="btn">${t('btn_save')}</button>

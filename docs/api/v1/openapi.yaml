@@ -451,6 +451,18 @@ components:
         summer_design_db_c: { type: number, minimum: 0, maximum: 55 }
         summer_design_rh_pct: { type: number, minimum: 1, maximum: 100 }
 
+    TunnelRules:
+      type: object
+      description: |
+        Когда туннель допустим. Нет — практика птицеводов: с 21-го дня и при наружной
+        T не ниже 24 °C (допущение `tunnel_rules_default`, источник
+        `practice_tunnel_rules_2026`).
+      required: [min_day, min_outdoor_c]
+      additionalProperties: false
+      properties:
+        min_day: { type: integer, minimum: 1, maximum: 42 }
+        min_outdoor_c: { type: number, minimum: 0, maximum: 35 }
+
     Heaters:
       type: object
       required: [type, power_kw]
@@ -500,6 +512,7 @@ components:
             Замеренное давление в туннельном режиме на похожем корпусе (те же
             панели, батареи, длина). Заменяет оценку сервера — по ней и
             подбираются вентиляторы.
+        tunnel_rules: { $ref: "#/components/schemas/TunnelRules" }
         heating_margin_pct:
           type: number
           minimum: 0
@@ -628,6 +641,7 @@ components:
             outdoor_t_c: { type: number, minimum: -60, maximum: 55 }
             outdoor_rh_pct: { type: number, minimum: 0, maximum: 100 }
         heaters: { $ref: "#/components/schemas/Heaters" }
+        tunnel_rules: { $ref: "#/components/schemas/TunnelRules" }
 
     RequirementResult:
       type: object
@@ -643,7 +657,7 @@ components:
           type: object
           required: [allowed, active, target_speed_ms, free_section_m2]
           properties:
-            allowed: { type: boolean, description: "Возраст (≥ 14 дн.) и наружная T (≥ 18 °C) допускают туннель" }
+            allowed: { type: boolean, description: "Возраст и наружная T допускают туннель (tunnel_rules; по умолчанию ≥ 21 дн. и ≥ 24 °C)" }
             active: { type: boolean, description: "Тепловой баланс требует туннеля (больше 50 % его расхода)" }
             effective_temp_c: { type: number, description: "Только при active: ощущаемая T у вентиляторов (воздух нагрет по длине корпуса)" }
             target_speed_ms:

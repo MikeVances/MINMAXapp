@@ -102,6 +102,16 @@ def test_flat_house_with_low_ceiling_uses_cobb_area_norm(client):
     assert j["equipment"]["tunnel_fans_m3h"]["max"] == round(200 * FLOOR_M2)
 
 
+def test_design_tunnel_starts_at_day_21_by_default(client):
+    # До 21-го дня туннеля нет: летний Qmax — потолок переходной вентиляции 4 × Qmin
+    j = client.post(URL, json=REQ).json()
+    d20, d21 = j["days"][19], j["days"][20]
+    assert d20["qmax_m3h"] < 0.5 * d21["qmax_m3h"]
+    assert "tunnel_rules_default" in _codes(j["assumptions"])
+    early = client.post(URL, json={**REQ, "tunnel_rules": {"min_day": 14, "min_outdoor_c": 18}}).json()
+    assert early["days"][19]["qmax_m3h"] > 2 * d20["qmax_m3h"]
+
+
 def test_heating_margin_is_applied_to_equipment_only(client):
     j = client.post(URL, json=REQ).json()
     peak = j["peak"]["heating_kw"]

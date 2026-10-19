@@ -27,7 +27,7 @@ from .growth_profiles import load_profile
 from .psychro import pressure_at_altitude_pa, site_pressure
 from .tunnel_speed_calc import EFFECTIVE_TEMP_MAX_C, _effective_temperature
 from .ventilation_design import (
-    CAGE_BIRD_SPEED_SHARE, Airtightness, CageRow, Note, _mean_height_m, _profile_citation, airtightness_q4,
+    CAGE_BIRD_SPEED_SHARE, Airtightness, CageRow, Note, TunnelRules, _mean_height_m, tunnel_rule_params, _profile_citation, airtightness_q4,
     build_envelope, cage_notes, coldest_surface, condensation, tunnel_target,
 )
 
@@ -59,6 +59,7 @@ class RequirementInput:
     roof: Optional[Surface] = None
     end_walls: Optional[Surface] = None
     heater: Optional[HeaterConfig] = None
+    tunnel_rules: Optional[TunnelRules] = None
 
     @property
     def has_envelope(self) -> bool:
@@ -109,12 +110,11 @@ def _requirement(inp: RequirementInput) -> RequirementResult:
         q4_m3h = airtightness_q4(g.length_m * g.width_m, inp.airtightness, assumptions)
         source_ids.add("uga_leakage")
 
-    # Падёж 0: birds — уже текущее поголовье. Правила туннеля (14 дней, 18 °C) —
-    # значения интерфейса по умолчанию, отдаём их допущением
+    # Падёж 0: birds — уже текущее поголовье
     share = CAGE_BIRD_SPEED_SHARE if cages else 1.0
-    params = CalcParams(total_mortality_pct=0.0, v_tunnel_ms=target.speed_ms[1], bird_speed_share=share)
-    assumptions.append(Note("tunnel_rules_default", {
-        "min_day": params.tunnel_min_day, "min_temp_c": params.tunnel_min_temp_c}))
+    rules = tunnel_rule_params(inp.tunnel_rules, assumptions, source_ids)
+    params = CalcParams(total_mortality_pct=0.0, v_tunnel_ms=target.speed_ms[1],
+                        bird_speed_share=share, **rules)
     common = dict(birds=inp.birds, age_days=age, outside_t=inp.outdoor_t_c,
                   outside_rh=inp.outdoor_rh_pct, growth_profile_id=inp.growth_profile_id,
                   target_rh=inp.target_rh_pct, tunnel_section_m2=target.section_m2,
@@ -135,11 +135,11 @@ def _requirement(inp: RequirementInput) -> RequirementResult:
     if cages:
         hot = compute_with(CalcInput(**common),
                            CalcParams(total_mortality_pct=0.0, v_tunnel_ms=target.speed_ms[1],
-                                      bird_speed_share=share, bird_heat_model=animal_heat_per_bird),
+                                      bird_speed_share=share, bird_heat_model=animal_heat_per_bird, **rules),
                            HouseThermal(ua_w_per_k=ua))
         qmax = max(hot.q_max_m3h, now.q_min_m3h)
 
-    tunnel = _tunnel_now(inp, age, target, now, qmax, findings, source_ids, cages)
+    tunnel = _tunnel_now(inp, age, target, now, qmax, findings, source_ids, cages, params)
 
     # ── Находки ──
     if now.humidity_uncontrollable:
@@ -185,7 +185,7 @@ def _requirement(inp: RequirementInput) -> RequirementResult:
 
 
 def _tunnel_now(inp: RequirementInput, age: int, target, now: CalcResult, qmax: float,
-                findings: list, source_ids: set, cages: bool) -> dict:
+                findings: list, source_ids: set, cages: bool, params: CalcParams) -> dict:
     """
     Цель туннеля на сегодня и ощущаемая температура у вентиляторов.
 
@@ -198,7 +198,8 @@ def _tunnel_now(inp: RequirementInput, age: int, target, now: CalcResult, qmax: 
     aisle_cap = bird_cap / share
     speed = (min(target.speed_ms[0], aisle_cap), min(target.speed_ms[1], aisle_cap))
     out: dict = {
-        "allowed": age >= 14 and inp.outdoor_t_c >= 18.0,
+        # Те же пороги, что решают tunnel_active в ядре, — не свои числа рядом
+        "allowed": age >= params.tunnel_min_day and inp.outdoor_t_c >= params.tunnel_min_temp_c,
         "active": now.tunnel_active,
         "target_speed_ms": {"min": round(speed[0], 2), "max": round(speed[1], 2),
                             "source_id": target.source_id},
@@ -210,8 +211,8 @@ def _tunnel_now(inp: RequirementInput, age: int, target, now: CalcResult, qmax: 
                                 "source_id": "practice_cage_tunnel_2026"}
 
     # Жарко, а туннель по возрасту нельзя — внешней системе стоит знать почему
-    if not out["allowed"] and age < 14 and inp.outdoor_t_c >= now.min_temp_c:
-        findings.append(Note("tunnel_not_allowed_age", {"min_day": 14}, "info"))
+    if age < params.tunnel_min_day and inp.outdoor_t_c >= now.min_temp_c:
+        findings.append(Note("tunnel_not_allowed_age", {"min_day": params.tunnel_min_day}, "info"))
 
     if now.tunnel_active:
         # Птица у вентиляторов дышит воздухом, нагретым по длине корпуса

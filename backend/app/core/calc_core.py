@@ -178,8 +178,9 @@ class CalcParams:
     default_growth_profile: str = "ross308"
     v_tunnel_ms: float = 2.5
     safety_factor_qmin: float = 1.5
-    tunnel_min_day: int = 14
-    tunnel_min_temp_c: float = 18.0
+    # Практика птицеводов (владелец, 2026-10-19): туннель с 21-го дня, снаружи ≥ 24 °C
+    tunnel_min_day: int = 21
+    tunnel_min_temp_c: float = 24.0
     # Тепло птицы: house_heat_per_bird (подстилка, CIGR 2002) или
     # animal_heat_per_bird (клетки, летний край вилки — bird_heat)
     bird_heat_model: Callable[[float, float], HouseHeat] = house_heat_per_bird
@@ -196,8 +197,8 @@ class CalcParams:
             default_growth_profile=getattr(cfg, "default_growth_profile", "ross308"),
             v_tunnel_ms=float(getattr(cfg, "v_tunnel_ms", 2.5)),
             safety_factor_qmin=float(getattr(cfg, "safety_factor_qmin", 1.5)),
-            tunnel_min_day=int(getattr(cfg, "tunnel_min_day", 14)),
-            tunnel_min_temp_c=float(getattr(cfg, "tunnel_min_temp_c", 18.0)),
+            tunnel_min_day=int(getattr(cfg, "tunnel_min_day", cls.tunnel_min_day)),
+            tunnel_min_temp_c=float(getattr(cfg, "tunnel_min_temp_c", cls.tunnel_min_temp_c)),
         )
 
 

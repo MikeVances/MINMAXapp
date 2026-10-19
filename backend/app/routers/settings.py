@@ -35,8 +35,9 @@ class AppCfg(BaseModel):
     safety_factor_qmin: float = Field(1.5, ge=1.0, le=3.0)
 
     # Ограничения туннельного режима
-    tunnel_min_day: int = Field(14, ge=1, le=42)
-    tunnel_min_temp_c: float = Field(18.0, ge=0.0, le=35.0)
+    # По умолчанию — практика птицеводов: с 21-го дня, снаружи не ниже 24 °C
+    tunnel_min_day: int = Field(21, ge=1, le=42)
+    tunnel_min_temp_c: float = Field(24.0, ge=0.0, le=35.0)
 
     # Высота над уровнем моря: на 1000 м воздух на 11 % реже (ASHRAE, станд. атмосфера)
     altitude_m: float = Field(0.0, ge=0.0, le=4000.0)

@@ -92,6 +92,8 @@ SOURCES = {
                         "for 150 mm pads, 225 fpm (1.14 m/s) for 100 mm",
     "sanhe_pads": "SANHE evaporative pad pressure-drop curves (digitised manufacturer data)",
     "amca_210": "AMCA 210 — fan ratings at standard air 1.2 kg/m³",
+    "practice_tunnel_rules_2026": "Poultry farmers' practice reported by the owner, 2026-10-19: "
+                                  "tunnel ventilation from day 21 at outdoor temperature ≥ 24 °C",
     "practice_cage_tunnel_2026": "Owner's operating practice for cage houses, 2026-10-19: "
                                  "4–5 m/s in aisles for ~2–2.5 m/s at the birds",
 }
@@ -112,6 +114,27 @@ class Airtightness:
     tightness_class: Optional[str] = None
     relative_leakage: Optional[float] = None
     leak_at_4pa_m3h: Optional[float] = None
+
+
+@dataclass(frozen=True)
+class TunnelRules:
+    min_day: int
+    min_outdoor_c: float
+
+
+def tunnel_rule_params(rules: Optional[TunnelRules], assumptions: list, source_ids: set) -> dict:
+    """
+    Пороги туннеля для CalcParams. Не заданы в запросе — практика по умолчанию,
+    и ответ говорит об этом допущением со ссылкой на источник.
+    """
+    if rules is not None:
+        return dict(tunnel_min_day=rules.min_day, tunnel_min_temp_c=rules.min_outdoor_c)
+    defaults = CalcParams()
+    assumptions.append(Note("tunnel_rules_default", {
+        "min_day": defaults.tunnel_min_day, "min_temp_c": defaults.tunnel_min_temp_c},
+        source_id="practice_tunnel_rules_2026"))
+    source_ids.add("practice_tunnel_rules_2026")
+    return {}
 
 
 @dataclass(frozen=True)
@@ -136,6 +159,8 @@ class DesignInput:
     target_rh_pct: Optional[float] = None
     heater: Optional[HeaterConfig] = None
     heating_margin_pct: float = DEFAULT_HEATING_MARGIN_PCT
+    # Правила туннеля (возраст, наружная T): None — практика по умолчанию (CalcParams)
+    tunnel_rules: Optional["TunnelRules"] = None
     # Туннель (этап 3b): панели на впуске, каталог вентилятора (давление Па, расход
     # м³/ч) и замеренное давление на похожем корпусе
     pads: Optional[Pads] = None
@@ -338,11 +363,12 @@ def _design(inp: DesignInput) -> DesignResult:
     # Параметры модели: падёж и цикл — из запроса; туннель в днях — на верхней
     # границе цели (проектная мощность), остальное — значения интерфейса по умолчанию
     share = CAGE_BIRD_SPEED_SHARE if cages else 1.0
+    rules = tunnel_rule_params(inp.tunnel_rules, assumptions, source_ids)
     winter_params = CalcParams(total_mortality_pct=inp.mortality_pct, cycle_days=inp.cycle_days,
-                               v_tunnel_ms=speed_range[1], bird_speed_share=share)
+                               v_tunnel_ms=speed_range[1], bird_speed_share=share, **rules)
     # Клетки летом — явное тепло на уровне птицы (верхний край вилки): больше воздуха
     summer_params = CalcParams(total_mortality_pct=inp.mortality_pct, cycle_days=inp.cycle_days,
-                               v_tunnel_ms=speed_range[1], bird_speed_share=share,
+                               v_tunnel_ms=speed_range[1], bird_speed_share=share, **rules,
                                bird_heat_model=animal_heat_per_bird if cages else house_heat_per_bird)
     winter_thermal = HouseThermal(ua_w_per_k=ua, heater=inp.heater)
     summer_thermal = HouseThermal(ua_w_per_k=ua)

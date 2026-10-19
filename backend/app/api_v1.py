@@ -206,6 +206,14 @@ class FanCurveIn(_Strict):
     points: list[FanPointIn] = Field(..., min_length=2, max_length=12)
 
 
+class TunnelRulesIn(_Strict):
+    min_day: int = Field(..., ge=1, le=42)
+    min_outdoor_c: float = Field(..., ge=0, le=35)
+
+    def to_core(self) -> vd.TunnelRules:
+        return vd.TunnelRules(self.min_day, self.min_outdoor_c)
+
+
 class DesignRequest(_Strict):
     house: HouseIn
     envelope: EnvelopeIn
@@ -213,6 +221,7 @@ class DesignRequest(_Strict):
     climate: ClimateIn
     heaters: Optional[HeatersIn] = None
     heating_margin_pct: float = Field(vd.DEFAULT_HEATING_MARGIN_PCT, ge=0, le=50)
+    tunnel_rules: Optional[TunnelRulesIn] = None
     pads: Optional[PadsIn] = None
     tunnel_fan: Optional[FanCurveIn] = None
     tunnel_static_pressure_pa: Optional[float] = Field(None, gt=0, le=150)
@@ -239,6 +248,7 @@ class RequirementRequest(_Strict):
     flock: FlockNowIn
     conditions: ConditionsIn
     heaters: Optional[HeatersIn] = None
+    tunnel_rules: Optional[TunnelRulesIn] = None
 
 
 # ─── Маршруты ─────────────────────────────────────────────────────────────────
@@ -280,6 +290,7 @@ def create_ventilation_design(req: DesignRequest) -> JSONResponse:
         summer_design_rh_pct=clim.summer_design_rh_pct,
         heater=_heater(req.heaters),
         heating_margin_pct=req.heating_margin_pct,
+        tunnel_rules=req.tunnel_rules.to_core() if req.tunnel_rules else None,
         pads=Pads(req.pads.type, req.pads.thickness_mm) if req.pads else None,
         fan_curve=tuple((p.static_pressure_pa, p.flow_m3h) for p in req.tunnel_fan.points)
         if req.tunnel_fan else (),
@@ -341,6 +352,7 @@ def create_ventilation_requirement(req: RequirementRequest) -> JSONResponse:
         age_days=flock.age_days, target_rh_pct=flock.target_rh_pct,
         outdoor_t_c=cond.outdoor_t_c, outdoor_rh_pct=cond.outdoor_rh_pct,
         heater=_heater(req.heaters),
+        tunnel_rules=req.tunnel_rules.to_core() if req.tunnel_rules else None,
     ))
     body: dict[str, Any] = {
         "qmin_m3h": r.qmin_m3h, "qmin_basis": r.qmin_basis, "qmax_m3h": r.qmax_m3h,
