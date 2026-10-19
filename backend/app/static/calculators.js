@@ -99,6 +99,23 @@ function houseSectionHeight(tab) {
   return wall || ridge;
 }
 
+// ─────── Расчётные наружные условия площадки ───────
+// Если в настройках хозяйства получены условия ASHRAE (ERA5): летние — в наружные
+// поля туннеля и панелей, зимние — в анализ горелок. Только в ПУСТЫЕ поля: введённое
+// пользователем не трогаем
+(async function prefillDesignClimate() {
+  try {
+    const cfg = await fetchJSON('./settings/app-config');
+    if (cfg.design_cool_db_c == null) return;
+    // «Не тронуто» — пусто или всё ещё значение из разметки (defaultValue)
+    const fill = (id, v) => { const el = document.getElementById(id);
+      if (el && v != null && (el.value === '' || el.value === el.defaultValue)) el.value = v; };
+    fill('tn-tdb', cfg.design_cool_db_c);  fill('tn-rh', cfg.design_cool_rh_pct);
+    fill('ev-tdb', cfg.design_cool_db_c);  fill('ev-rh', cfg.design_cool_rh_pct);
+    fill('tOutsideAnalysis', cfg.design_heat_c);
+  } catch (e) { /* без настроек — поля пустые, как раньше */ }
+})();
+
 // ─────── Tab switching ───────
 const toolTabs = document.querySelector('.tool-tabs');
 document.querySelectorAll('.tool-tab:not([disabled])').forEach(btn => {

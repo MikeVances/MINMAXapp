@@ -4,6 +4,7 @@ import json
 import logging
 import os
 from dataclasses import asdict, dataclass, fields
+from typing import Optional
 
 from .json_store import atomic_write_json
 from .survival import daily_mortality_to_total
@@ -35,6 +36,16 @@ class AppConfig:
 
     # Высота фермы над уровнем моря, м — давление площадки (psychro.site_pressure_pa)
     altitude_m: float = 0.0
+
+    # Координаты и расчётные наружные условия (core/design_climate, ERA5 / Open-Meteo)
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    design_heat_c: Optional[float] = None        # 99.6 % — зимняя
+    design_cool_db_c: Optional[float] = None     # 0.4 % — летняя по сухому
+    design_cool_rh_pct: Optional[float] = None   # совпадающая RH
+    design_cool_mcwb_c: Optional[float] = None   # совпадающий мокрый
+    design_evap_wb_c: Optional[float] = None     # 0.4 % по мокрому
+    design_source: Optional[str] = None
 
 
 def load_app_config(path: str = APP_CONFIG_PATH) -> AppConfig:

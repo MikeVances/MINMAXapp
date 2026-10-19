@@ -31,6 +31,27 @@ function renderConfig() {
         <button id="saveBtn" class="btn">${t('btn_save')}</button>
         <span id="saveStatus" class="muted fs-12" role="status"></span>
       </div>
+    </div>
+
+    <!-- Расчётные наружные условия площадки (ASHRAE гл. 14) по ERA5 / Open-Meteo -->
+    <div class="card mb-16">
+      <h2>${t('climate_h2')}</h2>
+      <p class="hint mt-0">${t('climate_desc')}</p>
+      <div class="d-grid gap-10">
+        <label class="kv m-0"><span>${t('latitude_lbl')}</span><span><input id="latitude" type="text" data-num inputmode="decimal" data-min="-90" data-max="90" value="${cfg.latitude ?? ''}" placeholder="55.75"></span></label>
+        <label class="kv m-0"><span>${t('longitude_lbl')}</span><span><input id="longitude" type="text" data-num inputmode="decimal" data-min="-180" data-max="180" value="${cfg.longitude ?? ''}" placeholder="37.62"></span></label>
+      </div>
+      <div class="mt-14 d-flex gap-10 ai-center wrap">
+        <button id="climateBtn" class="btn btn-secondary">${t('climate_btn')}</button>
+        <span id="climateStatus" class="muted fs-12" role="status"></span>
+      </div>
+      ${cfg.design_cool_db_c != null ? `
+      <div class="d-grid gap-6 mt-14">
+        <div class="kv"><span>${t('design_heat_lbl')}</span><span>${fmtNum(cfg.design_heat_c, 1)} °C</span></div>
+        <div class="kv"><span>${t('design_cool_lbl')}</span><span>${fmtNum(cfg.design_cool_db_c, 1)} °C · ${fmtNum(cfg.design_cool_rh_pct, 0)} % · T_wb ${fmtNum(cfg.design_cool_mcwb_c, 1)} °C</span></div>
+        <div class="kv"><span>${t('design_evap_lbl')}</span><span>${fmtNum(cfg.design_evap_wb_c, 1)} °C</span></div>
+      </div>
+      <p class="hint mt-8 mb-0">${t('climate_license', { source: escapeHtml(cfg.design_source || '') })}</p>` : ''}
     </div>`;
 
   // Пустое, нечисловое или вне диапазона поле НЕ меняет настройку (оно подсвечено,
@@ -51,6 +72,28 @@ function renderConfig() {
   bindNumber('safety_factor',   v => { cfg.safety_factor_qmin = v; });
   bindNumber('tunnel_min_day',  v => { cfg.tunnel_min_day = v; });
   bindNumber('tunnel_min_temp', v => { cfg.tunnel_min_temp_c = v; });
+
+  // Расчётные условия: ~20 с — 10 лет часовых данных с Open-Meteo (по кнопке, не сами)
+  document.getElementById('climateBtn').addEventListener('click', async () => {
+    if (!NumField.validate(['latitude', 'longitude'])) return;
+    const lat = NumField.value('latitude'), lon = NumField.value('longitude');
+    const st = document.getElementById('climateStatus');
+    if (lat === null || lon === null) { setStatus(st, () => t('climate_need_coords'), 'danger'); return; }
+    const btn = document.getElementById('climateBtn');
+    btn.disabled = true;
+    setStatus(st, () => t('climate_loading'));
+    try {
+      cfg = await fetchJSON('./settings/design-climate', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ latitude: lat, longitude: lon }),
+      });
+      renderConfig();
+    } catch (e) {
+      const msg = e.message || String(e);
+      setStatus(st, () => t('err_prefix') + msg, 'danger');
+      btn.disabled = false;
+    }
+  });
 
   document.getElementById('saveBtn').addEventListener('click', async () => {
     if (!NumField.validate(NUMBER_IDS)) return;
