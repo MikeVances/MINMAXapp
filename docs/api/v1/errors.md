@@ -43,13 +43,15 @@
 | `house_geometry_missing` | warning | Без сечения корпуса потолок вентиляции только оценён | — |
 | `fan_curve_extrapolated` | warning | Рабочая точка за последней точкой каталога — расход экстраполирован | `pressure_pa`, `last_pa` |
 | `tunnel_pressure_high` | warning | Давление туннеля выше 50 Па — осевые вентиляторы теряют много расхода, проверить каталог и панели | `pressure_pa` |
+| `leakage_exceeds_min_vent` | info | Утечка при 4 Па больше Qmin — в эти дни обогрев греет воздух щелей, а не минвентиляции; уплотнение корпуса экономит газ | `days`, `leak_4pa_m3h` |
+| `min_vent_pressure_low` | warning | Даже при закрытых клапанах вентиляторы Qmin не создают разрежения, при котором клапаны бросают струю под потолок (порог — по UGA, сверить при реализации): холодный воздух через щели падает на птицу | `day`, `pressure_pa`, `min_pa` |
 | `cycle_beyond_profile` | info | Цикл длиннее профиля — последние дни взяты по последней точке профиля | `last_day` |
 
 ## Допущения (`assumptions`)
 
 | code | Смысл |
 |---|---|
-| `infiltration_not_included` | Инфильтрация через щели не учтена (нет `infiltration_m3h`) — тепло занижено |
+| `airtightness_class_assumed` | Герметичность не задана — взят класс UGA `moderate` (0.65 м²/1000 м² пола), `params.class`, `params.relative_leakage` |
 | `floor_not_included` | Пол в UA по конструкции не входит (теплообмен через грунт и массу) |
 | `heating_safety_margin` | К пиковой мощности обогрева добавлен запас, `params.pct` |
 | `site_pressure_from_altitude` | Давление площадки по стандартной атмосфере, `params.altitude_m` |

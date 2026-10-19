@@ -312,6 +312,12 @@ components:
         wall_height_m: { type: number, exclusiveMinimum: 0, maximum: 10 }
         ridge_height_m: { type: number, exclusiveMinimum: 0, maximum: 15, description: "Нет — плоская кровля (= стене)" }
         altitude_m: { type: number, minimum: 0, maximum: 4000, default: 0, description: "Давление площадки по стандартной атмосфере" }
+        airtightness:
+          description: |
+            Герметичность по UGA. Нет — класс `moderate` как допущение
+            (`airtightness_class_assumed`). Утечка при 4 Па (ветер, тяга) нужна
+            обогреву: зимой обмен воздуха не меньше неё, даже если Qmin меньше.
+          allOf: [{ $ref: "#/components/schemas/Airtightness" }]
         cage_rows:
           type: array
           minItems: 1
@@ -322,6 +328,29 @@ components:
             сечение корпуса − Σ count·width·height; по нему считается скорость в
             проходах. Одинаковые ряды можно описать одной записью с `count`.
           items: { $ref: "#/components/schemas/CageRow" }
+
+    Airtightness:
+      description: |
+        Одно из трёх, от грубого к точному. Класс — UGA (Czarick, Fairchild):
+        относительная утечка, м² щелей на 1000 м² пола, берётся по ВЕРХНЕЙ
+        границе класса (tight 0.48, moderate 0.65, leaky 1.0, very_leaky 1.2) —
+        в безопасную для обогрева сторону. ELA с Cd = 1, как в калькуляторе UGA.
+      oneOf:
+        - type: object
+          title: ByClass
+          required: [class]
+          properties:
+            class: { type: string, enum: [tight, moderate, leaky, very_leaky] }
+        - type: object
+          title: ByRelativeLeakage
+          required: [relative_leakage]
+          properties:
+            relative_leakage: { type: number, exclusiveMinimum: 0, maximum: 5, description: "Из одноточечного теста на статическое давление" }
+        - type: object
+          title: ByTest
+          required: [leak_at_4pa_m3h]
+          properties:
+            leak_at_4pa_m3h: { type: number, exclusiveMinimum: 0, description: "Из многоточечного теста (Q = C·ΔPⁿ)" }
 
     FanCurve:
       type: object
@@ -374,8 +403,8 @@ components:
     Envelope:
       description: |
         Теплопотери ограждений: либо измеренный UA (тест остывания), либо
-        конструкции по справочнику. Пол и инфильтрация в UA по конструкции не
-        входят — инфильтрация считается отдельно (см. `infiltration_m3h`).
+        конструкции по справочнику. Пол и утечки в UA по конструкции не
+        входят — утечки задаются `house.airtightness`.
       oneOf:
         - type: object
           title: Measured
@@ -389,10 +418,6 @@ components:
             walls: { $ref: "#/components/schemas/Surface" }
             roof: { $ref: "#/components/schemas/Surface" }
             end_walls: { $ref: "#/components/schemas/Surface" }
-            infiltration_m3h:
-              type: number
-              minimum: 0
-              description: "Утечка при 4 Па из многоточечного теста; нет — не учитывается (указано в assumptions)"
 
     Flock:
       type: object
@@ -469,7 +494,9 @@ components:
         qmin_m3h: { type: number, description: "Минимальная вентиляция при зимней расчётной T" }
         qmin_basis: { type: string, enum: [co2, moisture] }
         qmax_m3h: { type: number, description: "Максимальная — тепловой баланс / туннель при летней расчётной T" }
-        heating_need_kw: { type: number, description: "Горелки при зимней расчётной T: UA·ΔT + вентиляция Qmin − явное тепло птицы; 0 — тепла птицы хватает" }
+        heating_need_kw: { type: number, description: "Горелки при зимней расчётной T: UA·ΔT + обмен воздуха − явное тепло птицы; 0 — тепла птицы хватает" }
+        air_exchange_m3h: { type: number, description: "Обмен для обогрева: max(Qmin, утечка при 4 Па)" }
+        air_exchange_basis: { type: string, enum: [qmin, leakage] }
 
     Equipment:
       type: object
@@ -594,7 +621,7 @@ components:
               description: "Только клетки: оценка скорости у птицы ≈ 0.5 скорости в проходах; по ней — ощущаемая T"
               allOf: [{ $ref: "#/components/schemas/Range" }]
             effective_temp_limit_c: { type: number, example: 30 }
-        heating_need_kw: { type: number, description: "Только с envelope" }
+        heating_need_kw: { type: number, description: "Только с envelope; обмен — max(Qmin, утечка при 4 Па)" }
         heater_duty_pct: { type: number, description: "Только с envelope и heaters" }
         findings:
           type: array
@@ -629,7 +656,7 @@ components:
       type: object
       required: [code]
       properties:
-        code: { type: string, example: infiltration_not_included }
+        code: { type: string, example: airtightness_class_assumed }
         params: { type: object, additionalProperties: true }
 
     Source:
