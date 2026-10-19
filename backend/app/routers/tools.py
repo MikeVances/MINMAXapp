@@ -7,9 +7,9 @@
 
 from fastapi import APIRouter
 from pydantic import BaseModel, Field, model_validator
-from typing import Literal, Optional
+from typing import Literal, Optional, List
 
-from ..api_errors import api_error
+from ..api_errors import api_error, from_calc_error
 from ..core.app_config import load_app_config
 from ..core.errors import CalcError
 from ..core.growth_profiles import ProfileNotFound, load_profile
@@ -29,6 +29,11 @@ router = APIRouter()
 # Калькулятор герметичности птичника (ELA)
 # ─────────────────────────────────────────────
 
+class LeakagePoint(BaseModel):
+    fan_capacity_m3h:     float = Field(..., gt=0, description="Вентиляторы этой точки при 25 Па, м³/ч")
+    measured_pressure_pa: float = Field(..., gt=0, le=250, description="Давление в этой точке, Па")
+
+
 class LeakageRequest(BaseModel):
     # Размеры птичника
     house_length_m: float = Field(..., gt=0, description="Длина птичника, м")
@@ -43,6 +48,8 @@ class LeakageRequest(BaseModel):
         ..., gt=0, le=250,
         description="Статическое давление при тесте, Па (рекомендуемый диапазон 25–65 Па)"
     )
+    # Ещё точки теста при другом числе вентиляторов → Q = C·ΔPⁿ
+    extra_points: List[LeakagePoint] = Field(default_factory=list, max_length=5)
 
     # Анализ впускной системы (опционально — не используется в тесте герметичности)
     min_vent_fan_m3h: Optional[float] = Field(None, gt=0, description="Суммарный расход вентиляторов минвентиляции, м³/ч")
@@ -60,6 +67,11 @@ class LeakageResponse(BaseModel):
     tightness_class:        str
 
     static_pressure_pa:     float
+    flow_exponent_n:         Optional[float] = None
+    flow_coefficient:        Optional[float] = None
+    leak_at_4pa_m3h:         Optional[float] = None
+    infiltration_kw_per_10k: Optional[float] = None
+    exponent_out_of_range:   bool = False
 
 
 # ─────────────────────────────────────────────
@@ -487,8 +499,12 @@ def calc_leakage(req: LeakageRequest) -> LeakageResponse:
         house_width_m         = req.house_width_m,
         fan_capacity_m3h      = req.fan_capacity_m3h,
         measured_pressure_pa  = req.measured_pressure_pa,
+        extra_points          = tuple((p.fan_capacity_m3h, p.measured_pressure_pa) for p in req.extra_points),
     )
-    result: LeakageResult = calculate_leakage(inp)
+    try:
+        result: LeakageResult = calculate_leakage(inp)
+    except ValueError as e:
+        raise from_calc_error(e, 422)
 
     return LeakageResponse(
         fan_corrected_m3h  = result.fan_corrected_m3h,
@@ -497,4 +513,9 @@ def calc_leakage(req: LeakageRequest) -> LeakageResponse:
         relative_leakage   = result.relative_leakage,
         tightness_class    = result.tightness_class,
         static_pressure_pa = result.static_pressure_pa,
+        flow_exponent_n         = result.flow_exponent_n,
+        flow_coefficient        = result.flow_coefficient,
+        leak_at_4pa_m3h         = result.leak_at_4pa_m3h,
+        infiltration_kw_per_10k = result.infiltration_kw_per_10k,
+        exponent_out_of_range   = result.exponent_out_of_range,
     )

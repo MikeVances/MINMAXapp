@@ -478,6 +478,9 @@ document.getElementById('l-calc-btn').addEventListener('click', async () => {
     fan_capacity_m3h:     NumField.value('l-fan-cap'),
     measured_pressure_pa: NumField.value('l-pressure'),
   };
+  // Вторая точка теста — только если заданы оба поля
+  const fan2 = NumField.value('l-fan-cap2'), p2 = NumField.value('l-pressure2');
+  if (fan2 !== null && p2 !== null) body.extra_points = [{ fan_capacity_m3h: fan2, measured_pressure_pa: p2 }];
 
   const btn = document.getElementById('l-calc-btn');
   btn.textContent = t('btn_leakage_busy'); btn.disabled = true;
@@ -525,6 +528,17 @@ function renderLeakage(d) {
   document.getElementById('l-fan-corr').textContent = `${fmtNum(d.fan_corrected_m3h, 0)} ${t('unit_m3h')}`;
   document.getElementById('l-class-tip').textContent = t(tc.tipKey);
 
+  // Многоточечный тест: показатель n и естественная инфильтрация с её теплопотерями
+  const multi = d.flow_exponent_n != null;
+  document.getElementById('l-n-row').hidden = !multi;
+  document.getElementById('l-q4-row').hidden = !multi;
+  if (multi) {
+    const nEl = document.getElementById('l-n');
+    nEl.textContent = fmtNum(d.flow_exponent_n, 2) + (d.exponent_out_of_range ? ' ⚠ ' + t('leak_n_out_of_range') : '');
+    setTone(nEl, d.exponent_out_of_range ? 'warn' : null);
+    document.getElementById('l-q4').textContent = t('leak_q4_value', {
+      q: fmtNum(d.leak_at_4pa_m3h, 0), kw: fmtNum(d.infiltration_kw_per_10k, 1) });
+  }
   document.getElementById('l-results').hidden = false;
 }
 

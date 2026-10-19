@@ -150,6 +150,19 @@
           <input id="l-pressure" type="text" data-num inputmode="decimal" data-min="5" data-max="250" value="25" required />
           <span class="muted fs-11" data-i18n="hint_pa_val">25 Pa ≈ 0.10″, 63 Pa ≈ 0.25″</span>
         </label>
+        <!-- Вторая точка теста (другое число вентиляторов): показатель n закона Q = C·ΔPⁿ -->
+        <p class="muted fs-12 mt-14 mb-6" data-i18n="leakage_point2_grp">Second test point (optional)</p>
+        <div class="field-row">
+          <label>
+            <span data-i18n="label_fan_cap_25pa">Test fan capacity at 25 Pa, m³/h</span>
+            <input id="l-fan-cap2" type="text" data-num inputmode="decimal" data-min="500" placeholder="—" />
+          </label>
+          <label>
+            <span data-i18n="label_test_pa">Static pressure at test, Pa</span>
+            <input id="l-pressure2" type="text" data-num inputmode="decimal" data-min="2" data-max="250" placeholder="—" />
+          </label>
+        </div>
+        <p class="muted fs-11 mt-4 mb-0 lh-1_5" data-i18n="leakage_point2_hint">Run the test with a different number of fans.</p>
 
         <button class="btn mt-16 w-full" id="l-calc-btn" data-i18n="btn_calc_leakage">
           Calculate tightness
@@ -180,6 +193,14 @@
             <div class="kv">
               <span data-i18n="lbl_fan_corr">Fan flow at test pressure</span>
               <span id="l-fan-corr"></span>
+            </div>
+            <div class="kv" id="l-n-row" hidden>
+              <span data-i18n="lbl_leak_exponent">Flow exponent n</span>
+              <span id="l-n"></span>
+            </div>
+            <div class="kv" id="l-q4-row" hidden>
+              <span data-i18n="lbl_leak_4pa">Natural infiltration (4 Pa)</span>
+              <span id="l-q4"></span>
             </div>
           </div>
 

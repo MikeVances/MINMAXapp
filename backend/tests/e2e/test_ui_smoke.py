@@ -144,6 +144,17 @@ def test_leakage_calculation(page):
     assert page.errors == []
 
 
+def test_leakage_two_point_test(page):
+    """Вторая точка теста: показатель n и инфильтрация при 4 Па появляются в результате."""
+    _open(page, "/calculators.html", "leakage")
+    page.fill("#l-fan-cap2", "68000")
+    page.fill("#l-pressure2", "60")
+    page.click("#l-calc-btn")
+    page.wait_for_selector("#l-q4-row:not([hidden])", timeout=10_000)
+    assert page.text_content("#l-n").strip() != ""
+    assert page.errors == []
+
+
 def test_evap_calculation(page):
     _open(page, "/calculators.html", "evap")
     _fill(page, {"#ev-length": 120, "#ev-width": 16, "#ev-tdb": 32, "#ev-rh": 45,
