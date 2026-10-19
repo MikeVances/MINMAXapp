@@ -608,6 +608,9 @@
     srv_calibration_too_short:       'le test a duré {minutes} min ; il faut au moins {min} min pour séparer l’air du sol et des murs',
     srv_calibration_ua_unresolved: 'les marques ne déterminent pas UA à ±25 % près — refaites le test de refroidissement',
     srv_calibration_implausible:     'U moyen de l’enveloppe {u} W/(m²·K) hors de la plage physique {min}–{max} — vérifiez le test et les dimensions du bâtiment',
+    srv_envelope_implausible:        'U moyen de l’enveloppe {u} W/(m²·K) hors de la plage physique {min}–{max} — vérifiez les épaisseurs (mm) et le U déclaré',
+    srv_material_not_found:          'le matériau « {id} » n’est pas dans le catalogue des parois',
+    srv_validation_failed:           'champ invalide {field}',
     srv_calibration_other_house:     'la calibration concerne le bâtiment \'{house_id}\'',
     cal_ignored_note:                'La calibration des pertes thermiques n’est pas utilisée dans les calculs : {reason}.',
 

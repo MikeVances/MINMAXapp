@@ -608,6 +608,9 @@
     srv_calibration_too_short:       'der Test dauerte {minutes} min; um Luft von Boden und Wänden zu trennen, sind mindestens {min} min nötig',
     srv_calibration_ua_unresolved: 'die Markierungen bestimmen UA nicht auf ±25 % genau — Abkühltest wiederholen',
     srv_calibration_implausible:     'mittlerer Hüllen-U-Wert {u} W/(m²·K) außerhalb des physikalischen Bereichs {min}–{max} — Test und Stallmaße prüfen',
+    srv_envelope_implausible:        'mittlerer Hüllen-U-Wert {u} W/(m²·K) außerhalb des physikalischen Bereichs {min}–{max} — Schichtdicken (mm) und deklarierten U-Wert prüfen',
+    srv_material_not_found:          'Material „{id}“ ist nicht im Baustoffkatalog',
+    srv_validation_failed:           'ungültiges Feld {field}',
     srv_calibration_other_house:     'die Kalibrierung gehört zu Stall \'{house_id}\'',
     cal_ignored_note:                'Die Wärmeverlust-Kalibrierung wird in Berechnungen nicht verwendet: {reason}.',
 

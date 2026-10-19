@@ -608,6 +608,9 @@
     srv_calibration_too_short:       'test trwał {minutes} min; aby oddzielić powietrze od posadzki i ścian, potrzeba co najmniej {min} min',
     srv_calibration_ua_unresolved: 'znaczniki nie wyznaczają UA z dokładnością ±25 % — powtórz test stygnięcia',
     srv_calibration_implausible:     'średnie U przegród {u} W/(m²·K) poza zakresem fizycznym {min}–{max} — sprawdź test i wymiary kurnika',
+    srv_envelope_implausible:        'średnie U przegród {u} W/(m²·K) poza zakresem fizycznym {min}–{max} — sprawdź grubości warstw (mm) i deklarowane U',
+    srv_material_not_found:          'materiału „{id}” nie ma w katalogu przegród',
+    srv_validation_failed:           'nieprawidłowe pole {field}',
     srv_calibration_other_house:     'kalibracja dotyczy kurnika \'{house_id}\'',
     cal_ignored_note:                'Kalibracja strat ciepła nie jest używana w obliczeniach: {reason}.',
 

@@ -81,7 +81,7 @@ DesignResult: days[] · peak · equipment · warnings[] · assumptions[] · sour
 | Высота → давление | `psychro.site_pressure_pa` | передавать из запроса, а не из настроек фермы |
 | Обогрев по измеренному UA | `solve_heater_duty`, `calculate_heat_balance` | пик по дням при зимней T |
 | Герметичность | `leakage_calc`: классы UGA, ELA, Q₄Па | класс → ELA → Q₄Па; `max(Qmin, Q₄Па)` в обогреве |
-| **UA по конструкции** | площадь оболочки `envelope_area_m2` | справочник λ, U по слоям: `U = 1/(R_si + Σd/λ + R_se)`, R_si 0.13, R_se 0.04 |
+| UA по конструкции | ✅ `construction` (этап 2): справочник λ (BR 443 / ISO 10456), U по слоям, R_si по направлению потока, площади с фронтонами | подключить к `ventilation-designs` |
 | Подбор оборудования | нормы Cobb §9.1 / §9.7, UGA впуск и панели | собрать в `equipment` |
 | Находки | флаги в разных расчётах | единый список `findings` |
 | Ключи, лимит частоты | `WRITE_TOKEN`, лимит обратной связи | `X-API-Key` (`API_KEYS`), лимит на расчёты |
@@ -168,7 +168,7 @@ DesignResult: days[] · peak · equipment · warnings[] · assumptions[] · sour
 ## Этапы
 
 1. ✅ Этот контракт (на согласование).
-2. Справочник конструкций по ISO 10456 и UA по слоям.
+2. ✅ Справочник конструкций по ISO 10456 и UA по слоям (`backend/app/core/construction.py`).
 3. `POST /ventilation-designs` + справочные GET.
 4. `POST /ventilation-requirements` + единый список находок.
 5. Ключи, лимиты, тест схемы OpenAPI против этого файла (ловит незаметные

@@ -60,8 +60,8 @@ paths:
                 value:
                   house: { length_m: 120, width_m: 16, wall_height_m: 2.5, ridge_height_m: 4.5, altitude_m: 30 }
                   envelope:
-                    walls: { layers: [{ material_id: pir_sandwich, thickness_mm: 100 }] }
-                    roof: { layers: [{ material_id: pir_sandwich, thickness_mm: 120 }] }
+                    walls: { layers: [{ material_id: steel, thickness_mm: 0.5 }, { material_id: pir_core, thickness_mm: 100 }, { material_id: steel, thickness_mm: 0.5 }] }
+                    roof: { u_w_m2k: 0.21 }
                   flock: { birds: 30000, growth_profile_id: ross308, cycle_days: 42, housing: floor_litter }
                   climate: { winter_design_c: -9.8, summer_design_db_c: 35.6, summer_design_rh_pct: 28 }
       responses:
@@ -123,7 +123,9 @@ paths:
       summary: Справочник материалов ограждений (λ, источник)
       description: |
         Небольшой ограниченный справочник (десятки записей) — без пагинации.
-        U слоя считается сервером: U = 1 / (R_si + Σ d/λ + R_se).
+        U считается сервером по ISO 6946: U = 1 / (R_si + Σ d/λ + R_se), R_se 0.04,
+        R_si 0.13 у стен и 0.10 у кровли (поток вверх; скат круче 60° — как стена).
+        Значения — BRE BR 443 (2019) §3/§4.3 по BS EN ISO 10456 и 6946.
       responses:
         "200":
           description: Список материалов
@@ -377,11 +379,23 @@ components:
         height_m: { type: number, exclusiveMinimum: 0, maximum: 10, description: "Высота батареи от пола" }
 
     Layer:
-      type: object
-      required: [material_id, thickness_mm]
-      properties:
-        material_id: { type: string, example: pir_sandwich }
-        thickness_mm: { type: number, exclusiveMinimum: 0, maximum: 1000 }
+      description: |
+        Материал из справочника ИЛИ λ из декларации продукта (DoP). Утеплителей
+        (минвата, EPS, XPS) в справочнике нет намеренно — BR 443 §3 велит брать
+        заявленную λ производителя.
+      oneOf:
+        - type: object
+          title: CatalogMaterial
+          required: [material_id, thickness_mm]
+          properties:
+            material_id: { type: string, example: pir_core }
+            thickness_mm: { type: number, exclusiveMinimum: 0, maximum: 1000 }
+        - type: object
+          title: DeclaredLambda
+          required: [lambda_w_mk, thickness_mm]
+          properties:
+            lambda_w_mk: { type: number, minimum: 0.01, maximum: 200, example: 0.040 }
+            thickness_mm: { type: number, exclusiveMinimum: 0, maximum: 1000 }
 
     Surface:
       type: object
@@ -672,11 +686,12 @@ components:
       type: object
       required: [id, name, lambda_w_mk, source_id]
       properties:
-        id: { type: string, example: pir_sandwich }
-        name: { type: string, example: "PIR sandwich panel core" }
+        id: { type: string, example: pir_core }
+        name: { type: string, example: "PIR/PUR sandwich panel core (typical DoP)" }
         lambda_w_mk: { type: number, example: 0.022, description: "Расчётная теплопроводность" }
+        density_kg_m3: { type: number }
         typical_thickness_mm: { type: array, items: { type: number }, example: [60, 80, 100, 120, 150] }
-        source_id: { type: string }
+        source_id: { type: string, example: br443_2019_s3 }
 
     GrowthProfileSummary:
       type: object

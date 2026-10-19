@@ -609,6 +609,9 @@
     srv_calibration_too_short:       'тест длился {minutes} мин; чтобы отделить воздух от пола и стен, нужно не меньше {min} мин',
     srv_calibration_ua_unresolved: 'отметки не определяют UA в пределах ±25 % — повторите тест остывания',
     srv_calibration_implausible:     'средний U оболочки {u} Вт/(м²·К) вне физического диапазона {min}–{max} — проверьте тест и размеры корпуса',
+    srv_envelope_implausible:        'средний U оболочки {u} Вт/(м²·К) вне физического диапазона {min}–{max} — проверьте толщины слоёв (мм) и U из декларации',
+    srv_material_not_found:          'материала «{id}» нет в справочнике конструкций',
+    srv_validation_failed:           'неверное поле {field}',
     srv_calibration_other_house:     'калибровка относится к корпусу \'{house_id}\'',
     cal_ignored_note:                'Калибровка теплопотерь не используется в расчётах: {reason}.',
 

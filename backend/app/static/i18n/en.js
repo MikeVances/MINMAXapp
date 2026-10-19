@@ -609,6 +609,9 @@
     srv_calibration_too_short:       'the test lasted {minutes} min; at least {min} min are needed to separate air from floor and walls',
     srv_calibration_ua_unresolved: 'the marks do not determine UA within ±25 % — repeat the cooling test',
     srv_calibration_implausible:     'mean envelope U = {u} W/(m²·K) is outside the physical range {min}–{max} — check the test and house dimensions',
+    srv_envelope_implausible:        'mean envelope U = {u} W/(m²·K) is outside the physical range {min}–{max} — check layer thicknesses (mm) and declared U',
+    srv_material_not_found:          'material “{id}” is not in the construction catalogue',
+    srv_validation_failed:           'invalid field {field}',
     srv_calibration_other_house:     'the calibration belongs to house \'{house_id}\'',
     cal_ignored_note:                'Heat-loss calibration is not used in calculations: {reason}.',
 
