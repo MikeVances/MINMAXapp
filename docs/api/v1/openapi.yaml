@@ -1,0 +1,593 @@
+openapi: "3.1.0"
+info:
+  title: MINMAX Ventilation Engineering API
+  version: "1.0.0-draft"
+  summary: Расчёт воздухообмена и тепла для птичников — проектирование и потребность «сейчас»
+  description: |
+    Публичный контракт /api/v1 (черновик на согласование, 2026-10-19).
+
+    * **Без состояния:** каждый запрос несёт все входные данные; сохранённые на
+      сервере настройки фермы и калибровки в ответ не подмешиваются.
+    * **Единицы — СИ**, единица — в имени поля: `_m3h`, `_kw`, `_c`, `_pct`, `_m`.
+    * **Источники в ответе:** каждая норма и коэффициент, использованные в
+      расчёте, перечислены в `sources`, допущения — в `assumptions`.
+    * **Ошибки** — RFC 7807 (`application/problem+json`) с машинным `code`.
+    * Мы отдаём, **сколько нужно**; сопоставление с фактическим оборудованием —
+      на стороне клиента.
+  contact:
+    name: MINMAXapp
+    url: https://github.com/MikeVances/MINMAXapp
+  license:
+    name: См. репозиторий
+    url: https://github.com/MikeVances/MINMAXapp
+
+servers:
+  - url: /api/v1
+    description: Относительно площадки (Render, копия в локальной сети)
+
+security:
+  - ApiKey: []
+
+tags:
+  - name: Design
+    description: Сценарий 1 — проектный расчёт помещения на весь цикл
+  - name: Requirements
+    description: Сценарий 2 — потребность в воздухе и тепле при текущих условиях
+  - name: Catalog
+    description: Справочники — конструкции, профили роста, способы содержания
+  - name: Climate
+    description: Расчётные наружные условия по координатам (ERA5 / Open-Meteo)
+
+paths:
+  /ventilation-designs:
+    post:
+      tags: [Design]
+      operationId: createVentilationDesign
+      summary: Проектный расчёт вентиляции и обогрева на цикл
+      description: |
+        Воздухообмен по дням цикла (Qmin — CO₂ и влага, Qmax — тепловой баланс и
+        туннель), расчётная мощность обогрева при зимней расчётной температуре и
+        подбор оборудования по нормам. Результат не сохраняется — ресурс
+        создаётся и сразу возвращается (201 без Location).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DesignRequest" }
+            examples:
+              broiler_house:
+                summary: Бройлерник 120 × 16 м, сэндвич-панели, Краснодар
+                value:
+                  house: { length_m: 120, width_m: 16, wall_height_m: 2.5, ridge_height_m: 4.5, altitude_m: 30 }
+                  envelope:
+                    walls: { layers: [{ material_id: pir_sandwich, thickness_mm: 100 }] }
+                    roof: { layers: [{ material_id: pir_sandwich, thickness_mm: 120 }] }
+                  flock: { birds: 30000, growth_profile_id: ross308, cycle_days: 42, housing: floor_litter }
+                  climate: { winter_design_c: -9.8, summer_design_db_c: 35.6, summer_design_rh_pct: 28 }
+      responses:
+        "201":
+          description: Расчёт выполнен
+          headers:
+            X-Request-Id: { $ref: "#/components/headers/RequestId" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DesignResult" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+
+  /ventilation-requirements:
+    post:
+      tags: [Requirements]
+      operationId: createVentilationRequirement
+      summary: Сколько воздуха и тепла нужно сейчас и какие есть риски
+      description: |
+        Для внешней системы или агента: текущий возраст, поголовье и погода →
+        требуемые Qmin/Qmax, цель скорости туннеля, потребность в тепле и
+        риски (влага вне контроля, конденсат, нехватка горелок). Сравнение с
+        тем, что сейчас включено, делает клиент.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RequirementRequest" }
+            examples:
+              day_21_cold:
+                summary: День 21, мороз, газовые горелки 300 кВт
+                value:
+                  house: { length_m: 120, width_m: 16, wall_height_m: 2.5, ridge_height_m: 4.5 }
+                  envelope: { ua_w_per_k: 3200 }
+                  flock: { birds: 30000, growth_profile_id: ross308, age_days: 21, housing: floor_litter }
+                  conditions: { outdoor_t_c: -12, outdoor_rh_pct: 85, target_rh_pct: 60 }
+                  heaters: { type: gas_open, power_kw: 300 }
+      responses:
+        "201":
+          description: Расчёт выполнен
+          headers:
+            X-Request-Id: { $ref: "#/components/headers/RequestId" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RequirementResult" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+
+  /construction-materials:
+    get:
+      tags: [Catalog]
+      operationId: listConstructionMaterials
+      summary: Справочник материалов ограждений (λ, источник)
+      description: |
+        Небольшой ограниченный справочник (десятки записей) — без пагинации.
+        U слоя считается сервером: U = 1 / (R_si + Σ d/λ + R_se).
+      responses:
+        "200":
+          description: Список материалов
+          headers:
+            Cache-Control: { $ref: "#/components/headers/CacheControl" }
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/ConstructionMaterial" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+
+  /growth-profiles:
+    get:
+      tags: [Catalog]
+      operationId: listGrowthProfiles
+      summary: Профили роста кроссов (встроенные — с источником)
+      description: Ограниченный справочник — без пагинации.
+      responses:
+        "200":
+          description: Список профилей
+          headers:
+            Cache-Control: { $ref: "#/components/headers/CacheControl" }
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/GrowthProfileSummary" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+
+  /housing-systems:
+    get:
+      tags: [Catalog]
+      operationId: listHousingSystems
+      summary: Способы содержания и их статус поддержки
+      description: |
+        `floor_litter` — поддерживается (CIGR 2002, с подстилкой). `cages` —
+        объявлен, но отвечает 422 `housing_not_supported`, пока не найден
+        источник доли скрытой теплоты и плотности посадки для клеток.
+      responses:
+        "200":
+          description: Список способов содержания
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/HousingSystem" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /climate-designs:
+    get:
+      tags: [Climate]
+      operationId: getClimateDesign
+      summary: Расчётные наружные условия по координатам
+      description: |
+        ASHRAE Fundamentals гл. 14 по 10 годам часового ERA5 (Open-Meteo, CC BY 4.0,
+        бесплатный доступ — некоммерческий). Первый запрос по точке ~20 с, затем
+        результат кэшируется (ключ — координаты, округлённые до 0.1°).
+      parameters:
+        - name: latitude
+          in: query
+          required: true
+          schema: { type: number, minimum: -90, maximum: 90 }
+        - name: longitude
+          in: query
+          required: true
+          schema: { type: number, minimum: -180, maximum: 180 }
+      responses:
+        "200":
+          description: Расчётные условия
+          headers:
+            Cache-Control: { $ref: "#/components/headers/CacheControl" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ClimateDesign" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+        "502": { $ref: "#/components/responses/UpstreamUnavailable" }
+
+components:
+  securitySchemes:
+    ApiKey:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: |
+        Ключ выдаёт владелец площадки (переменная API_KEYS). Если ключи на площадке
+        не заданы — доступ открыт (как WRITE_TOKEN: локальная разработка и LAN).
+
+  headers:
+    RequestId:
+      description: Идентификатор запроса — для поиска в журнале сервера
+      schema: { type: string }
+    CacheControl:
+      description: Справочники и климат кэшируются клиентом
+      schema: { type: string, example: "public, max-age=3600" }
+    RetryAfter:
+      description: Через сколько секунд повторить
+      schema: { type: integer }
+
+  responses:
+    BadRequest:
+      description: Запрос не разобран
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+    Unauthorized:
+      description: Нет или неверный X-API-Key
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+    NotFound:
+      description: Ссылка на несуществующий справочный объект (профиль, материал)
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+    Unprocessable:
+      description: Данные разобраны, но расчёт по ним невозможен или вне допустимых пределов
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+    TooManyRequests:
+      description: Превышен лимит частоты
+      headers:
+        Retry-After: { $ref: "#/components/headers/RetryAfter" }
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+    UpstreamUnavailable:
+      description: Внешний источник данных (Open-Meteo) недоступен
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+
+  schemas:
+    # ── Ошибки ────────────────────────────────────────────────────────────────
+    Problem:
+      type: object
+      description: RFC 7807 Problem Details + машинный код и параметры
+      required: [type, title, status, code]
+      properties:
+        type: { type: string, format: uri, example: "https://github.com/MikeVances/MINMAXapp/blob/main/docs/api/v1/errors.md#profile_not_found" }
+        title: { type: string, example: "Growth profile not found" }
+        status: { type: integer, example: 404 }
+        detail: { type: string, example: "Growth profile 'ross999' does not exist" }
+        instance: { type: string, example: "req-7f3a2c" }
+        code: { type: string, example: profile_not_found }
+        params: { type: object, additionalProperties: true, example: { id: ross999 } }
+        errors:
+          type: array
+          description: Ошибки по полям (422 валидации)
+          items:
+            type: object
+            required: [field, code]
+            properties:
+              field: { type: string, example: "flock.birds" }
+              code: { type: string, example: less_than_equal }
+              message: { type: string, example: "Input should be less than or equal to 200000" }
+
+    # ── Общие части запросов ──────────────────────────────────────────────────
+    House:
+      type: object
+      required: [length_m, width_m, wall_height_m]
+      properties:
+        length_m: { type: number, exclusiveMinimum: 0, maximum: 400 }
+        width_m: { type: number, exclusiveMinimum: 0, maximum: 60 }
+        wall_height_m: { type: number, exclusiveMinimum: 0, maximum: 10 }
+        ridge_height_m: { type: number, exclusiveMinimum: 0, maximum: 15, description: "Нет — плоская кровля (= стене)" }
+        altitude_m: { type: number, minimum: 0, maximum: 4000, default: 0, description: "Давление площадки по стандартной атмосфере" }
+
+    Layer:
+      type: object
+      required: [material_id, thickness_mm]
+      properties:
+        material_id: { type: string, example: pir_sandwich }
+        thickness_mm: { type: number, exclusiveMinimum: 0, maximum: 1000 }
+
+    Surface:
+      type: object
+      description: Слои снаружи внутрь — или готовый U из паспорта
+      oneOf:
+        - type: object
+          required: [layers]
+          properties:
+            layers:
+              type: array
+              minItems: 1
+              maxItems: 6
+              items: { $ref: "#/components/schemas/Layer" }
+        - type: object
+          required: [u_w_m2k]
+          properties:
+            u_w_m2k: { type: number, minimum: 0.05, maximum: 10, description: "Паспорт производителя панели" }
+
+    Envelope:
+      description: |
+        Теплопотери ограждений: либо измеренный UA (тест остывания), либо
+        конструкции по справочнику. Пол и инфильтрация в UA по конструкции не
+        входят — инфильтрация считается отдельно (см. `infiltration_m3h`).
+      oneOf:
+        - type: object
+          title: Measured
+          required: [ua_w_per_k]
+          properties:
+            ua_w_per_k: { type: number, exclusiveMinimum: 0, maximum: 200000 }
+        - type: object
+          title: ByConstruction
+          required: [walls, roof]
+          properties:
+            walls: { $ref: "#/components/schemas/Surface" }
+            roof: { $ref: "#/components/schemas/Surface" }
+            end_walls: { $ref: "#/components/schemas/Surface" }
+            infiltration_m3h:
+              type: number
+              minimum: 0
+              description: "Утечка при 4 Па из многоточечного теста; нет — не учитывается (указано в assumptions)"
+
+    Flock:
+      type: object
+      required: [birds, growth_profile_id, housing]
+      properties:
+        birds: { type: integer, minimum: 1, maximum: 200000 }
+        growth_profile_id: { type: string, pattern: "^[a-z0-9][a-z0-9_-]{0,63}$", example: ross308 }
+        housing: { type: string, enum: [floor_litter, cages] }
+        mortality_pct: { type: number, minimum: 0, maximum: 100, default: 4 }
+        target_rh_pct: { type: number, minimum: 40, maximum: 70, description: "Нет — RH профиля" }
+
+    Climate:
+      type: object
+      required: [winter_design_c, summer_design_db_c, summer_design_rh_pct]
+      properties:
+        winter_design_c: { type: number, minimum: -60, maximum: 30 }
+        summer_design_db_c: { type: number, minimum: 0, maximum: 55 }
+        summer_design_rh_pct: { type: number, minimum: 1, maximum: 100 }
+
+    Heaters:
+      type: object
+      required: [type, power_kw]
+      properties:
+        type: { type: string, enum: [gas_open, gas_indirect, electric] }
+        power_kw: { type: number, exclusiveMinimum: 0, maximum: 5000 }
+
+    # ── Сценарий 1 ────────────────────────────────────────────────────────────
+    DesignRequest:
+      type: object
+      required: [house, envelope, flock, climate]
+      properties:
+        house: { $ref: "#/components/schemas/House" }
+        envelope: { $ref: "#/components/schemas/Envelope" }
+        flock:
+          allOf:
+            - $ref: "#/components/schemas/Flock"
+            - type: object
+              required: [cycle_days]
+              properties:
+                cycle_days: { type: integer, minimum: 21, maximum: 63 }
+        climate: { $ref: "#/components/schemas/Climate" }
+        heaters:
+          description: "Есть — проверить их достаточность; нет — только требуемая мощность"
+          allOf: [{ $ref: "#/components/schemas/Heaters" }]
+
+    DesignDay:
+      type: object
+      required: [day, weight_g, target_temp_c, qmin_m3h, qmin_basis, qmax_m3h, heating_need_kw]
+      properties:
+        day: { type: integer }
+        weight_g: { type: number }
+        target_temp_c: { type: number }
+        qmin_m3h: { type: number, description: "Минимальная вентиляция при зимней расчётной T" }
+        qmin_basis: { type: string, enum: [co2, moisture] }
+        qmax_m3h: { type: number, description: "Максимальная — тепловой баланс / туннель при летней расчётной T" }
+        heating_need_kw: { type: number, description: "Горелки при зимней расчётной T: UA·ΔT + вентиляция Qmin − явное тепло птицы; 0 — тепла птицы хватает" }
+
+    Equipment:
+      type: object
+      description: Рекомендация по оборудованию — диапазоны норм, а не модели
+      required: [min_vent_fans_m3h, tunnel_fans_m3h, heating_kw]
+      properties:
+        min_vent_fans_m3h: { $ref: "#/components/schemas/Range" }
+        tunnel_fans_m3h: { $ref: "#/components/schemas/Range" }
+        tunnel_air_speed_ms: { $ref: "#/components/schemas/Range" }
+        inlet_area_m2: { type: number }
+        pad_area_m2: { type: number, description: "Панель 150 мм при проектной скорости 1.78 м/с (UGA)" }
+        heating_kw: { type: number, description: "Пиковая потребность за цикл с запасом (см. assumptions)" }
+
+    Range:
+      type: object
+      required: [min, max]
+      properties:
+        min: { type: number }
+        max: { type: number }
+        source_id: { type: string, example: cobb_2021_9_1 }
+
+    DesignResult:
+      type: object
+      required: [envelope_ua_w_per_k, days, peak, equipment, warnings, assumptions, sources, api_version, app_version]
+      properties:
+        envelope_ua_w_per_k: { type: number }
+        days:
+          type: array
+          items: { $ref: "#/components/schemas/DesignDay" }
+        peak:
+          type: object
+          required: [qmin_m3h, qmin_day, qmax_m3h, qmax_day, heating_kw, heating_day]
+          properties:
+            qmin_m3h: { type: number }
+            qmin_day: { type: integer }
+            qmax_m3h: { type: number }
+            qmax_day: { type: integer }
+            heating_kw: { type: number }
+            heating_day: { type: integer }
+        equipment: { $ref: "#/components/schemas/Equipment" }
+        heaters_sufficient: { type: boolean, description: "Только если heaters переданы" }
+        warnings:
+          type: array
+          items: { $ref: "#/components/schemas/Finding" }
+        assumptions:
+          type: array
+          items: { $ref: "#/components/schemas/Assumption" }
+        sources:
+          type: array
+          items: { $ref: "#/components/schemas/Source" }
+        api_version: { type: string, example: "1.0.0" }
+        app_version: { type: string, example: "0.4.0 · 2a7c1ed" }
+
+    # ── Сценарий 2 ────────────────────────────────────────────────────────────
+    RequirementRequest:
+      type: object
+      required: [house, flock, conditions]
+      properties:
+        house: { $ref: "#/components/schemas/House" }
+        envelope:
+          description: "Нет — без теплового баланса и без проверки конденсата"
+          allOf: [{ $ref: "#/components/schemas/Envelope" }]
+        flock:
+          allOf:
+            - $ref: "#/components/schemas/Flock"
+            - type: object
+              required: [age_days]
+              properties:
+                age_days: { type: integer, minimum: 0, maximum: 70 }
+        conditions:
+          type: object
+          required: [outdoor_t_c, outdoor_rh_pct]
+          properties:
+            outdoor_t_c: { type: number, minimum: -60, maximum: 55 }
+            outdoor_rh_pct: { type: number, minimum: 0, maximum: 100 }
+            target_rh_pct: { type: number, minimum: 40, maximum: 70 }
+        heaters: { $ref: "#/components/schemas/Heaters" }
+
+    RequirementResult:
+      type: object
+      required: [qmin_m3h, qmin_basis, qmax_m3h, target_temp_c, tunnel, findings, assumptions, sources, api_version, app_version]
+      properties:
+        qmin_m3h: { type: number }
+        qmin_basis: { type: string, enum: [co2, moisture] }
+        qmax_m3h: { type: number }
+        target_temp_c: { type: number, description: "Уставка профиля на день с поправкой на целевую RH" }
+        tunnel:
+          type: object
+          required: [allowed, target_speed_ms]
+          properties:
+            allowed: { type: boolean, description: "Возраст и наружная T допускают туннель" }
+            target_speed_ms: { $ref: "#/components/schemas/Range" }
+            effective_temp_limit_c: { type: number, example: 30 }
+        heating_need_kw: { type: number, description: "Только с envelope" }
+        heater_duty_pct: { type: number, description: "Только с envelope и heaters" }
+        findings:
+          type: array
+          items: { $ref: "#/components/schemas/Finding" }
+        assumptions:
+          type: array
+          items: { $ref: "#/components/schemas/Assumption" }
+        sources:
+          type: array
+          items: { $ref: "#/components/schemas/Source" }
+        api_version: { type: string }
+        app_version: { type: string }
+
+    # ── Пояснения к результату ────────────────────────────────────────────────
+    Finding:
+      type: object
+      description: Риск или предупреждение — код стабилен, текст на клиенте
+      required: [code, severity]
+      properties:
+        code:
+          type: string
+          example: humidity_uncontrollable
+          description: |
+            humidity_uncontrollable, condensation_risk, heater_insufficient,
+            heater_load_unknown, tunnel_not_allowed_age, effective_temp_above_limit,
+            house_geometry_missing, ...
+        severity: { type: string, enum: [info, warning, critical] }
+        params: { type: object, additionalProperties: true }
+        source_id: { type: string }
+
+    Assumption:
+      type: object
+      required: [code]
+      properties:
+        code: { type: string, example: infiltration_not_included }
+        params: { type: object, additionalProperties: true }
+
+    Source:
+      type: object
+      required: [id, citation]
+      properties:
+        id: { type: string, example: cigr_2002 }
+        citation: { type: string, example: "CIGR (2002) Heat and moisture production at animal and house levels" }
+        url: { type: string, format: uri }
+
+    # ── Справочники ───────────────────────────────────────────────────────────
+    ConstructionMaterial:
+      type: object
+      required: [id, name, lambda_w_mk, source_id]
+      properties:
+        id: { type: string, example: pir_sandwich }
+        name: { type: string, example: "PIR sandwich panel core" }
+        lambda_w_mk: { type: number, example: 0.022, description: "Расчётная теплопроводность" }
+        typical_thickness_mm: { type: array, items: { type: number }, example: [60, 80, 100, 120, 150] }
+        source_id: { type: string }
+
+    GrowthProfileSummary:
+      type: object
+      required: [id, name, builtin, first_day, last_day]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        breed: { type: string }
+        builtin: { type: boolean }
+        first_day: { type: integer }
+        last_day: { type: integer }
+
+    HousingSystem:
+      type: object
+      required: [id, supported]
+      properties:
+        id: { type: string, enum: [floor_litter, cages] }
+        supported: { type: boolean }
+        source_id: { type: string }
+
+    ClimateDesign:
+      type: object
+      required: [winter_design_c, summer_design_db_c, summer_design_rh_pct, summer_mcwb_c, evap_wb_c, elevation_m, source_id]
+      properties:
+        winter_design_c: { type: number, description: "99.6 %" }
+        summer_design_db_c: { type: number, description: "0.4 % сухой" }
+        summer_design_rh_pct: { type: number, description: "Совпадающая RH" }
+        summer_mcwb_c: { type: number, description: "Средний совпадающий мокрый" }
+        evap_wb_c: { type: number, description: "0.4 % мокрый — предел панелей" }
+        elevation_m: { type: number }
+        source_id: { type: string, example: era5_open_meteo }
