@@ -612,6 +612,8 @@
     srv_envelope_implausible:        'mean envelope U = {u} W/(m²·K) is outside the physical range {min}–{max} — check layer thicknesses (mm) and declared U',
     srv_material_not_found:          'material “{id}” is not in the construction catalogue',
     srv_validation_failed:           'invalid field {field}',
+    srv_cage_section_missing:        'a cage house needs the cage-row cross-section (rows, width, height)',
+    srv_cage_section_implausible:    'cage rows do not fit the cross-section: taller than the wall, wider than the house, or only {free_pct} % free (at least {min_pct} % needed)',
     srv_calibration_other_house:     'the calibration belongs to house \'{house_id}\'',
     cal_ignored_note:                'Heat-loss calibration is not used in calculations: {reason}.',
 

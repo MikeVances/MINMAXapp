@@ -611,6 +611,8 @@
     srv_envelope_implausible:        'średnie U przegród {u} W/(m²·K) poza zakresem fizycznym {min}–{max} — sprawdź grubości warstw (mm) i deklarowane U',
     srv_material_not_found:          'materiału „{id}” nie ma w katalogu przegród',
     srv_validation_failed:           'nieprawidłowe pole {field}',
+    srv_cage_section_missing:        'kurnik klatkowy wymaga przekroju baterii (rzędy, szerokość, wysokość)',
+    srv_cage_section_implausible:    'baterie nie mieszczą się w przekroju: wyższe niż ściana, szersze niż kurnik lub wolne tylko {free_pct} % (potrzeba co najmniej {min_pct} %)',
     srv_calibration_other_house:     'kalibracja dotyczy kurnika \'{house_id}\'',
     cal_ignored_note:                'Kalibracja strat ciepła nie jest używana w obliczeniach: {reason}.',
 

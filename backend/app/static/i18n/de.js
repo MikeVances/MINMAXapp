@@ -611,6 +611,8 @@
     srv_envelope_implausible:        'mittlerer Hüllen-U-Wert {u} W/(m²·K) außerhalb des physikalischen Bereichs {min}–{max} — Schichtdicken (mm) und deklarierten U-Wert prüfen',
     srv_material_not_found:          'Material „{id}“ ist nicht im Baustoffkatalog',
     srv_validation_failed:           'ungültiges Feld {field}',
+    srv_cage_section_missing:        'für einen Käfigstall wird der Querschnitt der Käfigreihen benötigt (Reihen, Breite, Höhe)',
+    srv_cage_section_implausible:    'Käfigreihen passen nicht in den Querschnitt: höher als die Wand, breiter als der Stall oder nur {free_pct} % frei (mindestens {min_pct} % nötig)',
     srv_calibration_other_house:     'die Kalibrierung gehört zu Stall \'{house_id}\'',
     cal_ignored_note:                'Die Wärmeverlust-Kalibrierung wird in Berechnungen nicht verwendet: {reason}.',
 

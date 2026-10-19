@@ -2,17 +2,19 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import Optional
+from typing import Callable, Optional
 
 from .errors import CalcError
 from .growth_profiles import load_profile
 from .apparent_temp import rh_temperature_shift
 from .survival import survival_fraction
 from .psychro import humidity_ratio
-from .bird_heat import house_heat_per_bird, house_sensible_fraction
+from .bird_heat import HouseHeat, house_heat_per_bird, house_sensible_fraction
 from .ventilation_calc import calc_q_min_per_bird
 from .app_config import load_app_config
 from .building_thermal import (
+    BuildingDimensions,
+    HeaterConfig,
     surface_condensation,
     AIR_CP_J_PER_KG_K,
     air_density_kg_m3,
@@ -116,6 +118,11 @@ class CalcInput:
     target_rh: Optional[float] = None
     # Корпус расчёта: калибровка UA применяется только к тому корпусу, где измерена
     house_id: Optional[str] = None
+    # Сечение туннеля, м², если оно не ширина × высота: клеточный зал — свободное
+    # сечение между батареями (API v1). None → house_width_m × house_height_m
+    tunnel_section_m2: Optional[float] = None
+    # Утечка при ~4 Па, м³/ч: обогрев греет не меньше этого воздуха (API v1)
+    air_exchange_floor_m3h: float = 0.0
 
 
 @dataclass
@@ -153,38 +160,91 @@ class CalcResult:
     calibration_ignored: Optional[dict] = None
     # Профиль роста, по которому шёл расчёт (видно, какие данные кросса использованы)
     growth_profile_id: Optional[str] = None
+    # Потребность в тепле, Вт (нужен UA): стены + обмен воздуха − явное тепло птицы
+    heat_need_w: Optional[float] = None
+    # Живая птица на этот день с учётом падежа
+    birds_alive: Optional[float] = None
+
+
+@dataclass(frozen=True)
+class CalcParams:
+    """
+    Параметры расчёта, которые интерфейс берёт из настроек хозяйства (app_config),
+    а API v1 — из запроса. Разделены, чтобы оба пути шли через ОДНУ модель
+    (compute_with), а не через две копии расчёта.
+    """
+    total_mortality_pct: float = 4.0
+    cycle_days: int = 42
+    default_growth_profile: str = "ross308"
+    v_tunnel_ms: float = 2.5
+    safety_factor_qmin: float = 1.5
+    tunnel_min_day: int = 14
+    tunnel_min_temp_c: float = 18.0
+    # Тепло птицы: house_heat_per_bird (подстилка, CIGR 2002) или
+    # animal_heat_per_bird (клетки, летний край вилки — bird_heat)
+    bird_heat_model: Callable[[float, float], HouseHeat] = house_heat_per_bird
+
+    @classmethod
+    def from_app_config(cls, cfg) -> "CalcParams":
+        return cls(
+            total_mortality_pct=cfg.total_mortality_pct,
+            cycle_days=cfg.cycle_days,
+            default_growth_profile=getattr(cfg, "default_growth_profile", "ross308"),
+            v_tunnel_ms=float(getattr(cfg, "v_tunnel_ms", 2.5)),
+            safety_factor_qmin=float(getattr(cfg, "safety_factor_qmin", 1.5)),
+            tunnel_min_day=int(getattr(cfg, "tunnel_min_day", 14)),
+            tunnel_min_temp_c=float(getattr(cfg, "tunnel_min_temp_c", 18.0)),
+        )
+
+
+@dataclass(frozen=True)
+class HouseThermal:
+    """Теплотехника корпуса: UA, горелки, размеры для проверки конденсата."""
+    ua_w_per_k: Optional[float] = None
+    heater: Optional[HeaterConfig] = None
+    building: Optional[BuildingDimensions] = None
+    # Почему сохранённая калибровка не применена (только путь интерфейса)
+    calibration_ignored: Optional[dict] = None
+
+
+def _stored_thermal(house_id: Optional[str]) -> HouseThermal:
+    """Теплотехника корпуса из сохранённых настроек — путь интерфейса."""
+    try:
+        # Теплотехника СВОЕГО корпуса: калибровка и горелки хранятся по корпусам.
+        # UA — только проверенной калибровки СВОЕГО корпуса (usable_ua): калибровка
+        # чужого корпуса, тест короче 10 мин или неправдоподобный U оболочки в расчёт
+        # не идут, а причина уходит в ответ, чтобы UI предупредил
+        cfg = load_thermal_config(house_id=house_id)
+        ua, ignored = usable_ua(cfg, house_id)
+    except Exception:
+        return HouseThermal()
+    return HouseThermal(ua_w_per_k=ua, heater=cfg.heater, building=cfg.building,
+                        calibration_ignored=ignored)
 
 
 def compute(ci: CalcInput) -> CalcResult:
+    """Расчёт для интерфейса: параметры и теплотехника — из сохранённых настроек."""
+    return compute_with(ci, CalcParams.from_app_config(load_app_config()), _stored_thermal(ci.house_id))
+
+
+def compute_with(ci: CalcInput, params: CalcParams, thermal: HouseThermal) -> CalcResult:
     """
     Compute min/max ventilation from the growth profile (weight, temperature, RH) and house data.
+    Всё, кроме профиля роста, приходит аргументами — сохранённое состояние не читается.
 
     Qmin = max(Qmin_CO₂, Qmin_moisture)  — CIGR + психрометрический баланс.
     Qmax = (H_birds − UA×ΔT) × 3600 / (ρ × Cp × ΔT)  — тепловой баланс с поправкой стен.
            Ограничен физической мощностью установки. В туннельном режиме: полная мощность.
     """
 
-    cfg = load_app_config()
     age = max(1, int(ci.age_days))
-
-    # Загружаем thermal_cfg один раз — используется в Qmax (UA), duty_cycle и влагобалансе
-    _thermal_cfg = None
-    # UA — только проверенной калибровки СВОЕГО корпуса (usable_ua): калибровка
-    # чужого корпуса, тест короче 10 мин или неправдоподобный U оболочки в расчёт
-    # не идут, а причина уходит в ответ, чтобы UI предупредил
-    _ua_coeff: Optional[float] = None
-    calibration_ignored: Optional[dict] = None
-    try:
-        # Теплотехника СВОЕГО корпуса: калибровка и горелки хранятся по корпусам
-        _thermal_cfg = load_thermal_config(house_id=ci.house_id)
-        _ua_coeff, calibration_ignored = usable_ua(_thermal_cfg, ci.house_id)
-    except Exception:
-        _thermal_cfg = None
+    _ua_coeff = thermal.ua_w_per_k
+    calibration_ignored = thermal.calibration_ignored
 
     # --- Профиль роста: масса, целевые температура и RH на этот день ---
     # Профиля нет → ProfileNotFound наружу: расчёт по «чьим-то» данным
     # хуже, чем явная ошибка (раньше здесь был тихий fallback на демо-профиль)
-    profile_id = ci.growth_profile_id or getattr(cfg, "default_growth_profile", "ross308")
+    profile_id = ci.growth_profile_id or params.default_growth_profile
     point = load_profile(profile_id).point_for_day(age)
 
     if point.body_weight_g is None or point.min_temp_c is None:
@@ -204,15 +264,15 @@ def compute(ci: CalcInput) -> CalcResult:
         t_target_inside += rh_temperature_shift(body_weight_g, rv_percent)
 
     # --- Effective birds with mortality ---
-    birds_eff = ci.birds * survival_fraction(age, cfg.total_mortality_pct, cfg.cycle_days)
+    birds_eff = ci.birds * survival_fraction(age, params.total_mortality_pct, params.cycle_days)
 
     # Тепло одной птицы на уровне корпуса при уставке — одна модель для Qmax, горелок и влаги
-    bird_heat = house_heat_per_bird(weight_kg, t_target_inside)
+    bird_heat = params.bird_heat_model(weight_kg, t_target_inside)
 
     # --- Qmin: биологический минимум по CO₂ (CIGR 1984) из живой массы ---
     # Норма считается из веса профиля роста, а не хранится в нём: профиль — это
     # данные кросса (вес, температура, RH), а вентиляция — следствие физики.
-    safety = float(getattr(cfg, "safety_factor_qmin", 1.5))
+    safety = params.safety_factor_qmin
     per_bird_min = calc_q_min_per_bird(weight_kg, safety)
     q_min = birds_eff * per_bird_min
     q_min_co2 = q_min
@@ -221,16 +281,18 @@ def compute(ci: CalcInput) -> CalcResult:
     # Q_tunnel = v × S_сечения × 3600. Раньше мощность туннеля хранилась на голову
     # (поделённая на n_birds_initial) и умножалась на введённое поголовье:
     # вдвое меньше птицы → вдвое меньше «вентиляторов».
-    tunnel_min_day  = int(getattr(cfg, "tunnel_min_day", 14))
-    tunnel_min_temp = float(getattr(cfg, "tunnel_min_temp_c", 18.0))
-    v_tunnel        = float(getattr(cfg, "v_tunnel_ms", 2.5))
+    tunnel_min_day  = params.tunnel_min_day
+    tunnel_min_temp = params.tunnel_min_temp_c
+    v_tunnel        = params.v_tunnel_ms
 
     # Проектный туннельный расход корпуса (полная скорость) — для мощности и UI
     tunnel_requirement: Optional[float] = None
     # Туннельный расход с учётом возраста: молодой птице полную скорость не дают
     tunnel_flow_for_age: Optional[float] = None
-    if ci.house_width_m and ci.house_height_m:
+    section_m2: Optional[float] = ci.tunnel_section_m2
+    if section_m2 is None and ci.house_width_m and ci.house_height_m:
         section_m2 = ci.house_width_m * ci.house_height_m
+    if section_m2:
         tunnel_requirement  = v_tunnel * section_m2 * 3600.0
         tunnel_flow_for_age = min(v_tunnel, tunnel_speed_limit_ms(age, v_tunnel)) * section_m2 * 3600.0
 
@@ -340,9 +402,10 @@ def compute(ci: CalcInput) -> CalcResult:
     duty_cycle = None
     heater_insufficient = False
 
-    if _thermal_cfg is not None and _thermal_cfg.heater and _ua_coeff is not None:
-        heater_kw   = _thermal_cfg.heater.total_power_kw
-        heater_type = _thermal_cfg.heater.heater_type
+    heat_need_w: Optional[float] = None
+    if thermal.heater and _ua_coeff is not None:
+        heater_kw   = thermal.heater.total_power_kw
+        heater_type = thermal.heater.heater_type
         q_min_birds = q_min                     # без горелок: max(CO₂, влага) птицы
         open_flame  = ci.heater_on and heater_type == "gas_open"
 
@@ -364,8 +427,10 @@ def compute(ci: CalcInput) -> CalcResult:
             t_outside_c      = ci.outside_t,
             birds_sensible_w = bird_heat.sensible_w * birds_eff,
             heater_power_w   = heater_kw * 1000.0,
+            exchange_floor_m3h = ci.air_exchange_floor_m3h,
         )
         duty_cycle          = sol.duty_cycle
+        heat_need_w         = sol.heat_need_w
         heater_insufficient = sol.insufficient
 
         if ci.heater_on:
@@ -387,7 +452,7 @@ def compute(ci: CalcInput) -> CalcResult:
     # CO₂ нет вовсе (аудит 2026-10-18). Теперь — только то, что следует из данных:
     heater_note: Optional[str] = None
     if ci.heater_on and duty_cycle is None:
-        heater = _thermal_cfg.heater if _thermal_cfg is not None else None
+        heater = thermal.heater
         if heater is None:
             # Ни мощности, ни типа: добавить нечего — так и говорим, а не угадываем
             heater_note = "heater_data_missing"
@@ -403,10 +468,20 @@ def compute(ci: CalcInput) -> CalcResult:
     # Конденсат на ограждениях при целевой RH внутри (ASHRAE, теплопередача через стенку)
     surface_temp = dew_in = None
     condensation = False
-    if _ua_coeff is not None and _thermal_cfg is not None and _thermal_cfg.building \
+    if _ua_coeff is not None and thermal.building \
             and rv_percent is not None and t_target_inside > ci.outside_t:
         surface_temp, dew_in, condensation = surface_condensation(
-            _ua_coeff, _thermal_cfg.building, t_target_inside, rv_percent, ci.outside_t)
+            _ua_coeff, thermal.building, t_target_inside, rv_percent, ci.outside_t)
+
+    # Потребность в тепле без горелок (известен только UA): мощность 0 → solve
+    # отдаёт потребность при d = 0, то есть без воздуха на разбавление продуктов
+    # сгорания — тип горелок неизвестен
+    if heat_need_w is None and _ua_coeff is not None:
+        heat_need_w = solve_heater_duty(
+            lambda d: q_min, ua_w_per_k=_ua_coeff, t_inside_c=t_target_inside,
+            t_outside_c=ci.outside_t, birds_sensible_w=bird_heat.sensible_w * birds_eff,
+            heater_power_w=0.0, exchange_floor_m3h=ci.air_exchange_floor_m3h,
+        ).heat_need_w
 
     # Влажность упёрлась в потолок, а потолок без размеров корпуса только оценён
     if humidity_uncontrollable and ceiling_needs_geometry:
@@ -444,4 +519,6 @@ def compute(ci: CalcInput) -> CalcResult:
         condensation_risk=condensation,
         heater_insufficient=heater_insufficient,
         calibration_ignored=calibration_ignored,
+        heat_need_w=heat_need_w,
+        birds_alive=birds_eff,
     )

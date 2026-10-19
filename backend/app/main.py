@@ -63,6 +63,11 @@ app.include_router(feedback_router.router, tags=["feedback"])
 app.include_router(growth_profiles_router.router, prefix="/profiles", tags=["profiles"])
 app.include_router(backup_router.router, tags=["backup"])
 
+# Публичный API v1 — отдельное подприложение со своим форматом ошибок (RFC 7807).
+# Монтируется ДО статики: mount("/") ниже перехватил бы /api/v1/... как файлы
+from .api_v1 import api as api_v1  # noqa: E402
+app.mount("/api/v1", api_v1)
+
 # ─── Статика с версиями по содержимому ───────────────────────────────────────
 # Раньше: ETag без Cache-Control (браузер переспрашивал каждый файл на каждой
 # странице) и ручной ?v= у двух файлов из десятка — остальные после деплоя могли

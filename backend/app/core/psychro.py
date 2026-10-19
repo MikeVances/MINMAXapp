@@ -19,7 +19,9 @@ from __future__ import annotations
 
 import math
 import os
-from typing import Optional
+from contextlib import contextmanager
+from contextvars import ContextVar
+from typing import Iterator, Optional
 
 P_ATM_PA = 101_325.0
 # Отношение молярных масс воды и сухого воздуха (ASHRAE: 0.621945)
@@ -40,6 +42,22 @@ def pressure_at_altitude_pa(altitude_m: float) -> float:
 
 _site = {"key": object(), "p": P_ATM_PA}
 
+# Давление, заданное самим запросом (API v1 без состояния: высота площадки приходит
+# в запросе, а не из настроек хозяйства). ContextVar, а не глобальная переменная:
+# FastAPI выполняет запросы параллельно в пуле потоков, и у каждого запроса своё
+# значение — расчёт одной площадки не подхватит высоту другой.
+_pressure_override: ContextVar[Optional[float]] = ContextVar("site_pressure_override", default=None)
+
+
+@contextmanager
+def site_pressure(p_pa: float) -> Iterator[None]:
+    """Внутри блока site_pressure_pa() возвращает p_pa вместо давления из настроек."""
+    token = _pressure_override.set(p_pa)
+    try:
+        yield
+    finally:
+        _pressure_override.reset(token)
+
 
 def site_pressure_pa() -> float:
     """
@@ -48,6 +66,9 @@ def site_pressure_pa() -> float:
     Высота — постоянная площадки, поэтому берётся здесь, а не тянется параметром
     через все расчёты. Файл настроек перечитывается только когда он изменился.
     """
+    override = _pressure_override.get()
+    if override is not None:
+        return override
     from .app_config import APP_CONFIG_PATH, load_app_config   # без цикла импорта
     try:
         key = os.stat(APP_CONFIG_PATH).st_mtime_ns

@@ -170,6 +170,13 @@ DesignResult: days[] · peak · equipment · warnings[] · assumptions[] · sour
 1. ✅ Этот контракт (на согласование).
 2. ✅ Справочник конструкций по ISO 10456 и UA по слоям (`backend/app/core/construction.py`).
 3. `POST /ventilation-designs` + справочные GET.
+   - ✅ 3a: ядро без состояния (`calc_core.compute_with`, давление площадки из
+     запроса через `psychro.site_pressure`), `core/ventilation_design.py`,
+     подприложение `backend/app/api_v1.py` (RFC 7807), справочники материалов,
+     профилей, способов содержания. Туннель пола — больший из критериев Cobb §9.7
+     (165–200 м³/ч·м² и смена воздуха за 40–50 с).
+   - 3b: давление туннеля и характеристика вентилятора, впуск и панели,
+     `GET /climate-designs` с кэшем.
 4. `POST /ventilation-requirements` + единый список находок.
 5. Ключи, лимиты, тест схемы OpenAPI против этого файла (ловит незаметные
    изменения контракта).

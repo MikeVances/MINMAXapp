@@ -67,6 +67,22 @@ class HouseHeat:
         return self.latent_w * 3600.0 / LATENT_HEAT_J_PER_G
 
 
+# Доля явного тепла на уровне ПТИЦЫ в термонейтральной зоне — Aarnink et al.,
+# CIGR Journal art. 4781 (2018), разд. 3: «a constant level of fQs during the
+# growing period of 0.67 might be assumed». Без испарения из подстилки — модель
+# клеток с помётом на лентах, верхний край явного тепла (см. docs/api/v1/README.md,
+# «Клетки»). Вне термонейтральной зоны птица отдаёт больше пара, явная доля
+# ниже — значит 0.67 завышает явное тепло: для летнего Qmax это безопасная сторона.
+ANIMAL_LEVEL_SENSIBLE_FRACTION = 0.67
+
+
+def animal_heat_per_bird(weight_kg: float, t_inside_c: float) -> HouseHeat:
+    """Тепло одной птицы на уровне ПТИЦЫ: полное — как у корпуса, явное — 0.67 полного."""
+    total = TOTAL_HEAT_COEFF_20C * max(weight_kg, 0.0) ** 0.75 * total_heat_factor(t_inside_c)
+    sensible = ANIMAL_LEVEL_SENSIBLE_FRACTION * total
+    return HouseHeat(total_w=total, sensible_w=sensible, latent_w=total - sensible)
+
+
 def house_heat_per_bird(weight_kg: float, t_inside_c: float) -> HouseHeat:
     """Явное и скрытое тепло одной птицы массой weight_kg при температуре корпуса T."""
     q20 = TOTAL_HEAT_COEFF_20C * max(weight_kg, 0.0) ** 0.75

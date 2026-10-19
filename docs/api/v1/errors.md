@@ -21,7 +21,7 @@
 | 422 | <a id="rh_out_of_table"></a>`rh_out_of_table` | Целевая RH вне таблицы Ross 2025 2.5 (40–70 %) | `rh`, `min`, `max` |
 | 422 | <a id="housing_not_supported"></a>`housing_not_supported` | Способ содержания объявлен, но расчёт для него без источника не делается (сейчас таких нет; код — для будущих) | `housing` |
 | 422 | <a id="cage_section_missing"></a>`cage_section_missing` | `housing: cages`, но нет `house.cage_rows` — скорость туннеля не посчитать | — |
-| 422 | <a id="cage_section_implausible"></a>`cage_section_implausible` | Батареи выше стены или оставляют свободным меньше 15 % сечения | `free_pct`, `min_pct` |
+| 422 | <a id="cage_section_implausible"></a>`cage_section_implausible` | Батареи выше стены, в сумме шире корпуса или оставляют свободным меньше 15 % сечения | `free_pct`, `min_pct` |
 | 422 | <a id="fan_curve_invalid"></a>`fan_curve_invalid` | Точки характеристики не по возрастанию давления или расход не убывает | `index` |
 | 422 | <a id="envelope_implausible"></a>`envelope_implausible` | U оболочки вне 0.1–8 Вт/(м²·К) — ошибка в слоях или в UA | `u`, `min`, `max` |
 | 429 | <a id="rate_limited"></a>`rate_limited` | Превышен лимит частоты; заголовок `Retry-After` | `limit`, `window_s` |
@@ -59,4 +59,7 @@
 | `cages_bird_speed_from_aisle` | Клетки: скорость у птицы ≈ 0.5 скорости в проходах (практика эксплуатации: 4–5 м/с в проходах → 2–2.5 м/с в клетках); ощущаемая T — по ней |
 | `tunnel_length_loss_not_included` | Потери давления по длине корпуса (батареи, балки, кормушки) не оценены: нет источника коэффициента — давление и падение расхода занижены; передайте `tunnel_static_pressure_pa` с замера |
 | `cage_through_flow_not_included` | Клетки: расход вентиляторов = скорость в проходах × свободное сечение; воздух сквозь батареи сверху не добавлен — нижняя граница, сверять анемометром в проходе |
+| `winter_rh_saturated` | Наружный воздух зимой — насыщенный (RH 100 %): больше влаги снаружи — больше влажностный Qmin, в безопасную сторону |
+| `min_vent_climate_class` | Норма установленной мощности минвентиляции Cobb §9.1 выбрана по зиме: ниже 0 °C — холодный климат (36.6–46.2 м³/ч·м²), иначе жаркий (18). Границы у Cobb нет, `params.class`, `params.winter_design_c` |
+| `heating_without_combustion_products` | Горелки не заданы — обогрев посчитан без воздуха на разбавление CO₂ и пара открытого пламени; для газовых горелок открытого горения передайте `heaters` |
 | `materials_iso_10456` | λ — BS EN ISO 10456 в изложении BRE BR 443 (2019) §3, R_si/R_se — ISO 6946 по BR 443 §4.3; панель по слоям без стыков — U из декларации точнее |

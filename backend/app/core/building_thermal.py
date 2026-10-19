@@ -327,6 +327,7 @@ def solve_heater_duty(
     t_outside_c: float,
     birds_sensible_w: float,
     heater_power_w: float,
+    exchange_floor_m3h: float = 0.0,
 ) -> HeaterDuty:
     """
     Загрузка горелок, согласованная с воздухом, который они сами требуют.
@@ -342,9 +343,13 @@ def solve_heater_duty(
     qmin_for_duty(d) — Qmin при загрузке d (у открытого пламени растёт с d,
     у электрических не зависит). Решаем бисекцией: f(d) = потребность(d)/P − d,
     f(0) ≥ 0; если f(1) ≥ 0 — мощности не хватает и горелки работают на 100 %.
+
+    exchange_floor_m3h — утечка при ~4 Па (ветер, тяга): греть приходится не меньше
+    этого воздуха, даже когда Qmin меньше. К Qmin она не прибавляется — под
+    разрежением щели лишь ещё один впуск (docs/api/v1/README.md, «Герметичность»).
     """
     def need_w(d: float) -> float:
-        q = qmin_for_duty(d)
+        q = max(qmin_for_duty(d), exchange_floor_m3h)
         vent = ventilation_heat_w(q, t_inside_c, t_outside_c) if t_inside_c > t_outside_c else 0.0
         walls = ua_w_per_k * max(t_inside_c - t_outside_c, 0.0)
         return max(0.0, walls + vent - birds_sensible_w)
