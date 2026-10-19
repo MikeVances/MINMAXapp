@@ -95,6 +95,8 @@ _THVI_V_RANGE = (0.2, 1.2)
 
 # Давление второй точки паспорта вентилятора, Па (0.1" вод. ст. ≈ 25 Па — типовая точка BESS)
 FAN_RATING_POINT_PA = 25.0
+# Стандартный воздух паспортов вентиляторов и таблиц панелей (AMCA 210), кг/м³
+RHO_STD_AIR = 1.2
 
 # Рекомендуемые скорости по возрасту (дней: v_min, v_max)
 _SPEED_TARGETS = [
@@ -422,7 +424,13 @@ def calculate_tunnel_speed(inp: TunnelSpeedInput) -> TunnelSpeedResult:
 
     # Сопротивление системы P = c·Q² [Па при Q в м³/с]: динамическое давление в
     # сечении + потеря на впуске (модель UGA)
-    resistance = rho / 2.0 * (
+    # Законы подобия вентиляторов (AMCA 210: паспорт — на стандартном воздухе 1.2 кг/м³):
+    # при тех же оборотах объёмный расход тот же, а давление вентилятора и сопротивление
+    # системы оба ∝ ρ. Поэтому рабочую точку ищем в «стандартном» эквиваленте — с ρ = 1.2
+    # и таблицами панелей SANHE как есть; фактические давления — ниже, с ρ площадки.
+    # Раньше сопротивление считалось при фактической ρ, а характеристика — при
+    # стандартной: в жару и на высоте расход выходил завышенным
+    resistance = RHO_STD_AIR / 2.0 * (
         (1.0 / cross_section ** 2 if cross_section > 0 else 0.0) + 1.0 / (inlet_area * cd) ** 2
     )
 
@@ -481,7 +489,8 @@ def calculate_tunnel_speed(inp: TunnelSpeedInput) -> TunnelSpeedResult:
 
     # Панель на впуске: скорость через неё и её сопротивление по кривой производителя
     pad_velocity = total_m3s / inlet_area if pad is not None else 0.0
-    pad_dp = _pad_pressure_pa(pad_v_table, pad_dp_table, pad_velocity) if pad is not None else 0.0
+    pad_dp = (_pad_pressure_pa(pad_v_table, pad_dp_table, pad_velocity) * rho / RHO_STD_AIR
+              if pad is not None else 0.0)
     p_total = p_dynamic + inlet_sp + pad_dp
 
     # Рекомендации по скорости

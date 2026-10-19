@@ -42,7 +42,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from .building_thermal import air_temperature_rise_c
-from .psychro import dew_point_c, dry_air_kg_per_m3, humidity_ratio, wet_bulb_c
+from .psychro import dew_point_c, dry_air_kg_per_m3, humidity_ratio, moist_air_density, wet_bulb_c
 
 # Проектная скорость через панель для расчёта рекомендуемой площади, м/с, по толщине
 # (UGA, Czarick: 350 fpm ≈ 1.78 м/с для 150 мм и 225 fpm ≈ 1.14 м/с для 100 мм —
@@ -347,7 +347,8 @@ def calculate_evap_cooling(inp: EvapCoolingInput) -> EvapCoolingResult:
 
     # Интерполяция η и ΔP по фактической скорости
     eta_pct = _interp_linear(velocities, eta_table, air_velocity_ms)
-    dp_pa   = _interp_linear(velocities, dp_table,  air_velocity_ms)
+    # Таблица SANHE — на стандартном воздухе (1.2 кг/м³); фактическое сопротивление ∝ ρ
+    dp_pa   = _interp_linear(velocities, dp_table,  air_velocity_ms) * moist_air_density(inp.t_outdoor_db_c, inp.rh_outdoor_pct) / 1.2
     efficiency_basis = "passport"
     if inp.pad_efficiency_pct is not None:
         eta_pct, efficiency_basis = inp.pad_efficiency_pct, "user"

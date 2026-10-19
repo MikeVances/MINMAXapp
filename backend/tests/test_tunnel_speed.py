@@ -9,7 +9,6 @@ import pytest
 from backend.app.core.tunnel_speed_calc import TunnelSpeedInput, calculate_tunnel_speed
 
 # Независимые значения для 32 °C / 60 % (psychrolib 2.5 = ASHRAE Fundamentals 2017)
-RHO_32_60 = 1.1445     # плотность влажного воздуха, кг/м³
 T_WB_32_60 = 25.555    # мокрый термометр, °C
 
 HOUSE = dict(house_width_m=18, tunnel_height_m=3.0, num_fans=10, fan_capacity_m3h=40_000,
@@ -27,7 +26,8 @@ def test_operating_point_lies_on_fan_curve_and_system_curve():
 
     q = r.fan_operating_m3h
     Q = 10 * q / 3600.0
-    p_system = RHO_32_60 / 2 * (1 / 54 ** 2 + 1 / (60 * 0.62) ** 2) * Q ** 2
+    # Рабочая точка — в эквиваленте стандартного воздуха (паспорт AMCA при 1.2 кг/м³)
+    p_system = 1.2 / 2 * (1 / 54 ** 2 + 1 / (60 * 0.62) ** 2) * Q ** 2
     q_on_fan_curve = 40_000 - (40_000 - 36_000) / 25 * p_system
 
     assert r.velocity_basis == "operating_point"
@@ -192,7 +192,6 @@ def test_pad_in_the_inlet_lowers_the_operating_flow():
     система P = c·Q² + ΔP_панели(Q/A) по таблице SANHE. Без панели — прежний расчёт.
     """
     from backend.app.core.evap_cooling_calc import SANHE_PADS, _pad_pressure_pa
-    from backend.app.core.psychro import moist_air_density
 
     base = dict(HOUSE, fan_capacity_25pa_m3h=36_000)
     open_inlet = calculate_tunnel_speed(TunnelSpeedInput(**base))
@@ -203,7 +202,7 @@ def test_pad_in_the_inlet_lowers_the_operating_flow():
 
     pad = SANHE_PADS["7090"]
     Q = 10 * padded.fan_operating_m3h / 3600.0
-    c = moist_air_density(32, 60) / 2 * (1 / 54 ** 2 + 1 / (60 * 0.62) ** 2)
+    c = 1.2 / 2 * (1 / 54 ** 2 + 1 / (60 * 0.62) ** 2)   # стандартный воздух, как паспорт
     p_system = c * Q ** 2 + _pad_pressure_pa(pad["velocities"], pad["pressure_pa"][150], Q / 60)
     assert padded.fan_operating_m3h == pytest.approx(40_000 - 4_000 / 25 * p_system, abs=2.0)
 
@@ -230,3 +229,16 @@ def test_profile_target_is_reported_but_does_not_fail_the_tunnel(client):
                     json={**TUNNEL_35D, "num_fans": 12, "t_outdoor_db_c": 30}).json()
     assert r["profile_target_c"] == pytest.approx(20.0, abs=0.5)     # тестовый профиль, день 35
     assert r["above_profile_target"] is True and r["tunnel_sufficient"] is True
+
+
+def test_volume_flow_does_not_depend_on_air_density():
+    """
+    Законы подобия: при тех же оборотах давление вентилятора и сопротивление системы
+    оба ∝ ρ — объёмный расход тот же. Раньше сопротивление бралось при фактической ρ,
+    а паспорт — при стандартной, и в жару (ρ ниже) скорость выходила завышенной.
+    """
+    base = dict(HOUSE, fan_capacity_25pa_m3h=36_000)
+    cool = calculate_tunnel_speed(TunnelSpeedInput(**{**base, "t_outdoor_db_c": 10}))
+    hot = calculate_tunnel_speed(TunnelSpeedInput(**{**base, "t_outdoor_db_c": 40}))
+    assert hot.air_velocity_ms == pytest.approx(cool.air_velocity_ms, abs=0.005)
+    assert hot.inlet_sp_pa < cool.inlet_sp_pa        # фактические давления — с ρ площадки
