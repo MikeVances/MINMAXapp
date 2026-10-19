@@ -183,6 +183,10 @@ class CalcParams:
     # Тепло птицы: house_heat_per_bird (подстилка, CIGR 2002) или
     # animal_heat_per_bird (клетки, летний край вилки — bird_heat)
     bird_heat_model: Callable[[float, float], HouseHeat] = house_heat_per_bird
+    # Скорость у птицы / скорость в сечении туннеля. Пол — 1; клетки — ~0.5 (в
+    # проходах 4–5 м/с, у птицы 2–2.5, практика владельца). Предел Cobb по возрасту
+    # — для скорости У ПТИЦЫ, поэтому в проходе клеточного зала он вдвое выше
+    bird_speed_share: float = 1.0
 
     @classmethod
     def from_app_config(cls, cfg) -> "CalcParams":
@@ -294,7 +298,9 @@ def compute_with(ci: CalcInput, params: CalcParams, thermal: HouseThermal) -> Ca
         section_m2 = ci.house_width_m * ci.house_height_m
     if section_m2:
         tunnel_requirement  = v_tunnel * section_m2 * 3600.0
-        tunnel_flow_for_age = min(v_tunnel, tunnel_speed_limit_ms(age, v_tunnel)) * section_m2 * 3600.0
+        share = params.bird_speed_share
+        v_for_age = min(v_tunnel, tunnel_speed_limit_ms(age, v_tunnel * share) / share)
+        tunnel_flow_for_age = v_for_age * section_m2 * 3600.0
 
     # --- Тепловой баланс всего птичника ---
     # Тепло, которое должна унести вентиляция:

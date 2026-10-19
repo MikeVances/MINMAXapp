@@ -23,6 +23,7 @@ from .core import construction
 from .core import design_climate
 from .core.tunnel_design import Pads
 from .core import ventilation_design as vd
+from .core import ventilation_requirement as vr
 from .core.build_info import APP_VERSION, build_info
 from .core.building_thermal import HeaterConfig
 from .core.errors import CalcError
@@ -217,6 +218,29 @@ class DesignRequest(_Strict):
     tunnel_static_pressure_pa: Optional[float] = Field(None, gt=0, le=150)
 
 
+class FlockNowIn(_Strict):
+    # birds — ТЕКУЩЕЕ поголовье: падежа (mortality_pct) здесь нет намеренно —
+    # он уже сидит в числе, которое ввёл клиент, и был бы учтён дважды
+    birds: int = Field(..., ge=1, le=200_000)
+    growth_profile_id: str = Field(..., pattern=PROFILE_ID_PATTERN)
+    housing: Literal["floor_litter", "cages"]
+    age_days: int = Field(..., ge=0, le=70)
+    target_rh_pct: Optional[float] = Field(None, ge=40, le=70)
+
+
+class ConditionsIn(_Strict):
+    outdoor_t_c: float = Field(..., ge=-60, le=55)
+    outdoor_rh_pct: float = Field(..., ge=0, le=100)
+
+
+class RequirementRequest(_Strict):
+    house: HouseIn
+    envelope: Optional[EnvelopeIn] = None
+    flock: FlockNowIn
+    conditions: ConditionsIn
+    heaters: Optional[HeatersIn] = None
+
+
 # ─── Маршруты ─────────────────────────────────────────────────────────────────
 
 def _note(n: vd.Note) -> dict:
@@ -231,7 +255,7 @@ def _note(n: vd.Note) -> dict:
 
 
 def _sources(ids: list[str], profile_citation: Optional[str]) -> list[dict]:
-    catalog = {**construction.SOURCES, **vd.SOURCES}
+    catalog = {**construction.SOURCES, **vd.SOURCES, **vr.SOURCES}
     out = [{"id": i, "citation": catalog[i]} for i in ids if i in catalog]
     if profile_citation:
         out.append({"id": "growth_profile", "citation": profile_citation})
@@ -245,27 +269,16 @@ def _app_version() -> str:
 
 @api.post("/ventilation-designs", status_code=201)
 def create_ventilation_design(req: DesignRequest) -> JSONResponse:
-    h, env, flock, clim = req.house, req.envelope, req.flock, req.climate
-    if flock.housing == "cages" and not h.cage_rows:
+    flock, clim = req.flock, req.climate
+    if flock.housing == "cages" and not req.house.cage_rows:
         raise CalcError("cage_section_missing")
-    air = h.airtightness
     result = vd.design(vd.DesignInput(
-        geometry=construction.HouseGeometry(h.length_m, h.width_m, h.wall_height_m, h.ridge_height_m),
-        altitude_m=h.altitude_m,
-        airtightness=vd.Airtightness(air.tightness_class, air.relative_leakage, air.leak_at_4pa_m3h)
-        if air else None,
-        cage_rows=tuple(vd.CageRow(r.width_m, r.height_m, r.count) for r in h.cage_rows or ()),
-        ua_w_per_k=env.ua_w_per_k,
-        walls=env.walls.to_core() if env.walls else None,
-        roof=env.roof.to_core() if env.roof else None,
-        end_walls=env.end_walls.to_core() if env.end_walls else None,
+        **_house_parts(req.house), **_envelope_parts(req.envelope),
         birds=flock.birds, growth_profile_id=flock.growth_profile_id, housing=flock.housing,
         mortality_pct=flock.mortality_pct, target_rh_pct=flock.target_rh_pct, cycle_days=flock.cycle_days,
         winter_design_c=clim.winter_design_c, summer_design_db_c=clim.summer_design_db_c,
         summer_design_rh_pct=clim.summer_design_rh_pct,
-        # gas_indirect воздух корпуса не загрязняет — для модели это как электрический
-        heater=HeaterConfig("gas_open" if req.heaters.type == "gas_open" else "electric", req.heaters.power_kw)
-        if req.heaters else None,
+        heater=_heater(req.heaters),
         heating_margin_pct=req.heating_margin_pct,
         pads=Pads(req.pads.type, req.pads.thickness_mm) if req.pads else None,
         fan_curve=tuple((p.static_pressure_pa, p.flow_m3h) for p in req.tunnel_fan.points)
@@ -285,6 +298,61 @@ def create_ventilation_design(req: DesignRequest) -> JSONResponse:
     }
     if result.heaters_sufficient is not None:
         body["heaters_sufficient"] = result.heaters_sufficient
+    return JSONResponse(body, status_code=201, headers={"Cache-Control": "no-store"})
+
+
+def _heater(h: Optional[HeatersIn]) -> Optional[HeaterConfig]:
+    # gas_indirect воздух корпуса не загрязняет — для модели это как электрический
+    if h is None:
+        return None
+    return HeaterConfig("gas_open" if h.type == "gas_open" else "electric", h.power_kw)
+
+
+def _house_parts(h: HouseIn) -> dict:
+    air = h.airtightness
+    return dict(
+        geometry=construction.HouseGeometry(h.length_m, h.width_m, h.wall_height_m, h.ridge_height_m),
+        altitude_m=h.altitude_m,
+        airtightness=vd.Airtightness(air.tightness_class, air.relative_leakage, air.leak_at_4pa_m3h)
+        if air else None,
+        cage_rows=tuple(vd.CageRow(r.width_m, r.height_m, r.count) for r in h.cage_rows or ()),
+    )
+
+
+def _envelope_parts(env: Optional[EnvelopeIn]) -> dict:
+    if env is None:
+        return {}
+    return dict(
+        ua_w_per_k=env.ua_w_per_k,
+        walls=env.walls.to_core() if env.walls else None,
+        roof=env.roof.to_core() if env.roof else None,
+        end_walls=env.end_walls.to_core() if env.end_walls else None,
+    )
+
+
+@api.post("/ventilation-requirements", status_code=201)
+def create_ventilation_requirement(req: RequirementRequest) -> JSONResponse:
+    flock, cond = req.flock, req.conditions
+    if flock.housing == "cages" and not req.house.cage_rows:
+        raise CalcError("cage_section_missing")
+    r = vr.requirement(vr.RequirementInput(
+        **_house_parts(req.house), **_envelope_parts(req.envelope),
+        birds=flock.birds, growth_profile_id=flock.growth_profile_id, housing=flock.housing,
+        age_days=flock.age_days, target_rh_pct=flock.target_rh_pct,
+        outdoor_t_c=cond.outdoor_t_c, outdoor_rh_pct=cond.outdoor_rh_pct,
+        heater=_heater(req.heaters),
+    ))
+    body: dict[str, Any] = {
+        "qmin_m3h": r.qmin_m3h, "qmin_basis": r.qmin_basis, "qmax_m3h": r.qmax_m3h,
+        "target_temp_c": r.target_temp_c, "weight_g": r.weight_g, "tunnel": r.tunnel,
+        "findings": [_note(n) for n in r.findings],
+        "assumptions": [_note(n) for n in r.assumptions],
+        "sources": _sources(r.source_ids, r.profile_source),
+        "api_version": API_VERSION, "app_version": _app_version(),
+    }
+    for key in ("heating_need_kw", "heater_duty_pct", "air_exchange_m3h"):
+        if getattr(r, key) is not None:
+            body[key] = getattr(r, key)
     return JSONResponse(body, status_code=201, headers={"Cache-Control": "no-store"})
 
 

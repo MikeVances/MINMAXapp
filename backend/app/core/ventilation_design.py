@@ -57,6 +57,9 @@ COLD_CLIMATE_WINTER_C = 0.0
 # проходах, чтобы у птицы в клетках было ~2–2.5 м/с
 CAGE_AISLE_SPEED_MS = (4.0, 5.0)
 
+# Скорость у птицы в клетках ≈ половина скорости в проходах (та же практика)
+CAGE_BIRD_SPEED_SHARE = 0.5
+
 # Батареи выше стены или почти без прохода — опечатка в сечении, а не корпус
 CAGE_MIN_FREE_SHARE = 0.15
 
@@ -224,16 +227,84 @@ def leak_at_4pa_m3h(floor_area_m2: float, airtight: Optional[Airtightness]) -> t
     return q_m3s * 3600.0, assumed
 
 
-def _coldest_surface(env: Optional[EnvelopeUA]) -> Optional[tuple[str, float, float]]:
-    """(элемент, U, R_si) с самой холодной внутренней поверхностью: наибольшее U·R_si."""
+def coldest_surface(env: Optional[EnvelopeUA], ua_w_per_k: float,
+                    g: HouseGeometry) -> tuple[str, float, float]:
+    """
+    (элемент, U, R_si) с самой холодной внутренней поверхностью: наибольшее U·R_si.
+    Измеренный UA по элементам не делится — берём средний U оболочки и R_si стены;
+    UA теста включает и щели, так что U завышен — риск виден раньше (безопасно).
+    """
     if env is None:
-        return None
+        mean_u = ua_w_per_k / envelope_areas(g).total_m2
+        return ("envelope_mean", mean_u, surface_resistance_si("wall"))
     parts = [
         ("side_walls", env.side_walls_u, surface_resistance_si("wall")),
         ("end_walls", env.end_walls_u, surface_resistance_si("wall")),
         ("roof", env.roof_u, surface_resistance_si("roof", env.areas.roof_pitch_deg)),
     ]
     return max(parts, key=lambda p: p[1] * p[2])
+
+
+def condensation(surface: tuple[str, float, float], t_in: float, rh_in: float,
+                 t_out: float) -> Optional[tuple[float, float]]:
+    """(T поверхности, T росы), если поверхность холоднее точки росы; иначе None."""
+    if t_in <= t_out:
+        return None
+    _, u, r_si = surface
+    t_si = t_in - u * r_si * (t_in - t_out)
+    t_dew = dew_point_c(t_in, rh_in)
+    return (t_si, t_dew) if t_si < t_dew else None
+
+
+@dataclass(frozen=True)
+class TunnelTarget:
+    section_m2: float                    # у клеток — свободное сечение
+    speed_ms: tuple[float, float]        # у клеток — в проходах
+    flow_m3h: tuple[float, float]
+    source_id: str
+
+
+def tunnel_target(g: HouseGeometry, housing: str, cage_rows: tuple[CageRow, ...]) -> TunnelTarget:
+    """Цель туннеля корпуса: пол — Cobb §9.7 (больший из двух критериев), клетки — практика."""
+    if housing == "cages":
+        section = cage_free_section_m2(g, cage_rows)
+        speed = CAGE_AISLE_SPEED_MS
+        return TunnelTarget(section, speed, tuple(v * section * 3600.0 for v in speed),
+                            "practice_cage_tunnel_2026")
+    section = g.width_m * _mean_height_m(g)
+    volume_m3 = section * g.length_m
+    floor_m2 = g.length_m * g.width_m
+    flow = tuple(max(n * floor_m2, volume_m3 * 3600.0 / t)
+                 for n, t in zip(TUNNEL_CAPACITY_M3H_M2, TUNNEL_AIR_EXCHANGE_S))
+    return TunnelTarget(section, tuple(q / 3600.0 / section for q in flow), flow, "cobb_2021_9_7")
+
+
+def build_envelope(g: HouseGeometry, ua_w_per_k: Optional[float], walls: Optional[Surface],
+                   roof: Optional[Surface], end_walls: Optional[Surface],
+                   assumptions: list, source_ids: set) -> tuple[float, Optional[EnvelopeUA]]:
+    """UA корпуса: измеренный как есть или по конструкции (с допущениями и источниками)."""
+    if ua_w_per_k is not None:
+        return ua_w_per_k, None
+    if walls is None or roof is None:
+        raise CalcError("validation_failed", field="envelope")
+    env = envelope_ua(g, walls, roof, end_walls)
+    source_ids |= {"br443_2019_s3", "br443_2019_s4_3"}
+    assumptions += [Note("materials_iso_10456"), Note("floor_not_included")]
+    return env.ua_w_per_k, env
+
+
+def cage_notes(assumptions: list, source_ids: set) -> None:
+    source_ids |= {"aarnink_2018", "practice_cage_tunnel_2026"}
+    assumptions += [Note("cages_heat_split_bounded"), Note("cages_bird_speed_from_aisle"),
+                    Note("cage_through_flow_not_included")]
+
+
+def airtightness_q4(floor_m2: float, airtight: Optional[Airtightness], assumptions: list) -> float:
+    q4, assumed_class = leak_at_4pa_m3h(floor_m2, airtight)
+    if assumed_class:
+        assumptions.append(Note("airtightness_class_assumed", {
+            "class": assumed_class, "relative_leakage": AIRTIGHTNESS_CLASS_RELATIVE[assumed_class]}))
+    return q4
 
 
 # ─── Расчёт ───────────────────────────────────────────────────────────────────
@@ -250,52 +321,28 @@ def _design(inp: DesignInput) -> DesignResult:
     source_ids = {"cigr_1984", "cigr_2002", "ross_2025_t2_5", "cobb_2021_9_1", "uga_leakage"}
     cages = inp.housing == "cages"
 
-    # ── Ограждения ──
-    env: Optional[EnvelopeUA] = None
-    if inp.ua_w_per_k is not None:
-        ua = inp.ua_w_per_k
-    else:
-        if inp.walls is None or inp.roof is None:
-            raise CalcError("validation_failed", field="envelope")
-        env = envelope_ua(g, inp.walls, inp.roof, inp.end_walls)
-        ua = env.ua_w_per_k
-        source_ids |= {"br443_2019_s3", "br443_2019_s4_3"}
-        assumptions.append(Note("materials_iso_10456"))
-        assumptions.append(Note("floor_not_included"))
-
-    # ── Утечки ──
+    # ── Ограждения и утечки ──
+    ua, env = build_envelope(g, inp.ua_w_per_k, inp.walls, inp.roof, inp.end_walls,
+                             assumptions, source_ids)
     floor_m2 = g.length_m * g.width_m
-    q4_m3h, assumed_class = leak_at_4pa_m3h(floor_m2, inp.airtightness)
-    if assumed_class:
-        assumptions.append(Note("airtightness_class_assumed", {
-            "class": assumed_class, "relative_leakage": AIRTIGHTNESS_CLASS_RELATIVE[assumed_class]}))
+    q4_m3h = airtightness_q4(floor_m2, inp.airtightness, assumptions)
 
     # ── Туннель: сечение и цель скорости ──
-    house_section = g.width_m * _mean_height_m(g)
+    target = tunnel_target(g, inp.housing, inp.cage_rows)
+    section, speed_range, tunnel_range = target.section_m2, target.speed_ms, target.flow_m3h
+    tunnel_source = target.source_id
     if cages:
-        section = cage_free_section_m2(g, inp.cage_rows)
-        speed_range = CAGE_AISLE_SPEED_MS
-        tunnel_range = tuple(v * section * 3600.0 for v in speed_range)
-        tunnel_source = "practice_cage_tunnel_2026"
-        source_ids |= {"aarnink_2018", tunnel_source}
-        assumptions += [Note("cages_heat_split_bounded"), Note("cages_bird_speed_from_aisle"),
-                        Note("cage_through_flow_not_included")]
-    else:
-        section = house_section
-        volume_m3 = house_section * g.length_m
-        tunnel_range = tuple(max(n * floor_m2, volume_m3 * 3600.0 / t)
-                             for n, t in zip(TUNNEL_CAPACITY_M3H_M2, TUNNEL_AIR_EXCHANGE_S))
-        speed_range = tuple(q / 3600.0 / section for q in tunnel_range)
-        tunnel_source = "cobb_2021_9_7"
+        cage_notes(assumptions, source_ids)
     source_ids.add(tunnel_source)
 
     # Параметры модели: падёж и цикл — из запроса; туннель в днях — на верхней
     # границе цели (проектная мощность), остальное — значения интерфейса по умолчанию
+    share = CAGE_BIRD_SPEED_SHARE if cages else 1.0
     winter_params = CalcParams(total_mortality_pct=inp.mortality_pct, cycle_days=inp.cycle_days,
-                               v_tunnel_ms=speed_range[1])
+                               v_tunnel_ms=speed_range[1], bird_speed_share=share)
     # Клетки летом — явное тепло на уровне птицы (верхний край вилки): больше воздуха
     summer_params = CalcParams(total_mortality_pct=inp.mortality_pct, cycle_days=inp.cycle_days,
-                               v_tunnel_ms=speed_range[1],
+                               v_tunnel_ms=speed_range[1], bird_speed_share=share,
                                bird_heat_model=animal_heat_per_bird if cages else house_heat_per_bird)
     winter_thermal = HouseThermal(ua_w_per_k=ua, heater=inp.heater)
     summer_thermal = HouseThermal(ua_w_per_k=ua)
@@ -316,7 +363,7 @@ def _design(inp: DesignInput) -> DesignResult:
 
     days: list[DesignDay] = []
     humid_days, short_days, leak_days, condensation_days = [], [], [], []
-    coldest = _coldest_surface(env)
+    coldest = coldest_surface(env, ua, g)
     worst_condensation: Optional[tuple[float, float]] = None
 
     for d in range(1, inp.cycle_days + 1):
@@ -345,14 +392,12 @@ def _design(inp: DesignInput) -> DesignResult:
             leak_days.append(d)
 
         # Конденсат — на самой холодной поверхности: T_si = T_in − U·R_si·ΔT
-        if coldest is not None and w.rv_percent is not None and w.min_temp_c > inp.winter_design_c:
-            _, u, r_si = coldest
-            t_si = w.min_temp_c - u * r_si * (w.min_temp_c - inp.winter_design_c)
-            t_dew = dew_point_c(w.min_temp_c, w.rv_percent)
-            if t_si < t_dew:
-                condensation_days.append(d)
-                if worst_condensation is None or t_dew - t_si > worst_condensation[1] - worst_condensation[0]:
-                    worst_condensation = (t_si, t_dew)
+        cond = (condensation(coldest, w.min_temp_c, w.rv_percent, inp.winter_design_c)
+                if w.rv_percent is not None else None)
+        if cond is not None:
+            condensation_days.append(d)
+            if worst_condensation is None or cond[1] - cond[0] > worst_condensation[1] - worst_condensation[0]:
+                worst_condensation = cond
 
     # ── Находки ──
     if humid_days:

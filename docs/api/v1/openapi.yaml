@@ -99,8 +99,8 @@ paths:
                 value:
                   house: { length_m: 120, width_m: 16, wall_height_m: 2.5, ridge_height_m: 4.5 }
                   envelope: { ua_w_per_k: 3200 }
-                  flock: { birds: 30000, growth_profile_id: ross308, age_days: 21, housing: floor_litter }
-                  conditions: { outdoor_t_c: -12, outdoor_rh_pct: 85, target_rh_pct: 60 }
+                  flock: { birds: 30000, growth_profile_id: ross308, age_days: 21, housing: floor_litter, target_rh_pct: 60 }
+                  conditions: { outdoor_t_c: -12, outdoor_rh_pct: 85 }
                   heaters: { type: gas_open, power_kw: 300 }
       responses:
         "201":
@@ -608,19 +608,25 @@ components:
           description: "Нет — без теплового баланса и без проверки конденсата"
           allOf: [{ $ref: "#/components/schemas/Envelope" }]
         flock:
-          allOf:
-            - $ref: "#/components/schemas/Flock"
-            - type: object
-              required: [age_days]
-              properties:
-                age_days: { type: integer, minimum: 0, maximum: 70 }
+          type: object
+          description: |
+            `birds` — ТЕКУЩЕЕ поголовье: падежа (`mortality_pct`) здесь нет — он уже в
+            числе, которое ввёл клиент, и был бы учтён дважды.
+          required: [birds, growth_profile_id, housing, age_days]
+          additionalProperties: false
+          properties:
+            birds: { type: integer, minimum: 1, maximum: 200000 }
+            growth_profile_id: { type: string, pattern: "^[a-z0-9][a-z0-9_-]{0,63}$", example: ross308 }
+            housing: { type: string, enum: [floor_litter, cages] }
+            age_days: { type: integer, minimum: 0, maximum: 70 }
+            target_rh_pct: { type: number, minimum: 40, maximum: 70, description: "Нет — RH профиля" }
         conditions:
           type: object
           required: [outdoor_t_c, outdoor_rh_pct]
+          additionalProperties: false
           properties:
             outdoor_t_c: { type: number, minimum: -60, maximum: 55 }
             outdoor_rh_pct: { type: number, minimum: 0, maximum: 100 }
-            target_rh_pct: { type: number, minimum: 40, maximum: 70 }
         heaters: { $ref: "#/components/schemas/Heaters" }
 
     RequirementResult:
@@ -631,13 +637,19 @@ components:
         qmin_basis: { type: string, enum: [co2, moisture] }
         qmax_m3h: { type: number }
         target_temp_c: { type: number, description: "Уставка профиля на день с поправкой на целевую RH" }
+        weight_g: { type: number, description: "Масса по профилю на этот день" }
+        air_exchange_m3h: { type: number, description: "Только с envelope: обмен для обогрева max(Qmin, утечка при 4 Па)" }
         tunnel:
           type: object
-          required: [allowed, target_speed_ms, free_section_m2]
+          required: [allowed, active, target_speed_ms, free_section_m2]
           properties:
-            allowed: { type: boolean, description: "Возраст и наружная T допускают туннель" }
+            allowed: { type: boolean, description: "Возраст (≥ 14 дн.) и наружная T (≥ 18 °C) допускают туннель" }
+            active: { type: boolean, description: "Тепловой баланс требует туннеля (больше 50 % его расхода)" }
+            effective_temp_c: { type: number, description: "Только при active: ощущаемая T у вентиляторов (воздух нагрет по длине корпуса)" }
             target_speed_ms:
-              description: "Пол — скорость в сечении (Cobb §9.7); клетки — скорость в проходах, 4–5 м/с"
+              description: |
+                Пол — скорость в сечении (Cobb §9.7, как у проекта); клетки — в проходах,
+                4–5 м/с. Не выше предела Cobb §9.7 по возрасту для скорости у птицы.
               allOf: [{ $ref: "#/components/schemas/Range" }]
             free_section_m2: { type: number, description: "Сечение корпуса минус клеточные ряды" }
             bird_speed_ms:
