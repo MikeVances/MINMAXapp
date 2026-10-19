@@ -93,7 +93,7 @@
     day: 'col_day', body_weight_g: 'col_weight', min_temp_c: 'col_min_temp', rv_percent: 'col_rh',
     name: 'profile_name_lbl', default_growth_profile: 'growth_profile_lbl',
     cycle_days: 'cycle_days_lbl', v_tunnel_ms: 'v_tunnel_lbl', safety_factor_qmin: 'safety_factor_lbl',
-    tunnel_min_day: 'tunnel_min_day_lbl', tunnel_min_temp_c: 'tunnel_min_temp_lbl',
+    tunnel_min_day: 'tunnel_min_day_lbl', tunnel_min_temp_c: 'tunnel_min_temp_lbl', altitude_m: 'altitude_lbl',
     total_mortality_pct: 'mortality_lbl',
   };
 

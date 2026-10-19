@@ -306,7 +306,7 @@ def compute(ci: CalcInput) -> CalcResult:
     # Потолок режима для влажностного Qmin — тот же, что ограничивает Qmax
     moisture_ceiling, ceiling_needs_geometry = regime_ceiling_m3h(
         age, tunnel_min_day, q_min_co2, tunnel_flow_for_age)
-    _rho_in = 353.05 / (t_target_inside + 273.15)
+    _rho_in = air_density_kg_m3(t_target_inside)   # с поправкой на высоту фермы
 
     if rv_percent is not None:
         W_inside_max = humidity_ratio_g_per_kg(t_target_inside, rv_percent)

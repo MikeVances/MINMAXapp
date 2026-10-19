@@ -16,6 +16,7 @@ function renderConfig() {
       <div class="d-grid gap-10">
         <label class="kv m-0"><span>${t('cycle_days_lbl')}</span><span><input id="cycle_days" type="text" data-num data-int inputmode="numeric" data-min="21" data-max="56" value="${cfg.cycle_days ?? 42}"> ${t('unit_days')}</span></label>
         <label class="kv m-0"><span>${t('mortality_lbl')}</span><span><input id="mort_total" type="text" data-num inputmode="decimal" data-min="0" data-max="100" value="${(100 - (cfg.total_mortality_pct ?? 4)).toFixed(2)}"> %</span></label>
+        <label class="kv m-0"><span>${t('altitude_lbl')}</span><span><input id="altitude" type="text" data-num inputmode="decimal" data-min="0" data-max="4000" value="${cfg.altitude_m ?? 0}"> ${t('unit_m')}</span></label>
       </div>
 
       <hr class="divider my-14 mx-0">
@@ -41,9 +42,11 @@ function renderConfig() {
       if (val !== null && !NumField.problem(e.target)) apply(val);
     });
   };
-  const NUMBER_IDS = ['cycle_days', 'mort_total', 'v_tunnel', 'safety_factor', 'tunnel_min_day', 'tunnel_min_temp'];
+  const NUMBER_IDS = ['cycle_days', 'mort_total', 'altitude', 'v_tunnel', 'safety_factor', 'tunnel_min_day', 'tunnel_min_temp'];
   bindNumber('cycle_days',      v => { cfg.cycle_days = v; });
   bindNumber('mort_total',      v => { cfg.total_mortality_pct = 100 - v; });
+  // Высота площадки: на 1000 м воздух на 11 % реже — меняет влагу, тепло и UA
+  bindNumber('altitude',        v => { cfg.altitude_m = v; });
   bindNumber('v_tunnel',        v => { cfg.v_tunnel_ms = v; });
   bindNumber('safety_factor',   v => { cfg.safety_factor_qmin = v; });
   bindNumber('tunnel_min_day',  v => { cfg.tunnel_min_day = v; });

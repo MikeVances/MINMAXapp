@@ -33,6 +33,9 @@ class AppConfig:
     tunnel_min_day: int = 14            # минимальный возраст (дней) для включения туннеля
     tunnel_min_temp_c: float = 18.0     # минимальная наружная температура для туннеля (°C)
 
+    # Высота фермы над уровнем моря, м — давление площадки (psychro.site_pressure_pa)
+    altitude_m: float = 0.0
+
 
 def load_app_config(path: str = APP_CONFIG_PATH) -> AppConfig:
     if not os.path.exists(path):

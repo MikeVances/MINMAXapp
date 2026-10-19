@@ -32,6 +32,7 @@ import os
 from dataclasses import dataclass, asdict, field, fields
 from typing import Callable, Optional
 
+from .psychro import P_ATM_PA, site_pressure_pa
 from .bird_heat import house_heat_per_bird
 
 from .errors import CalcError
@@ -157,8 +158,11 @@ AIR_CP_J_PER_KG_K = 1006.0   # удельная теплоёмкость сух�
 
 
 def air_density_kg_m3(t_c: float) -> float:
-    """Плотность воздуха при 101.325 кПа: ρ = 353.05 / T[K]."""
-    return 353.05 / (t_c + 273.15)
+    """
+    Плотность сухого воздуха на площадке: ρ = 353.05 / T[K] при 101.325 кПа,
+    пересчитанная на давление по высоте фермы (psychro.site_pressure_pa).
+    """
+    return 353.05 / (t_c + 273.15) * site_pressure_pa() / P_ATM_PA
 
 
 def calculate_ua_coefficient(

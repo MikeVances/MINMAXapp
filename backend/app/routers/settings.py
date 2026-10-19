@@ -33,6 +33,9 @@ class AppCfg(BaseModel):
     tunnel_min_day: int = Field(14, ge=1, le=42)
     tunnel_min_temp_c: float = Field(18.0, ge=0.0, le=35.0)
 
+    # Высота над уровнем моря: на 1000 м воздух на 11 % реже (ASHRAE, станд. атмосфера)
+    altitude_m: float = Field(0.0, ge=0.0, le=4000.0)
+
 
 @router.get("/app-config", response_model=AppCfg)
 def get_app_cfg():
