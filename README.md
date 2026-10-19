@@ -117,6 +117,16 @@ storage — every device has its own. Heat-loss data — dimensions, heaters and
 is stored on the server per house id (`data/thermal_config.json`, `{"houses": {...}}`); renaming a
 house on the home page moves its record. Settings and growth profiles are shared server-side.
 
+**Updating the copy on the internal server.** `scripts/deploy_lan.sh` does the whole update and
+checks it: git and pip as the repository owner, local edits on the server stashed (not lost),
+`pull --ff-only`, `pip install`, service restart, then it waits for `/healthz` and compares the
+commit in `/version` with the one just pulled; if the new version does not come up it rolls back to
+the previous revision. `--dry-run` only lists the incoming commits.
+
+```bash
+ssh -t cdto@192.168.10.245 sudo /srv/minmax/scripts/deploy_lan.sh
+```
+
 **Backup.** Farm Settings → *Download farm data* saves settings, your growth profiles, heat-loss data
 per house and this browser's houses to one JSON file; *Restore from file* puts them back (all parts are
 validated before anything is written). Use it before deploying to a host with an ephemeral disk.
