@@ -170,9 +170,12 @@ paths:
       operationId: listHousingSystems
       summary: Способы содержания и их статус поддержки
       description: |
-        `floor_litter` — поддерживается (CIGR 2002, с подстилкой). `cages` —
-        объявлен, но отвечает 422 `housing_not_supported`, пока не найден
-        источник доли скрытой теплоты и плотности посадки для клеток.
+        `floor_litter` — CIGR 2002, уровень корпуса (испарение из подстилки
+        уже внутри формулы). `cages` — помёт на лентах, отдельной формулы
+        для клеточных бройлеров нет: деление тепла берётся по худшему случаю
+        для каждой величины (см. README, «Клетки») с допущением
+        `cages_heat_split_bounded`; охлаждение обдувом в туннеле не
+        засчитывается (`cages_no_wind_chill`).
       responses:
         "200":
           description: Список способов содержания
@@ -399,6 +402,12 @@ components:
         heaters:
           description: "Есть — проверить их достаточность; нет — только требуемая мощность"
           allOf: [{ $ref: "#/components/schemas/Heaters" }]
+        heating_margin_pct:
+          type: number
+          minimum: 0
+          maximum: 50
+          default: 15
+          description: "Запас к пиковой мощности обогрева в equipment.heating_kw (практика поставщиков 10–20 %); в days[] — без запаса"
 
     DesignDay:
       type: object

@@ -19,7 +19,7 @@
 | 422 | <a id="validation_failed"></a>`validation_failed` | Поле вне диапазона или не того вида; подробности — в `errors[]` по полям | — |
 | 422 | <a id="profile_day_missing"></a>`profile_day_missing` | В профиле нет массы или температуры на нужный день | `id`, `day` |
 | 422 | <a id="rh_out_of_table"></a>`rh_out_of_table` | Целевая RH вне таблицы Ross 2025 2.5 (40–70 %) | `rh`, `min`, `max` |
-| 422 | <a id="housing_not_supported"></a>`housing_not_supported` | Способ содержания объявлен, но расчёт для него без источника не делается (`cages`) | `housing` |
+| 422 | <a id="housing_not_supported"></a>`housing_not_supported` | Способ содержания объявлен, но расчёт для него без источника не делается (сейчас таких нет; код — для будущих) | `housing` |
 | 422 | <a id="envelope_implausible"></a>`envelope_implausible` | U оболочки вне 0.1–8 Вт/(м²·К) — ошибка в слоях или в UA | `u`, `min`, `max` |
 | 429 | <a id="rate_limited"></a>`rate_limited` | Превышен лимит частоты; заголовок `Retry-After` | `limit`, `window_s` |
 | 502 | <a id="climate_unavailable"></a>`climate_unavailable` | Open-Meteo не ответил или вернул меньше года данных | — |
@@ -48,3 +48,6 @@
 | `floor_not_included` | Пол в UA по конструкции не входит (теплообмен через грунт и массу) |
 | `heating_safety_margin` | К пиковой мощности обогрева добавлен запас, `params.pct` |
 | `site_pressure_from_altitude` | Давление площадки по стандартной атмосфере, `params.altitude_m` |
+| `cages_heat_split_bounded` | Клетки: зима (обогрев, влажностный Qmin) — доля явного тепла корпуса CIGR 2002 (как с подстилкой); лето (Qmax) — 0.67 уровня птицы (Aarnink 2018). Каждая величина — по худшему случаю |
+| `cages_no_wind_chill` | Клетки: охлаждение обдувом в туннеле не засчитано — клетки гасят скорость у птицы |
+| `materials_iso_10456` | λ материалов — расчётные значения ISO 10456; сэндвич-панель — U из паспорта, если передан |
