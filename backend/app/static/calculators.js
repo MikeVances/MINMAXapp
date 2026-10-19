@@ -303,6 +303,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const heaterNoteHtml = heaterNote
       ? `<p class="warn fs-12 mt-8 mb-0">⚠ ${t(heaterNote + '_note')}</p>`
       : '';
+    // Конденсат на ограждениях: поверхность холоднее точки росы внутри (по UA своего корпуса)
+    const condRow = d.rows.find(r => r.condensation_risk);
+    const condWarn = condRow
+      ? `<p class="warn fs-12 mt-8 mb-0">⚠ ${t('condensation_note', {
+          day: condRow.day, ts: fmtNum(condRow.surface_temp_c, 1), td: fmtNum(condRow.dew_point_inside_c, 1) })}</p>`
+      : '';
     // Туннельный Qmax считается из сечения корпуса — без размеров он равен Qmin
     const geomWarn = d.rows.some(r => r.house_geometry_missing)
       ? `<p class="warn fs-12 mt-8 mb-0">⚠ ${t('geometry_missing_note')}</p>`
@@ -373,6 +379,7 @@ document.addEventListener('DOMContentLoaded', () => {
       ${humWarn}
       ${heatWarn}
       ${heaterNoteHtml}
+      ${condWarn}
       ${calWarn}
       ${geomWarn}
       ${physBlock}

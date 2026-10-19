@@ -13,6 +13,7 @@ from .bird_heat import house_heat_per_bird, house_sensible_fraction
 from .ventilation_calc import calc_q_min_per_bird
 from .app_config import load_app_config
 from .building_thermal import (
+    surface_condensation,
     AIR_CP_J_PER_KG_K,
     air_density_kg_m3,
     ventilation_heat_w,
@@ -144,6 +145,10 @@ class CalcResult:
     heater_insufficient: bool = False
     # Как учтены горелки без найденной загрузки: heater_data_missing | heater_full_duty_estimate
     heater_note: Optional[str] = None
+    # Конденсат на ограждениях (нужны UA своего корпуса и размеры): T поверхности, T росы
+    surface_temp_c: Optional[float] = None
+    dew_point_inside_c: Optional[float] = None
+    condensation_risk: bool = False
     # Почему калибровка UA не применена: {code, params} или None
     calibration_ignored: Optional[dict] = None
     # Профиль роста, по которому шёл расчёт (видно, какие данные кросса использованы)
@@ -395,6 +400,14 @@ def compute(ci: CalcInput) -> CalcResult:
             heater_note = "heater_full_duty_estimate"
         # Электрические и непрямого нагрева воздух птичника не загрязняют — поправки нет
 
+    # Конденсат на ограждениях при целевой RH внутри (ASHRAE, теплопередача через стенку)
+    surface_temp = dew_in = None
+    condensation = False
+    if _ua_coeff is not None and _thermal_cfg is not None and _thermal_cfg.building \
+            and rv_percent is not None and t_target_inside > ci.outside_t:
+        surface_temp, dew_in, condensation = surface_condensation(
+            _ua_coeff, _thermal_cfg.building, t_target_inside, rv_percent, ci.outside_t)
+
     # Влажность упёрлась в потолок, а потолок без размеров корпуса только оценён
     if humidity_uncontrollable and ceiling_needs_geometry:
         house_geometry_missing = True
@@ -426,6 +439,9 @@ def compute(ci: CalcInput) -> CalcResult:
         growth_profile_id=profile_id,
         humidity_uncontrollable=humidity_uncontrollable,
         heater_note=heater_note,
+        surface_temp_c=surface_temp,
+        dew_point_inside_c=dew_in,
+        condensation_risk=condensation,
         heater_insufficient=heater_insufficient,
         calibration_ignored=calibration_ignored,
     )

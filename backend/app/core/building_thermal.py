@@ -137,6 +137,31 @@ def calibration_problem(cal: "CalibrationTest", building: Optional["BuildingDime
     return None
 
 
+# Сопротивление теплоотдаче у внутренней поверхности, м²·К/Вт: 0.13 — стены,
+# горизонтальный поток (ASHRAE Fundamentals гл. 26; то же значение в ISO 6946).
+# Для кровли (поток вверх) 0.10 — меньше риск; берём 0.13, в безопасную сторону
+R_SI_M2K_W = 0.13
+
+
+def surface_condensation(ua_w_per_k: float, building: "BuildingDimensions",
+                         t_inside_c: float, rh_inside_pct: float, t_outside_c: float) -> tuple[float, float, bool]:
+    """
+    Риск конденсата на ограждениях: (T внутренней поверхности, T росы внутри, риск).
+
+    Средний U оболочки = UA / площадь (стены, кровля, торцы). Через ограждение идёт
+    тот же поток, что и от воздуха к поверхности: U·ΔT = (T_in − T_si) / R_si, откуда
+      T_si = T_in − U·R_si·(T_in − T_out).
+    Ниже точки росы внутреннего воздуха — на стенах и кровле конденсат: мокрая
+    подстилка у стен, капель с кровли. UA калибровки включает и инфильтрацию через
+    щели, поэтому U тут завышен — оценка в безопасную сторону (риск — раньше).
+    """
+    from .psychro import dew_point_c
+    u = ua_w_per_k / envelope_area_m2(building)
+    t_si = t_inside_c - u * R_SI_M2K_W * (t_inside_c - t_outside_c)
+    t_dew = dew_point_c(t_inside_c, rh_inside_pct)
+    return t_si, t_dew, t_si < t_dew
+
+
 def usable_ua(config: "ThermalConfig", house_id: Optional[str]) -> tuple[Optional[float], Optional[dict]]:
     """
     UA для расчёта корпуса house_id и причина, если калибровку применить нельзя.

@@ -166,6 +166,9 @@ class SummaryRow(BaseModel):
     humidity_uncontrollable: bool = False
     heater_insufficient: bool = False   # горелок не хватает даже на 100 %
     heater_note: str | None = None      # горелки без загрузки: heater_data_missing | heater_full_duty_estimate
+    condensation_risk: bool = False     # поверхность ограждения холоднее точки росы внутри
+    surface_temp_c: float | None = None
+    dew_point_inside_c: float | None = None
     calibration_ignored: dict | None = None   # почему UA калибровки не применён: {code, params}
 
 
@@ -237,6 +240,9 @@ def summary7(payload: SummaryIn):
                 humidity_uncontrollable=cr.humidity_uncontrollable,
                 heater_insufficient=cr.heater_insufficient,
                 heater_note=cr.heater_note,
+                condensation_risk=cr.condensation_risk,
+                surface_temp_c=None if cr.surface_temp_c is None else round(cr.surface_temp_c, 1),
+                dew_point_inside_c=None if cr.dew_point_inside_c is None else round(cr.dew_point_inside_c, 1),
                 calibration_ignored=cr.calibration_ignored,
             )
         )
