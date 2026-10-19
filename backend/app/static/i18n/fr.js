@@ -613,6 +613,7 @@
     srv_validation_failed:           'champ invalide {field}',
     srv_cage_section_missing:        'un bâtiment en cages nécessite la section des batteries (rangées, largeur, hauteur)',
     srv_cage_section_implausible:    'les batteries ne tiennent pas dans la section : plus hautes que le mur, plus larges que le bâtiment ou seulement {free_pct} % libre (au moins {min_pct} % requis)',
+    srv_fan_curve_invalid:           'courbe du ventilateur invalide au point {index} : la pression doit croître et le débit décroître',
     srv_calibration_other_house:     'la calibration concerne le bâtiment \'{house_id}\'',
     cal_ignored_note:                'La calibration des pertes thermiques n’est pas utilisée dans les calculs : {reason}.',
 

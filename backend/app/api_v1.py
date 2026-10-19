@@ -10,15 +10,18 @@
 """
 from __future__ import annotations
 
+import threading
 import uuid
 from typing import Any, Literal, Optional
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .core import construction
+from .core import design_climate
+from .core.tunnel_design import Pads
 from .core import ventilation_design as vd
 from .core.build_info import APP_VERSION, build_info
 from .core.building_thermal import HeaterConfig
@@ -37,7 +40,7 @@ api = FastAPI(title="MINMAX Ventilation Engineering API", version=API_VERSION,
 # HTTP-статус по коду ошибки ядра. Ссылка на несуществующий справочный объект — 404,
 # всё остальное, что ядро отвергло по смыслу, — 422 (данные разобраны, но считать по
 # ним нельзя)
-_STATUS_BY_CODE = {"profile_not_found": 404, "material_not_found": 404}
+_STATUS_BY_CODE = {"profile_not_found": 404, "material_not_found": 404, "climate_unavailable": 502}
 
 
 def _problem(status: int, code: str, title: str, params: Optional[dict] = None,
@@ -188,6 +191,20 @@ class HeatersIn(_Strict):
     power_kw: float = Field(..., gt=0, le=5000)
 
 
+class PadsIn(_Strict):
+    type: Literal["7090", "7060", "5090"] = "7090"
+    thickness_mm: Literal[50, 75, 100, 150, 200, 300] = 150
+
+
+class FanPointIn(_Strict):
+    static_pressure_pa: float = Field(..., ge=0, le=150)
+    flow_m3h: float = Field(..., gt=0, le=100_000)
+
+
+class FanCurveIn(_Strict):
+    points: list[FanPointIn] = Field(..., min_length=2, max_length=12)
+
+
 class DesignRequest(_Strict):
     house: HouseIn
     envelope: EnvelopeIn
@@ -195,9 +212,8 @@ class DesignRequest(_Strict):
     climate: ClimateIn
     heaters: Optional[HeatersIn] = None
     heating_margin_pct: float = Field(vd.DEFAULT_HEATING_MARGIN_PCT, ge=0, le=50)
-    # Давление туннеля и характеристика вентилятора — этап 3b; поля уже в контракте,
-    # и принять их сейчас лучше, чем отвергать запрос, собранный по контракту
-    tunnel_fan: Optional[dict] = None
+    pads: Optional[PadsIn] = None
+    tunnel_fan: Optional[FanCurveIn] = None
     tunnel_static_pressure_pa: Optional[float] = Field(None, gt=0, le=150)
 
 
@@ -251,6 +267,10 @@ def create_ventilation_design(req: DesignRequest) -> JSONResponse:
         heater=HeaterConfig("gas_open" if req.heaters.type == "gas_open" else "electric", req.heaters.power_kw)
         if req.heaters else None,
         heating_margin_pct=req.heating_margin_pct,
+        pads=Pads(req.pads.type, req.pads.thickness_mm) if req.pads else None,
+        fan_curve=tuple((p.static_pressure_pa, p.flow_m3h) for p in req.tunnel_fan.points)
+        if req.tunnel_fan else (),
+        tunnel_static_pressure_pa=req.tunnel_static_pressure_pa,
     ))
     body: dict[str, Any] = {
         "envelope_ua_w_per_k": result.envelope_ua_w_per_k,
@@ -298,6 +318,35 @@ def list_growth_profiles() -> JSONResponse:
         data.append(item)
     # Пользовательские профили меняются без новой версии — не кэшировать надолго
     return JSONResponse({"data": data}, headers={"Cache-Control": "no-cache"})
+
+
+# Расчётный климат по точке: первый запрос ~20 с (10 лет часов ERA5), повтор — из
+# памяти процесса. Ключ — координаты с шагом 0.1° (~11 км): ближе ERA5 (сетка 0.25°)
+# всё равно не различает. Кэш живёт до перезапуска — данные за 2015–2024 не меняются
+_climate_cache: dict[tuple[float, float], dict] = {}
+_climate_lock = threading.Lock()
+
+
+@api.get("/climate-designs")
+def get_climate_design(latitude: float = Query(..., ge=-90, le=90),
+                       longitude: float = Query(..., ge=-180, le=180)) -> JSONResponse:
+    key = (round(latitude, 1), round(longitude, 1))
+    with _climate_lock:
+        cached = _climate_cache.get(key)
+    if cached is None:
+        # Вне блокировки: 20 с сети не должны держать другие точки
+        temps, rhs, elevation = design_climate.fetch_hourly(*key)
+        c = design_climate.design_conditions(temps, rhs, elevation)
+        cached = {
+            "winter_design_c": c.heating_996_c, "summer_design_db_c": c.cooling_04_db_c,
+            "summer_design_rh_pct": c.cooling_04_rh_pct, "summer_mcwb_c": c.cooling_04_mcwb_c,
+            "evap_wb_c": c.evap_04_wb_c, "elevation_m": c.elevation_m,
+            "source_id": "era5_open_meteo", "citation": design_climate.SOURCE,
+            "latitude": key[0], "longitude": key[1],
+        }
+        with _climate_lock:
+            _climate_cache[key] = cached
+    return JSONResponse(cached, headers=_CATALOG_CACHE)
 
 
 @api.get("/housing-systems")

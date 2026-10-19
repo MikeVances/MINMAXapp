@@ -614,6 +614,7 @@
     srv_validation_failed:           'invalid field {field}',
     srv_cage_section_missing:        'a cage house needs the cage-row cross-section (rows, width, height)',
     srv_cage_section_implausible:    'cage rows do not fit the cross-section: taller than the wall, wider than the house, or only {free_pct} % free (at least {min_pct} % needed)',
+    srv_fan_curve_invalid:           'fan curve is invalid at point {index}: pressure must rise and flow must fall',
     srv_calibration_other_house:     'the calibration belongs to house \'{house_id}\'',
     cal_ignored_note:                'Heat-loss calibration is not used in calculations: {reason}.',
 

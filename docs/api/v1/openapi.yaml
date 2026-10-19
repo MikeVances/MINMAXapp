@@ -476,6 +476,15 @@ components:
         heaters:
           description: "Есть — проверить их достаточность; нет — только требуемая мощность"
           allOf: [{ $ref: "#/components/schemas/Heaters" }]
+        pads:
+          description: |
+            Панели испарительного охлаждения на туннельном впуске. Есть — площадь
+            по проектной скорости UGA и их сопротивление по кривой SANHE входят
+            в давление туннеля; нет — впуск считается открытым торцом.
+          type: object
+          properties:
+            type: { type: string, enum: ["7090", "7060", "5090"], default: "7090" }
+            thickness_mm: { type: integer, enum: [50, 75, 100, 150, 200, 300], default: 150 }
         tunnel_fan:
           description: |
             Характеристика туннельного вентилятора из каталога. Есть — сервер
@@ -545,8 +554,8 @@ components:
             count: { type: integer, description: "Для верхней границы целевой скорости" }
             flow_per_fan_m3h: { type: number, description: "В рабочей точке, не паспорт 0 Па" }
             operating_pressure_pa: { type: number }
-        inlet_area_m2: { type: number }
-        pad_area_m2: { type: number, description: "Панель 150 мм при проектной скорости 1.78 м/с (UGA)" }
+        inlet_area_m2: { type: number, description: "Боковые клапаны минвентиляции под верх min_vent_fans_m3h: 750 cfm на ft² (UGA)" }
+        pad_area_m2: { type: number, description: "Только с pads: площадь при проектной скорости UGA (150 мм — 1.78 м/с, 100 мм — 1.14 м/с)" }
         heating_kw: { type: number, description: "Пиковая потребность за цикл с запасом (см. assumptions)" }
 
     Range:
@@ -723,3 +732,6 @@ components:
         evap_wb_c: { type: number, description: "0.4 % мокрый — предел панелей" }
         elevation_m: { type: number }
         source_id: { type: string, example: era5_open_meteo }
+        citation: { type: string, example: "ERA5 via Open-Meteo (CC BY 4.0), 2015–2024" }
+        latitude: { type: number, description: "Округлено до 0.1° — ключ кэша" }
+        longitude: { type: number }

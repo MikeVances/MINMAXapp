@@ -613,6 +613,7 @@
     srv_validation_failed:           'ungültiges Feld {field}',
     srv_cage_section_missing:        'für einen Käfigstall wird der Querschnitt der Käfigreihen benötigt (Reihen, Breite, Höhe)',
     srv_cage_section_implausible:    'Käfigreihen passen nicht in den Querschnitt: höher als die Wand, breiter als der Stall oder nur {free_pct} % frei (mindestens {min_pct} % nötig)',
+    srv_fan_curve_invalid:           'Ventilatorkennlinie ungültig an Punkt {index}: der Druck muss steigen und der Volumenstrom fallen',
     srv_calibration_other_house:     'die Kalibrierung gehört zu Stall \'{house_id}\'',
     cal_ignored_note:                'Die Wärmeverlust-Kalibrierung wird in Berechnungen nicht verwendet: {reason}.',
 

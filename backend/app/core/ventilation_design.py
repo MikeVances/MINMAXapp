@@ -30,7 +30,8 @@ from .construction import (
 )
 from .errors import CalcError
 from .growth_profiles import load_profile
-from .leakage_calc import RHO_AIR_KG_M3, _TIGHTNESS_THRESHOLDS
+from .leakage_calc import INLET_SPECIFIC_M3H_M2, RHO_AIR_KG_M3, _TIGHTNESS_THRESHOLDS
+from .tunnel_design import HIGH_TUNNEL_PRESSURE_PA, Pads, Resistance, pad_area_m2, select_fans
 from .psychro import dew_point_c, pressure_at_altitude_pa, site_pressure
 
 
@@ -83,6 +84,11 @@ SOURCES = {
                      "air exchange 40–50 s",
     "uga_leakage": "UGA Poultry House Leakage Estimating Spreadsheet 2014; Poultry411 Tightness Calculator",
     "ashrae_2017_ch1": "ASHRAE Handbook Fundamentals 2017, ch. 1 — psychrometrics, standard atmosphere",
+    "uga_inlet_750cfm": "UGA (Czarick): 750 cfm of fan capacity per ft² of sidewall inlet opening",
+    "uga_pad_velocity": "UGA (Czarick) Evaporative cooling pad design spreadsheet — 350 fpm (1.78 m/s) "
+                        "for 150 mm pads, 225 fpm (1.14 m/s) for 100 mm",
+    "sanhe_pads": "SANHE evaporative pad pressure-drop curves (digitised manufacturer data)",
+    "amca_210": "AMCA 210 — fan ratings at standard air 1.2 kg/m³",
     "practice_cage_tunnel_2026": "Owner's operating practice for cage houses, 2026-10-19: "
                                  "4–5 m/s in aisles for ~2–2.5 m/s at the birds",
 }
@@ -127,6 +133,11 @@ class DesignInput:
     target_rh_pct: Optional[float] = None
     heater: Optional[HeaterConfig] = None
     heating_margin_pct: float = DEFAULT_HEATING_MARGIN_PCT
+    # Туннель (этап 3b): панели на впуске, каталог вентилятора (давление Па, расход
+    # м³/ч) и замеренное давление на похожем корпусе
+    pads: Optional[Pads] = None
+    fan_curve: tuple[tuple[float, float], ...] = ()
+    tunnel_static_pressure_pa: Optional[float] = None
 
 
 # ─── Результат ────────────────────────────────────────────────────────────────
@@ -379,16 +390,20 @@ def _design(inp: DesignInput) -> DesignResult:
         assumptions.append(Note("site_pressure_from_altitude", {"altitude_m": inp.altitude_m}))
         source_ids.add("ashrae_2017_ch1")
 
+    min_vent_max = max(p_qmin.qmin_m3h, norm[1] * floor_m2)
     equipment = dict(
         min_vent_fans_m3h=dict(min=round(max(p_qmin.qmin_m3h, norm[0] * floor_m2)),
-                               max=round(max(p_qmin.qmin_m3h, norm[1] * floor_m2)),
-                               source_id="cobb_2021_9_1"),
+                               max=round(min_vent_max), source_id="cobb_2021_9_1"),
+        # Боковые клапаны минвентиляции под верх мощности её вентиляторов (UGA)
+        inlet_area_m2=round(min_vent_max / INLET_SPECIFIC_M3H_M2, 2),
         tunnel_fans_m3h=dict(min=round(tunnel_range[0]), max=round(tunnel_range[1]), source_id=tunnel_source),
         tunnel_air_speed_ms=dict(min=round(speed_range[0], 2), max=round(speed_range[1], 2),
                                  source_id=tunnel_source),
         tunnel_free_section_m2=round(section, 2),
         heating_kw=round(p_heat.heating_need_kw * (1.0 + margin / 100.0), 1),
     )
+    source_ids |= {"uga_inlet_750cfm", "amca_210"}
+    equipment.update(_tunnel_equipment(inp, section, tunnel_range[1], warnings, assumptions, source_ids))
 
     return DesignResult(
         envelope_ua_w_per_k=round(ua, 1),
@@ -397,6 +412,39 @@ def _design(inp: DesignInput) -> DesignResult:
         heaters_sufficient=(not short_days) if inp.heater is not None else None,
         profile_source=_profile_citation(profile),
     )
+
+
+def _tunnel_equipment(inp: DesignInput, section: float, q_design: float, warnings: list[Note],
+                      assumptions: list[Note], source_ids: set) -> dict:
+    """
+    Давление туннеля при проектном расходе (верх цели) и, если дан каталог, число
+    вентиляторов в рабочей точке. Панели — площадь по проектной скорости UGA.
+    """
+    out: dict = {}
+    pad_area = None
+    if inp.pads is not None:
+        pad_area = pad_area_m2(q_design, inp.pads)
+        out["pad_area_m2"] = round(pad_area, 1)
+        source_ids |= {"uga_pad_velocity", "sanhe_pads"}
+    measured = (q_design, inp.tunnel_static_pressure_pa) if inp.tunnel_static_pressure_pa else None
+    resistance = Resistance(section, inp.pads, pad_area, measured)
+    parts = resistance.parts(q_design)
+    out["tunnel_static_pressure_pa"] = {k: (round(v, 1) if isinstance(v, float) else v)
+                                        for k, v in vars(parts).items()}
+    if parts.basis == "estimated":
+        assumptions.append(Note("tunnel_length_loss_not_included"))
+    if parts.total > HIGH_TUNNEL_PRESSURE_PA:
+        warnings.append(Note("tunnel_pressure_high", {"pressure_pa": round(parts.total, 1)}, "warning"))
+
+    if inp.fan_curve:
+        sel = select_fans(inp.fan_curve, resistance, q_design)
+        out["tunnel_fans"] = dict(count=sel.count, flow_per_fan_m3h=round(sel.flow_per_fan_m3h),
+                                  operating_pressure_pa=round(sel.operating_pressure_pa, 1))
+        if sel.extrapolated:
+            warnings.append(Note("fan_curve_extrapolated", {
+                "pressure_pa": round(sel.operating_pressure_pa, 1),
+                "last_pa": inp.fan_curve[-1][0]}, "warning"))
+    return out
 
 
 def _profile_citation(profile) -> Optional[str]:

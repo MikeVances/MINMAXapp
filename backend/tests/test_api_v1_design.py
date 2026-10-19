@@ -73,7 +73,7 @@ def test_design_response_has_contract_fields(client):
         assert key in j["equipment"], key
     # Каждый source_id из ответа расшифрован в sources
     cited = {s["id"] for s in j["sources"]}
-    used = {v["source_id"] for v in j["equipment"].values() if isinstance(v, dict)}
+    used = {v["source_id"] for v in j["equipment"].values() if isinstance(v, dict) and "source_id" in v}
     assert used <= cited
 
 
