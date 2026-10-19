@@ -174,8 +174,9 @@ paths:
         уже внутри формулы). `cages` — помёт на лентах, отдельной формулы
         для клеточных бройлеров нет: деление тепла берётся по худшему случаю
         для каждой величины (см. README, «Клетки») с допущением
-        `cages_heat_split_bounded`; охлаждение обдувом в туннеле не
-        засчитывается (`cages_no_wind_chill`).
+        `cages_heat_split_bounded`. Туннель — по свободному сечению
+        (`house.cage_rows`): цель 4–5 м/с в проходах, чтобы у птицы в клетках
+        было ~2–2.5 м/с (`cages_bird_speed_from_aisle`).
       responses:
         "200":
           description: Список способов содержания
@@ -311,6 +312,24 @@ components:
         wall_height_m: { type: number, exclusiveMinimum: 0, maximum: 10 }
         ridge_height_m: { type: number, exclusiveMinimum: 0, maximum: 15, description: "Нет — плоская кровля (= стене)" }
         altitude_m: { type: number, minimum: 0, maximum: 4000, default: 0, description: "Давление площадки по стандартной атмосфере" }
+        cage_rows:
+          type: array
+          minItems: 1
+          maxItems: 20
+          description: |
+            Поперечное сечение клеточных батарей — обязательно при `housing: cages`
+            (нет — 422 `cage_section_missing`). Свободное сечение туннеля =
+            сечение корпуса − Σ count·width·height; по нему считается скорость в
+            проходах. Одинаковые ряды можно описать одной записью с `count`.
+          items: { $ref: "#/components/schemas/CageRow" }
+
+    CageRow:
+      type: object
+      required: [width_m, height_m]
+      properties:
+        count: { type: integer, minimum: 1, maximum: 20, default: 1 }
+        width_m: { type: number, exclusiveMinimum: 0, maximum: 5, description: "Ширина батареи поперёк корпуса" }
+        height_m: { type: number, exclusiveMinimum: 0, maximum: 10, description: "Высота батареи от пола" }
 
     Layer:
       type: object
@@ -428,7 +447,10 @@ components:
       properties:
         min_vent_fans_m3h: { $ref: "#/components/schemas/Range" }
         tunnel_fans_m3h: { $ref: "#/components/schemas/Range" }
-        tunnel_air_speed_ms: { $ref: "#/components/schemas/Range" }
+        tunnel_air_speed_ms:
+          description: "Пол — в сечении; клетки — в проходах между рядами"
+          allOf: [{ $ref: "#/components/schemas/Range" }]
+        tunnel_free_section_m2: { type: number }
         inlet_area_m2: { type: number }
         pad_area_m2: { type: number, description: "Панель 150 мм при проектной скорости 1.78 м/с (UGA)" }
         heating_kw: { type: number, description: "Пиковая потребность за цикл с запасом (см. assumptions)" }
@@ -508,10 +530,16 @@ components:
         target_temp_c: { type: number, description: "Уставка профиля на день с поправкой на целевую RH" }
         tunnel:
           type: object
-          required: [allowed, target_speed_ms]
+          required: [allowed, target_speed_ms, free_section_m2]
           properties:
             allowed: { type: boolean, description: "Возраст и наружная T допускают туннель" }
-            target_speed_ms: { $ref: "#/components/schemas/Range" }
+            target_speed_ms:
+              description: "Пол — скорость в сечении (Cobb §9.7); клетки — скорость в проходах, 4–5 м/с"
+              allOf: [{ $ref: "#/components/schemas/Range" }]
+            free_section_m2: { type: number, description: "Сечение корпуса минус клеточные ряды" }
+            bird_speed_ms:
+              description: "Только клетки: оценка скорости у птицы ≈ 0.5 скорости в проходах; по ней — ощущаемая T"
+              allOf: [{ $ref: "#/components/schemas/Range" }]
             effective_temp_limit_c: { type: number, example: 30 }
         heating_need_kw: { type: number, description: "Только с envelope" }
         heater_duty_pct: { type: number, description: "Только с envelope и heaters" }
