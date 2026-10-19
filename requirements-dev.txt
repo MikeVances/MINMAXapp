@@ -4,3 +4,7 @@
 pytest>=8,<9
 # httpx нужен fastapi.testclient.TestClient — без него импорт TestClient падает
 httpx>=0.27,<1
+# Тест контракта API v1 (test_api_v1_contract.py): openapi.yaml читается как YAML,
+# ответы проверяются по JSON Schema 2020-12 — диалекту OpenAPI 3.1
+PyYAML>=6,<7
+jsonschema>=4.18,<5

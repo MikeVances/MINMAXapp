@@ -707,6 +707,7 @@ components:
       properties:
         code: { type: string, example: airtightness_class_assumed }
         params: { type: object, additionalProperties: true }
+        source_id: { type: string, description: "Источник, на котором держится допущение (если есть)" }
 
     Source:
       type: object
