@@ -1,5 +1,4 @@
 import hashlib
-import os
 import re
 from pathlib import Path
 from dotenv import load_dotenv
@@ -17,8 +16,9 @@ from .routers import feedback as feedback_router
 from .routers import growth_profiles as growth_profiles_router
 from .routers import backup as backup_router
 from .core.paths import data_path
+from .core.build_info import APP_VERSION, build_info
 
-app = FastAPI(title="Ventilation Min/Max API", version="0.2.0")
+app = FastAPI(title="Ventilation Min/Max API", version=APP_VERSION)
 
 # Сжатие ответов: словари, страницы и скрипты — текст, gzip уменьшает их в 3–4 раза
 # (пять словарей 259 → 84 КБ). Мелочь меньше 1 КБ не жмём — заголовки дороже выигрыша
@@ -38,9 +38,8 @@ def healthz():
 
 @app.get("/version")
 def version():
-    # RENDER_GIT_COMMIT прокидывается Render автоматически при каждом деплое
-    commit = os.environ.get("RENDER_GIT_COMMIT", "local")[:7]
-    return {"commit": commit}
+    """Версия, коммит, ветка и дата коммита — по ним видно, какой код стоит на площадке."""
+    return build_info()
 
 
 @app.get("/theme.css", include_in_schema=False)

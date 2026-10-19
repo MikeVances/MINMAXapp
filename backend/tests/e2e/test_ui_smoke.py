@@ -214,6 +214,13 @@ def test_settings_page_renders(page):
     assert page.errors == []
 
 
+@pytest.mark.parametrize("path", ["/", "/calculators.html", "/settings.html"])
+def test_version_line_on_every_page(page, path):
+    _open(page, path)
+    page.wait_for_selector("#appVersion", timeout=5_000)
+    assert page.text_content("#appVersion").startswith("v")
+
+
 def test_every_language_renders_without_errors(page):
     _open(page, "/calculators.html", "profile")
     for lang in ("ru", "de", "fr", "pl", "en"):

@@ -98,6 +98,21 @@
     },
   };
 
+  // ── Версия приложения на каждой странице ───────────────────────────────────
+  // Строка внизу страницы: «v0.3.0 · a0af635 · 2026-10-19». По ней видно, какой код
+  // стоит на площадке (Render, копия в локальной сети) — без захода на сервер
+  document.addEventListener('DOMContentLoaded', () => {
+    fetch('./version').then(r => (r.ok ? r.json() : null)).then(v => {
+      if (!v) return;
+      const el = document.createElement('p');
+      el.id = 'appVersion';
+      el.className = 'version-tag';
+      el.textContent = ['v' + v.version, v.commit, v.date].filter(Boolean).join(' · ');
+      if (v.branch && v.branch !== 'main' && v.branch !== 'HEAD') el.textContent += ' · ' + v.branch;
+      document.body.appendChild(el);
+    }).catch(() => { /* без версии страница работает */ });
+  });
+
   // ── Модальные окна ─────────────────────────────────────────────────────────
   // Escape закрывает (как «Отмена»), Tab ходит по кругу внутри окна, а после
   // закрытия фокус возвращается на кнопку, которая окно открыла. Без этого

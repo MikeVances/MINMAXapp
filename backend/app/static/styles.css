@@ -227,6 +227,8 @@ input[type="number"], input[type="text"], select, textarea { font-size: 16px; }
 @media (min-width: 1300px) {
   .feedback-trigger { position: fixed; bottom: 12px; right: 8px; z-index: 9998; margin: 0; }
 }
+/* Версия приложения внизу страницы (ui.js): моноширинно, по колонке контейнера */
+.version-tag { max-width: 980px; margin: 0 auto 16px; padding: 0 16px; font: 11px/1.4 monospace; color: var(--muted); }
 .feedback-text { width: 100%; box-sizing: border-box; resize: vertical; background: var(--surface); color: inherit; border: 1px solid var(--field-border); border-radius: var(--radius-sm); padding: 8px; font-size: 14px; font-family: inherit; }
 .feedback-status { min-height: 18px; font-size: 12px; margin-top: 6px; }
 

@@ -130,16 +130,7 @@
         <a href="https://github.com/MikeVances/PigMaxApp" target="_blank" class="c-muted">PigMaxApp</a>
         — <span data-i18n="footer_related_pig">Pig house ventilation calculator</span>
       </small>
-      <!-- Хэш коммита из /version: быстрая проверка, что деплой на Render прошёл -->
-      <small class="muted d-block mt-4 ff-mono">build <span id="buildVersion">…</span></small>
     </footer>
-
-    <script>
-      // Показываем хэш коммита из Render — моментальная проверка что деплой прошёл
-      fetch('./version').then(r => r.json()).then(d => {
-        document.getElementById('buildVersion').textContent = d.commit;
-      }).catch(() => {});
-    </script>
   </main>
 
   <!-- Confirm delete modal -->
