@@ -15,6 +15,7 @@ from .routers import thermal
 from .routers import tools
 from .routers import feedback as feedback_router
 from .routers import growth_profiles as growth_profiles_router
+from .routers import backup as backup_router
 from .core.paths import data_path
 
 app = FastAPI(title="Ventilation Min/Max API", version="0.2.0")
@@ -61,6 +62,7 @@ app.include_router(thermal.router, prefix="/thermal", tags=["thermal"])
 app.include_router(tools.router, prefix="/calc/tools", tags=["tools"])
 app.include_router(feedback_router.router, tags=["feedback"])
 app.include_router(growth_profiles_router.router, prefix="/profiles", tags=["profiles"])
+app.include_router(backup_router.router, tags=["backup"])
 
 # ─── Статика с версиями по содержимому ───────────────────────────────────────
 # Раньше: ETag без Cache-Control (браузер переспрашивал каждый файл на каждой

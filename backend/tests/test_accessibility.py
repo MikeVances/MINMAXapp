@@ -21,7 +21,9 @@ def test_settings_fields_are_labelled():
     js = read("settings.js")
     assert not re.search(r'<div class="kv"><span>\$\{t\([^)]*\)\}</span><span><input', js)
     # Каждое поле настроек — внутри своей <label>, сколько бы полей ни добавили
-    assert len(re.findall(r'<label class="kv[^"]*"><span>\$\{t\(', js)) == len(re.findall(r"<input id=", js))
+    assert len(re.findall(r'<label class="kv[^"]*"><span>\$\{t\(', js)) == len(re.findall(r'<input id="[^"]+" type="text"', js))
+    # Файл копии — внутри <label> в виде кнопки: имя у него — текст этой метки
+    assert re.search(r'<label class="btn[^"]*">\$\{t\(\'backup_restore\'\)\}\s*<input id="backupFile" type="file"', js)
     assert 'id="saveStatus"' in js and re.search(r'id="saveStatus"[^>]*role="status"', js)
 
 

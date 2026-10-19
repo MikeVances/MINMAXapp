@@ -47,6 +47,14 @@
     design_cool_lbl: 'Kühlen, 0,4 % (TK · RH · MCWB)',
     design_evap_lbl: 'Pad-Grenze, 0,4 % Feuchtkugel',
     climate_license: 'Daten: {source}. Open-Meteo ist für nicht-kommerzielle Nutzung kostenlos.',
+    backup_h2: 'Sicherung',
+    backup_desc: 'Der Testserver verliert gespeicherte Daten bei jedem Deploy. Betriebsdaten herunterladen (Einstellungen, eigene Wachstumsprofile, Wärmeverlustdaten je Stall und die Ställe dieses Browsers) und aus der Datei wiederherstellen.',
+    backup_download: 'Betriebsdaten herunterladen',
+    backup_restore: 'Aus Datei wiederherstellen…',
+    backup_saved: 'Datei gespeichert',
+    backup_confirm: 'Einstellungen, eigene Profile und Wärmeverlustdaten durch den Dateiinhalt ersetzen?',
+    backup_restored: 'Wiederhergestellt: {profiles} Profile, {houses} Ställe, Wärmeverlustdaten von {thermal} Ställen',
+    backup_not_json: 'Die Datei ist kein JSON',
     unit_celsius:        '°C',
 
     // ── NAVIGATION extra ──────────────────────────
@@ -553,6 +561,7 @@
     srv_profile_day_missing:       'Profil \'{id}\' hat keine Masse oder Temperatur für Tag {day}',
     srv_builtin_profile_read_only: 'Züchterprofile sind schreibgeschützt — erstellen Sie eine Kopie',
     srv_profile_is_default:        'Dieses Profil ist der Standard des Betriebs — wählen Sie zuerst in den Einstellungen ein anderes',
+    srv_backup_invalid:            'Die Sicherungsdatei ist beschädigt oder aus einer anderen Version ({detail})',
     srv_climate_unavailable:       'Klimadaten nicht abrufbar (Open-Meteo) — Koordinaten und Verbindung prüfen',
     srv_leakage_points_too_close:  'Die Drücke der Messpunkte müssen sich um mindestens 30 % unterscheiden — sonst ist der Exponent n nicht bestimmbar',
     srv_thermal_house_exists:      'Stall „{id}“ hat bereits eigene Wärmeverlustdaten — wählen Sie einen anderen Namen',

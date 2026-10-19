@@ -23,6 +23,7 @@ WRITE_ROUTES = [
     ("PUT", "/thermal/config"),
     ("POST", "/thermal/rename-house"),
     ("POST", "/settings/design-climate"),
+    ("POST", "/backup"),
 ]
 
 

@@ -117,6 +117,15 @@ storage — every device has its own. Heat-loss data — dimensions, heaters and
 is stored on the server per house id (`data/thermal_config.json`, `{"houses": {...}}`); renaming a
 house on the home page moves its record. Settings and growth profiles are shared server-side.
 
+**Backup.** Farm Settings → *Download farm data* saves settings, your growth profiles, heat-loss data
+per house and this browser's houses to one JSON file; *Restore from file* puts them back (all parts are
+validated before anything is written). Use it before deploying to a host with an ephemeral disk.
+
+**Site climate.** Farm Settings take the farm altitude (site pressure, ASHRAE standard atmosphere) and
+coordinates; *Get design conditions* derives ASHRAE ch. 14 design values (99.6 % heating, 0.4 % cooling
+with coincident wet bulb, 0.4 % wet bulb) from 10 years of hourly ERA5 reanalysis via Open-Meteo —
+data CC BY 4.0, free access for non-commercial use.
+
 **Behind a reverse proxy.** The feedback form allows 5 messages per 10 minutes per client address.
 A proxy appends the address it saw to the end of `X-Forwarded-For`; everything to the left is
 whatever the client sent. Set `TRUSTED_PROXY_HOPS` to the number of entries your own proxies append

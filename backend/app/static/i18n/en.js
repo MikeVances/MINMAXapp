@@ -47,6 +47,14 @@
     design_cool_lbl: 'Cooling, 0.4 % (DB · RH · MCWB)',
     design_evap_lbl: 'Pad limit, 0.4 % wet bulb',
     climate_license: 'Data: {source}. Open-Meteo is free for non-commercial use.',
+    backup_h2: 'Backup',
+    backup_desc: 'The test server loses saved data on every deploy. Download the farm data (settings, your growth profiles, heat-loss data per house and this browser’s houses) and restore it from the file.',
+    backup_download: 'Download farm data',
+    backup_restore: 'Restore from file…',
+    backup_saved: 'File saved',
+    backup_confirm: 'Replace the settings, your profiles and heat-loss data with the file’s contents?',
+    backup_restored: 'Restored: {profiles} profiles, {houses} houses, heat-loss data of {thermal} houses',
+    backup_not_json: 'The file is not JSON',
     unit_celsius:        '°C',
 
     // ── NAVIGATION extra ──────────────────────────
@@ -554,6 +562,7 @@
     srv_profile_day_missing:       'Profile \'{id}\' has no weight or temperature for day {day}',
     srv_builtin_profile_read_only: 'Breeder profiles are read-only — make a copy',
     srv_profile_is_default:        'This profile is the farm default — choose another default in Farm Settings first',
+    srv_backup_invalid:            'The backup file is damaged or from another version ({detail})',
     srv_climate_unavailable:       'Climate data could not be fetched (Open-Meteo) — check the coordinates and the connection',
     srv_leakage_points_too_close:  'The test points need pressures at least 30 % apart — otherwise the exponent n cannot be found',
     srv_thermal_house_exists:      'House “{id}” already has its own heat-loss data — choose another name',

@@ -52,6 +52,19 @@ function renderConfig() {
         <div class="kv"><span>${t('design_evap_lbl')}</span><span>${fmtNum(cfg.design_evap_wb_c, 1)} °C</span></div>
       </div>
       <p class="hint mt-8 mb-0">${t('climate_license', { source: escapeHtml(cfg.design_source || '') })}</p>` : ''}
+    </div>
+
+    <!-- Резервная копия: тестовая площадка теряет данные при деплое — их можно унести -->
+    <div class="card mb-16">
+      <h2>${t('backup_h2')}</h2>
+      <p class="hint mt-0">${t('backup_desc')}</p>
+      <div class="d-flex gap-10 ai-center wrap">
+        <button id="backupDownload" class="btn btn-secondary">${t('backup_download')}</button>
+        <label class="btn btn-secondary m-0">${t('backup_restore')}
+          <input id="backupFile" type="file" accept="application/json,.json" hidden>
+        </label>
+        <span id="backupStatus" class="muted fs-12" role="status"></span>
+      </div>
     </div>`;
 
   // Пустое, нечисловое или вне диапазона поле НЕ меняет настройку (оно подсвечено,
@@ -72,6 +85,49 @@ function renderConfig() {
   bindNumber('safety_factor',   v => { cfg.safety_factor_qmin = v; });
   bindNumber('tunnel_min_day',  v => { cfg.tunnel_min_day = v; });
   bindNumber('tunnel_min_temp', v => { cfg.tunnel_min_temp_c = v; });
+
+  // ── Резервная копия ──
+  const HOUSES_KEY = 'vent_mvp_tabs_v1';   // список корпусов главной (живёт в браузере)
+  const backupSt = document.getElementById('backupStatus');
+  document.getElementById('backupDownload').addEventListener('click', async () => {
+    try {
+      const data = await fetchJSON('./backup');
+      try { data.houses = JSON.parse(localStorage.getItem(HOUSES_KEY) || 'null'); } catch (e) { data.houses = null; }
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'minmax-farm-' + new Date().toISOString().slice(0, 10) + '.json';
+      a.click();
+      URL.revokeObjectURL(a.href);
+      setStatus(backupSt, () => t('backup_saved'), 'ok');
+    } catch (e) {
+      const msg = e.message || String(e);
+      setStatus(backupSt, () => t('err_prefix') + msg, 'danger');
+    }
+  });
+  document.getElementById('backupFile').addEventListener('change', async ev => {
+    const file = ev.target.files[0];
+    ev.target.value = '';                       // тот же файл можно выбрать ещё раз
+    if (!file || !window.confirm(t('backup_confirm'))) return;
+    try {
+      const data = JSON.parse(await file.text());
+      const res = await fetchJSON('./backup', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data),
+      });
+      // Сервер принял — теперь и список корпусов этого браузера
+      if (Array.isArray(data.houses) && data.houses.length) {
+        try { localStorage.setItem(HOUSES_KEY, JSON.stringify(data.houses)); } catch (e) { /* хранилище недоступно */ }
+      }
+      cfg = await fetchJSON('./settings/app-config');
+      renderConfig();
+      const n = Array.isArray(data.houses) ? data.houses.length : 0;
+      setStatus(document.getElementById('backupStatus'), () => t('backup_restored',
+        { profiles: res.profiles, houses: n, thermal: res.thermal_houses }), 'ok');
+    } catch (e) {
+      const msg = e instanceof SyntaxError ? t('backup_not_json') : (e.message || String(e));
+      setStatus(document.getElementById('backupStatus'), () => t('err_prefix') + msg, 'danger');
+    }
+  });
 
   // Расчётные условия: ~20 с — 10 лет часовых данных с Open-Meteo (по кнопке, не сами)
   document.getElementById('climateBtn').addEventListener('click', async () => {

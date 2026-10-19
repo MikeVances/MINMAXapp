@@ -47,6 +47,14 @@
     design_cool_lbl: 'Refroidissement, 0,4 % (sec · HR · humide coïncident)',
     design_evap_lbl: 'Limite des panneaux, 0,4 % humide',
     climate_license: 'Données : {source}. Open-Meteo est gratuit pour un usage non commercial.',
+    backup_h2: 'Sauvegarde',
+    backup_desc: 'Le serveur de test perd les données enregistrées à chaque déploiement. Téléchargez les données de l’exploitation (réglages, vos profils de croissance, déperditions par bâtiment et les bâtiments de ce navigateur) et restaurez-les depuis le fichier.',
+    backup_download: 'Télécharger les données',
+    backup_restore: 'Restaurer depuis un fichier…',
+    backup_saved: 'Fichier enregistré',
+    backup_confirm: 'Remplacer les réglages, vos profils et les données de déperditions par le contenu du fichier ?',
+    backup_restored: 'Restauré : {profiles} profils, {houses} bâtiments, déperditions de {thermal} bâtiments',
+    backup_not_json: 'Le fichier n’est pas du JSON',
     unit_celsius:        '°C',
 
     // ── NAVIGATION extra ─────────────────────────────
@@ -553,6 +561,7 @@
     srv_profile_day_missing:       'Le profil \'{id}\' n\'a ni poids ni température pour le jour {day}',
     srv_builtin_profile_read_only: 'Les profils des sélectionneurs sont en lecture seule — faites une copie',
     srv_profile_is_default:        'Ce profil est le profil par défaut de l’exploitation — choisissez d’abord un autre profil dans les réglages',
+    srv_backup_invalid:            'Le fichier de sauvegarde est endommagé ou d’une autre version ({detail})',
     srv_climate_unavailable:       'Données climatiques indisponibles (Open-Meteo) — vérifiez les coordonnées et la connexion',
     srv_leakage_points_too_close:  'Les pressions des points de test doivent différer d’au moins 30 % — sinon l’exposant n est indéterminé',
     srv_thermal_house_exists:      'Le bâtiment « {id} » a déjà ses propres données de déperditions — choisissez un autre nom',

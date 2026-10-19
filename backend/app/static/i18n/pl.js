@@ -47,6 +47,14 @@
     design_cool_lbl: 'Chłodzenie, 0,4 % (sucha · RH · mokra)',
     design_evap_lbl: 'Granica paneli, 0,4 % mokra',
     climate_license: 'Dane: {source}. Open-Meteo jest bezpłatny do użytku niekomercyjnego.',
+    backup_h2: 'Kopia zapasowa',
+    backup_desc: 'Serwer testowy traci zapisane dane przy każdym wdrożeniu. Pobierz dane fermy (ustawienia, własne profile wzrostu, dane strat ciepła kurników i kurniki tej przeglądarki) i przywróć je z pliku.',
+    backup_download: 'Pobierz dane fermy',
+    backup_restore: 'Przywróć z pliku…',
+    backup_saved: 'Plik zapisany',
+    backup_confirm: 'Zastąpić ustawienia, własne profile i dane strat ciepła zawartością pliku?',
+    backup_restored: 'Przywrócono: profili {profiles}, kurników {houses}, dane strat ciepła {thermal} kurników',
+    backup_not_json: 'Plik nie jest JSON',
     unit_celsius:        '°C',
 
     // ── Nawigacja dodatkowa ────────────────────────
@@ -553,6 +561,7 @@
     srv_profile_day_missing:       'Profil \'{id}\' nie ma masy ani temperatury na dzień {day}',
     srv_builtin_profile_read_only: 'Profile hodowców są tylko do odczytu — zrób kopię',
     srv_profile_is_default:        'Ten profil jest domyślny dla fermy — najpierw wybierz inny w ustawieniach',
+    srv_backup_invalid:            'Plik kopii jest uszkodzony lub z innej wersji ({detail})',
     srv_climate_unavailable:       'Nie udało się pobrać danych klimatycznych (Open-Meteo) — sprawdź współrzędne i połączenie',
     srv_leakage_points_too_close:  'Ciśnienia w punktach testu muszą różnić się co najmniej o 30 % — inaczej wykładnika n nie da się wyznaczyć',
     srv_thermal_house_exists:      'Kurnik „{id}” ma już własne dane strat ciepła — wybierz inną nazwę',
