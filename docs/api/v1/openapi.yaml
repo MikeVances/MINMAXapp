@@ -323,6 +323,22 @@ components:
             проходах. Одинаковые ряды можно описать одной записью с `count`.
           items: { $ref: "#/components/schemas/CageRow" }
 
+    FanCurve:
+      type: object
+      required: [points]
+      properties:
+        points:
+          type: array
+          minItems: 2
+          maxItems: 12
+          description: "Точки каталога по возрастанию давления; расход должен убывать (иначе 422 fan_curve_invalid)"
+          items:
+            type: object
+            required: [static_pressure_pa, flow_m3h]
+            properties:
+              static_pressure_pa: { type: number, minimum: 0, maximum: 150 }
+              flow_m3h: { type: number, exclusiveMinimum: 0, maximum: 100000 }
+
     CageRow:
       type: object
       required: [width_m, height_m]
@@ -421,6 +437,21 @@ components:
         heaters:
           description: "Есть — проверить их достаточность; нет — только требуемая мощность"
           allOf: [{ $ref: "#/components/schemas/Heaters" }]
+        tunnel_fan:
+          description: |
+            Характеристика туннельного вентилятора из каталога. Есть — сервер
+            находит рабочую точку при сопротивлении корпуса и считает число
+            вентиляторов; нет — отдаёт только требуемые расход и давление,
+            при котором его читать в каталоге.
+          allOf: [{ $ref: "#/components/schemas/FanCurve" }]
+        tunnel_static_pressure_pa:
+          type: number
+          exclusiveMinimum: 0
+          maximum: 150
+          description: |
+            Замеренное давление в туннельном режиме на похожем корпусе (те же
+            панели, батареи, длина). Заменяет оценку сервера — по ней и
+            подбираются вентиляторы.
         heating_margin_pct:
           type: number
           minimum: 0
@@ -451,6 +482,28 @@ components:
           description: "Пол — в сечении; клетки — в проходах между рядами"
           allOf: [{ $ref: "#/components/schemas/Range" }]
         tunnel_free_section_m2: { type: number }
+        tunnel_static_pressure_pa:
+          type: object
+          description: |
+            Давление, при котором брать производительность вентиляторов из
+            каталога. Батареи сужают сечение (скоростной напор растёт с v²) и
+            добавляют потери по длине — при 0 Па каталог завышает расход.
+          required: [total, section, inlet, pad, length_loss, basis]
+          properties:
+            total: { type: number }
+            section: { type: number, description: "Скоростной напор в свободном сечении ½ρv²" }
+            inlet: { type: number }
+            pad: { type: number, description: "Панель по кривой производителя (SANHE)" }
+            length_loss: { type: number, description: "Потери по длине корпуса; 0 — не оценены (см. assumptions)" }
+            basis: { type: string, enum: [estimated, measured] }
+        tunnel_fans:
+          type: object
+          description: "Только если передан tunnel_fan"
+          required: [count, flow_per_fan_m3h, operating_pressure_pa]
+          properties:
+            count: { type: integer, description: "Для верхней границы целевой скорости" }
+            flow_per_fan_m3h: { type: number, description: "В рабочей точке, не паспорт 0 Па" }
+            operating_pressure_pa: { type: number }
         inlet_area_m2: { type: number }
         pad_area_m2: { type: number, description: "Панель 150 мм при проектной скорости 1.78 м/с (UGA)" }
         heating_kw: { type: number, description: "Пиковая потребность за цикл с запасом (см. assumptions)" }

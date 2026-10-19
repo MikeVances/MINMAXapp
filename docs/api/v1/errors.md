@@ -22,6 +22,7 @@
 | 422 | <a id="housing_not_supported"></a>`housing_not_supported` | Способ содержания объявлен, но расчёт для него без источника не делается (сейчас таких нет; код — для будущих) | `housing` |
 | 422 | <a id="cage_section_missing"></a>`cage_section_missing` | `housing: cages`, но нет `house.cage_rows` — скорость туннеля не посчитать | — |
 | 422 | <a id="cage_section_implausible"></a>`cage_section_implausible` | Батареи выше стены или оставляют свободным меньше 15 % сечения | `free_pct`, `min_pct` |
+| 422 | <a id="fan_curve_invalid"></a>`fan_curve_invalid` | Точки характеристики не по возрастанию давления или расход не убывает | `index` |
 | 422 | <a id="envelope_implausible"></a>`envelope_implausible` | U оболочки вне 0.1–8 Вт/(м²·К) — ошибка в слоях или в UA | `u`, `min`, `max` |
 | 429 | <a id="rate_limited"></a>`rate_limited` | Превышен лимит частоты; заголовок `Retry-After` | `limit`, `window_s` |
 | 502 | <a id="climate_unavailable"></a>`climate_unavailable` | Open-Meteo не ответил или вернул меньше года данных | — |
@@ -40,6 +41,8 @@
 | `effective_temp_above_limit` | warning | Ощущаемая температура у вентиляторов ≥ 30 °C (Cobb 2021 §9.7) | `effective_c` |
 | `effective_temp_above_profile` | info | Ощущаемая выше уставки профиля — смотреть на поведение птицы | `effective_c`, `target_c` |
 | `house_geometry_missing` | warning | Без сечения корпуса потолок вентиляции только оценён | — |
+| `fan_curve_extrapolated` | warning | Рабочая точка за последней точкой каталога — расход экстраполирован | `pressure_pa`, `last_pa` |
+| `tunnel_pressure_high` | warning | Давление туннеля выше 50 Па — осевые вентиляторы теряют много расхода, проверить каталог и панели | `pressure_pa` |
 | `cycle_beyond_profile` | info | Цикл длиннее профиля — последние дни взяты по последней точке профиля | `last_day` |
 
 ## Допущения (`assumptions`)
@@ -52,5 +55,6 @@
 | `site_pressure_from_altitude` | Давление площадки по стандартной атмосфере, `params.altitude_m` |
 | `cages_heat_split_bounded` | Клетки: зима (обогрев, влажностный Qmin) — доля явного тепла корпуса CIGR 2002 (как с подстилкой); лето (Qmax) — 0.67 уровня птицы (Aarnink 2018). Каждая величина — по худшему случаю |
 | `cages_bird_speed_from_aisle` | Клетки: скорость у птицы ≈ 0.5 скорости в проходах (практика эксплуатации: 4–5 м/с в проходах → 2–2.5 м/с в клетках); ощущаемая T — по ней |
+| `tunnel_length_loss_not_included` | Потери давления по длине корпуса (батареи, балки, кормушки) не оценены: нет источника коэффициента — давление и падение расхода занижены; передайте `tunnel_static_pressure_pa` с замера |
 | `cage_through_flow_not_included` | Клетки: расход вентиляторов = скорость в проходах × свободное сечение; воздух сквозь батареи сверху не добавлен — нижняя граница, сверять анемометром в проходе |
 | `materials_iso_10456` | λ материалов — расчётные значения ISO 10456; сэндвич-панель — U из паспорта, если передан |
