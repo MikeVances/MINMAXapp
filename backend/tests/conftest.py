@@ -63,6 +63,8 @@ os.environ["APP_CONFIG_JSON"] = str(_DATA_DIR / "app_config.json")
 os.environ["THERMAL_CONFIG_JSON"] = str(_DATA_DIR / "thermal_config.json")
 # Тема площадки в тестах не создаётся: проверяем и «нет файла», и подмену пути
 os.environ["THEME_CSS"] = str(_DATA_DIR / "theme.css")
+# Журнал вызовов API v1 — во временный каталог, не в рабочий data/
+os.environ["API_AUDIT_LOG"] = str(_DATA_DIR / "api_audit.jsonl")
 
 
 @pytest.fixture(scope="session")

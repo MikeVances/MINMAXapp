@@ -10,13 +10,17 @@
 """
 from __future__ import annotations
 
+import json
+import logging
 import threading
+import time
 import uuid
+from logging.handlers import RotatingFileHandler
 from typing import Any, Literal, Optional
 
 from fastapi import FastAPI, Query, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, PlainTextResponse
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .core import construction
@@ -28,12 +32,59 @@ from .core.build_info import APP_VERSION, build_info
 from .core.building_thermal import HeaterConfig
 from .core.errors import CalcError
 from .core.growth_profiles import PROFILE_ID_PATTERN, ProfileNotFound, list_profiles
+from .core.paths import PROJECT_ROOT, data_path
 
 API_VERSION = "1.0.0"
 ERRORS_DOC = "https://github.com/MikeVances/MINMAXapp/blob/main/docs/api/v1/errors.md"
 
 api = FastAPI(title="MINMAX Ventilation Engineering API", version=API_VERSION,
               docs_url="/docs", openapi_url="/openapi.json", redoc_url=None)
+
+
+# ─── Идентификатор запроса и журнал вызовов ───────────────────────────────────
+# Агент может пересказать правдоподобный «результат расчёта», которого не было
+# (инструмент не подключился, а описание API он знает из промта) — без журнала
+# это неотличимо от настоящего вызова. Поэтому у каждого ответа есть request_id
+# (в теле: платформы агентов отдают модели тело, а не заголовки), агент обязан
+# его называть, а сервер пишет каждый расчёт в журнал — сверить можно всегда.
+
+AUDIT_LOG_PATH = data_path("API_AUDIT_LOG", "data/api_audit.jsonl")
+_audit_logger: Optional[logging.Logger] = None
+_audit_lock = threading.Lock()
+
+
+def _audit(entry: dict) -> None:
+    """Строка JSON в журнал вызовов. Сбой журнала не должен ломать расчёт."""
+    global _audit_logger
+    try:
+        with _audit_lock:
+            if _audit_logger is None:
+                AUDIT_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+                logger = logging.getLogger("minmax.api_v1.audit")
+                logger.setLevel(logging.INFO)
+                logger.propagate = False
+                # 5 МБ × 3 файла: ~10 тыс. расчётов, диск площадки не забьётся
+                handler = RotatingFileHandler(AUDIT_LOG_PATH, maxBytes=5_000_000, backupCount=3,
+                                              encoding="utf-8")
+                handler.setFormatter(logging.Formatter("%(message)s"))
+                logger.addHandler(handler)
+                _audit_logger = logger
+        entry = {"ts": time.strftime("%Y-%m-%dT%H:%M:%S%z"), **entry}
+        _audit_logger.info(json.dumps(entry, ensure_ascii=False, default=str))
+    except Exception:
+        logging.getLogger(__name__).warning("api audit log write failed", exc_info=True)
+
+
+@api.middleware("http")
+async def _request_id(request: Request, call_next):
+    request.state.request_id = f"req-{uuid.uuid4().hex[:12]}"
+    response = await call_next(request)
+    response.headers["X-Request-Id"] = request.state.request_id
+    return response
+
+
+def _rid(request: Request) -> str:
+    return getattr(request.state, "request_id", f"req-{uuid.uuid4().hex[:12]}")
 
 
 # ─── Ошибки: RFC 7807 ─────────────────────────────────────────────────────────
@@ -44,43 +95,46 @@ api = FastAPI(title="MINMAX Ventilation Engineering API", version=API_VERSION,
 _STATUS_BY_CODE = {"profile_not_found": 404, "material_not_found": 404, "climate_unavailable": 502}
 
 
-def _problem(status: int, code: str, title: str, params: Optional[dict] = None,
+def _problem(request: Request, status: int, code: str, title: str, params: Optional[dict] = None,
              errors: Optional[list] = None) -> JSONResponse:
+    rid = _rid(request)
     body: dict[str, Any] = {
         "type": f"{ERRORS_DOC}#{code}", "title": title, "status": status,
-        "code": code, "instance": f"req-{uuid.uuid4().hex[:8]}",
+        "code": code, "instance": rid,
     }
     if params:
         body["params"] = params
     if errors:
         body["errors"] = errors
-    return JSONResponse(body, status_code=status, media_type="application/problem+json",
-                        headers={"X-Request-Id": body["instance"]})
+    # Отказ — тоже факт для сверки: агент мог сказать «посчитал», а сервер ответил ошибкой
+    _audit({"request_id": rid, "path": request.url.path, "status": status, "code": code,
+            "params": params, "errors": errors})
+    return JSONResponse(body, status_code=status, media_type="application/problem+json")
 
 
 @api.exception_handler(CalcError)
-def _calc_error(_: Request, exc: CalcError) -> JSONResponse:
-    return _problem(_STATUS_BY_CODE.get(exc.code, 422), exc.code, exc.code.replace("_", " "), exc.params)
+def _calc_error(request: Request, exc: CalcError) -> JSONResponse:
+    return _problem(request, _STATUS_BY_CODE.get(exc.code, 422), exc.code, exc.code.replace("_", " "), exc.params)
 
 
 @api.exception_handler(ProfileNotFound)
-def _profile_not_found(_: Request, exc: ProfileNotFound) -> JSONResponse:
-    return _problem(404, "profile_not_found", "growth profile not found", {"id": str(exc.args[0])})
+def _profile_not_found(request: Request, exc: ProfileNotFound) -> JSONResponse:
+    return _problem(request, 404, "profile_not_found", "growth profile not found", {"id": str(exc.args[0])})
 
 
 @api.exception_handler(RequestValidationError)
-def _validation(_: Request, exc: RequestValidationError) -> JSONResponse:
+def _validation(request: Request, exc: RequestValidationError) -> JSONResponse:
     errs = exc.errors()
     # Тело — не JSON: это не ошибка полей, а неразобранный запрос
     if any(e.get("type") == "json_invalid" for e in errs):
-        return _problem(400, "bad_request", "request body is not valid JSON")
+        return _problem(request, 400, "bad_request", "request body is not valid JSON")
     fields = [{
         # loc начинается с "body" — клиенту нужен путь внутри своего JSON
         "field": ".".join(str(p) for p in e["loc"] if p != "body"),
         "code": e["type"],
         "message": e["msg"],
     } for e in errs]
-    return _problem(422, "validation_failed", "request fields are invalid", errors=fields)
+    return _problem(request, 422, "validation_failed", "request fields are invalid", errors=fields)
 
 
 # ─── Модели запроса ───────────────────────────────────────────────────────────
@@ -278,7 +332,7 @@ def _app_version() -> str:
 
 
 @api.post("/ventilation-designs", status_code=201)
-def create_ventilation_design(req: DesignRequest) -> JSONResponse:
+def create_ventilation_design(req: DesignRequest, request: Request) -> JSONResponse:
     flock, clim = req.flock, req.climate
     if flock.housing == "cages" and not req.house.cage_rows:
         raise CalcError("cage_section_missing")
@@ -296,7 +350,9 @@ def create_ventilation_design(req: DesignRequest) -> JSONResponse:
         if req.tunnel_fan else (),
         tunnel_static_pressure_pa=req.tunnel_static_pressure_pa,
     ))
+    rid = _rid(request)
     body: dict[str, Any] = {
+        "request_id": rid,
         "envelope_ua_w_per_k": result.envelope_ua_w_per_k,
         "days": [vars(d) for d in result.days],
         "peak": result.peak,
@@ -309,6 +365,12 @@ def create_ventilation_design(req: DesignRequest) -> JSONResponse:
     }
     if result.heaters_sufficient is not None:
         body["heaters_sufficient"] = result.heaters_sufficient
+    _audit({"request_id": rid, "path": request.url.path, "status": 201,
+            "request": req.model_dump(by_alias=True, exclude_none=True),
+            "result": {"peak": body["peak"], "heating_kw": body["equipment"]["heating_kw"],
+                       "tunnel_fans_m3h": body["equipment"]["tunnel_fans_m3h"],
+                       "tunnel_fans": body["equipment"].get("tunnel_fans"),
+                       "warnings": [n["code"] for n in body["warnings"]]}})
     return JSONResponse(body, status_code=201, headers={"Cache-Control": "no-store"})
 
 
@@ -342,7 +404,7 @@ def _envelope_parts(env: Optional[EnvelopeIn]) -> dict:
 
 
 @api.post("/ventilation-requirements", status_code=201)
-def create_ventilation_requirement(req: RequirementRequest) -> JSONResponse:
+def create_ventilation_requirement(req: RequirementRequest, request: Request) -> JSONResponse:
     flock, cond = req.flock, req.conditions
     if flock.housing == "cages" and not req.house.cage_rows:
         raise CalcError("cage_section_missing")
@@ -354,7 +416,9 @@ def create_ventilation_requirement(req: RequirementRequest) -> JSONResponse:
         heater=_heater(req.heaters),
         tunnel_rules=req.tunnel_rules.to_core() if req.tunnel_rules else None,
     ))
+    rid = _rid(request)
     body: dict[str, Any] = {
+        "request_id": rid,
         "qmin_m3h": r.qmin_m3h, "qmin_basis": r.qmin_basis, "qmax_m3h": r.qmax_m3h,
         "target_temp_c": r.target_temp_c, "weight_g": r.weight_g, "tunnel": r.tunnel,
         "findings": [_note(n) for n in r.findings],
@@ -365,6 +429,10 @@ def create_ventilation_requirement(req: RequirementRequest) -> JSONResponse:
     for key in ("heating_need_kw", "heater_duty_pct", "air_exchange_m3h"):
         if getattr(r, key) is not None:
             body[key] = getattr(r, key)
+    _audit({"request_id": rid, "path": request.url.path, "status": 201,
+            "request": req.model_dump(by_alias=True, exclude_none=True),
+            "result": {k: body.get(k) for k in ("qmin_m3h", "qmax_m3h", "heating_need_kw", "heater_duty_pct")}
+            | {"findings": [n["code"] for n in body["findings"]]}})
     return JSONResponse(body, status_code=201, headers={"Cache-Control": "no-store"})
 
 
@@ -408,7 +476,7 @@ _climate_lock = threading.Lock()
 
 
 @api.get("/climate-designs")
-def get_climate_design(latitude: float = Query(..., ge=-90, le=90),
+def get_climate_design(request: Request, latitude: float = Query(..., ge=-90, le=90),
                        longitude: float = Query(..., ge=-180, le=180)) -> JSONResponse:
     key = (round(latitude, 1), round(longitude, 1))
     with _climate_lock:
@@ -426,7 +494,22 @@ def get_climate_design(latitude: float = Query(..., ge=-90, le=90),
         }
         with _climate_lock:
             _climate_cache[key] = cached
+    _audit({"request_id": _rid(request), "path": request.url.path, "status": 200,
+            "request": {"latitude": latitude, "longitude": longitude},
+            "result": {k: cached[k] for k in ("winter_design_c", "summer_design_db_c", "summer_design_rh_pct")}})
     return JSONResponse(cached, headers=_CATALOG_CACHE)
+
+
+# Выверенный контракт — для платформ агентов: описания инструментов они берут из
+# OpenAPI, а живая /openapi.json сгенерирована FastAPI из моделей — без русских
+# описаний, примеров и смысла полей. Отдаём файл как есть, без разбора
+CONTRACT_PATH = PROJECT_ROOT / "docs" / "api" / "v1" / "openapi.yaml"
+
+
+@api.get("/openapi.yaml", include_in_schema=False)
+def contract() -> PlainTextResponse:
+    return PlainTextResponse(CONTRACT_PATH.read_text(encoding="utf-8"), media_type="application/yaml",
+                             headers={"Cache-Control": "no-cache"})
 
 
 @api.get("/housing-systems")

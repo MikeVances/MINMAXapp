@@ -22,8 +22,10 @@ info:
     url: https://github.com/MikeVances/MINMAXapp
 
 servers:
-  - url: /api/v1
-    description: Относительно площадки (Render, копия в локальной сети)
+  # «.» — относительно адреса самого документа (…/api/v1/openapi.yaml): за прокси
+  # (/deploy/proxy/minmax/) путь «/api/v1» от корня хоста ушёл бы мимо приложения
+  - url: .
+    description: Рядом с этим документом — GET {площадка}/api/v1/openapi.yaml
 
 security:
   - ApiKey: []
@@ -290,7 +292,7 @@ components:
         title: { type: string, example: "Growth profile not found" }
         status: { type: integer, example: 404 }
         detail: { type: string, example: "Growth profile 'ross999' does not exist" }
-        instance: { type: string, example: "req-7f3a2c" }
+        instance: { type: string, example: "req-7f3a2c1b9e0d", description: "request_id — тот же в X-Request-Id и в журнале сервера" }
         code: { type: string, example: profile_not_found }
         params: { type: object, additionalProperties: true, example: { id: ross999 } }
         errors:
@@ -581,8 +583,12 @@ components:
 
     DesignResult:
       type: object
-      required: [envelope_ua_w_per_k, days, peak, equipment, warnings, assumptions, sources, api_version, app_version]
+      required: [request_id, envelope_ua_w_per_k, days, peak, equipment, warnings, assumptions, sources, api_version, app_version]
       properties:
+        request_id:
+          type: string
+          example: req-3f9a1c2b7d4e
+          description: "Идентификатор расчёта — тот же в заголовке X-Request-Id и в журнале вызовов сервера; называть его рядом с числами"
         envelope_ua_w_per_k: { type: number }
         days:
           type: array
@@ -645,8 +651,12 @@ components:
 
     RequirementResult:
       type: object
-      required: [qmin_m3h, qmin_basis, qmax_m3h, target_temp_c, tunnel, findings, assumptions, sources, api_version, app_version]
+      required: [request_id, qmin_m3h, qmin_basis, qmax_m3h, target_temp_c, tunnel, findings, assumptions, sources, api_version, app_version]
       properties:
+        request_id:
+          type: string
+          example: req-3f9a1c2b7d4e
+          description: "Идентификатор расчёта — тот же в заголовке X-Request-Id и в журнале вызовов сервера"
         qmin_m3h: { type: number }
         qmin_basis: { type: string, enum: [co2, moisture] }
         qmax_m3h: { type: number }

@@ -153,8 +153,9 @@ def test_every_documented_route_exists_and_vice_versa():
     documented = {(p, m.upper()) for p, ops in SPEC["paths"].items() for m in ops}
     served = {(r.path, m) for r in api_v1.api.routes if hasattr(r, "methods")
               for m in r.methods if m not in ("HEAD", "OPTIONS")}
-    # Служебные маршруты подприложения: живая схема и её страница
-    served -= {("/openapi.json", "GET"), ("/docs", "GET"), ("/docs/oauth2-redirect", "GET")}
+    # Служебные маршруты подприложения: живая схема, её страница и сам контракт
+    served -= {("/openapi.json", "GET"), ("/docs", "GET"), ("/docs/oauth2-redirect", "GET"),
+               ("/openapi.yaml", "GET")}
     assert documented == served
 
 
