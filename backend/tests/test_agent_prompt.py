@@ -18,8 +18,8 @@ ERRORS_MD = (ROOT / "docs/api/v1/errors.md").read_text(encoding="utf-8")
 API_SRC = (ROOT / "backend/app/api_v1.py").read_text(encoding="utf-8")
 CORE_SRC = "\n".join(p.read_text(encoding="utf-8") for p in (ROOT / "backend/app/core").glob("*.py"))
 
-# Коды, которые API пока не отдаёт: ключи и лимиты — этап 5б (отложен)
-NOT_YET = {"api_key_required", "rate_limited"}
+# Коды, которые API пока не отдаёт (ключи и лимиты отдаются с этапа 5б)
+NOT_YET: set = set()
 
 
 def _error_table_codes() -> set:

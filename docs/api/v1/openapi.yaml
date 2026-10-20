@@ -284,6 +284,7 @@ paths:
                     type: array
                     items: { $ref: "#/components/schemas/HousingSystem" }
         "401": { $ref: "#/components/responses/Unauthorized" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
 
   /climate-designs:
     get:
@@ -325,6 +326,8 @@ components:
       description: |
         Ключ выдаёт владелец площадки (переменная API_KEYS). Если ключи на площадке
         не заданы — доступ открыт (как WRITE_TOKEN: локальная разработка и LAN).
+        Этот документ отдаётся без ключа. Лимиты на ключ в минуту: расчёты — 60,
+        справочники — 300, климат — 10; сверх — 429 с Retry-After.
 
   headers:
     RequestId:

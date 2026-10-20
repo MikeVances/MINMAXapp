@@ -15,6 +15,7 @@ import logging
 import threading
 import time
 import uuid
+from contextvars import ContextVar
 from logging.handlers import RotatingFileHandler
 from typing import Any, Literal, Optional
 
@@ -23,6 +24,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, PlainTextResponse, Response
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from . import api_access
 from .core import construction
 from .core import design_climate
 from .core import sources
@@ -71,15 +73,53 @@ def _audit(entry: dict) -> None:
                 logger.addHandler(handler)
                 _audit_logger = logger
         entry = {"ts": time.strftime("%Y-%m-%dT%H:%M:%S%z"), **entry}
+        # Чей ключ: владелец видит, какой клиент тратит лимит, — по отпечатку, не по ключу
+        client = _client_var.get()
+        if client:
+            entry["client"] = client
         _audit_logger.info(json.dumps(entry, ensure_ascii=False, default=str))
     except Exception:
         logging.getLogger(__name__).warning("api audit log write failed", exc_info=True)
 
 
+# Отпечаток ключа текущего запроса — для журнала. ContextVar, а не request.state:
+# _audit вызывают и места, куда request не передаётся
+_client_var: ContextVar[Optional[str]] = ContextVar("api_v1_client", default=None)
+
+
+def _route_path(request: Request) -> str:
+    """Путь внутри /api/v1: Starlette оставляет в scope полный путь и кладёт префикс в root_path."""
+    path, root = request.scope["path"], request.scope.get("root_path", "")
+    return path[len(root):] if root and path.startswith(root) else path
+
+
+def _check_access(request: Request) -> Optional[Response]:
+    """Отказ 401/429 или None — запрос идёт дальше (api_access: зачем и какие лимиты)."""
+    group = api_access.route_group(_route_path(request))
+    keys = api_access.configured_keys()
+    if group is None or not keys:
+        return None
+    client = api_access.match_key(request.headers.get(api_access.API_KEY_HEADER), keys)
+    if client is None:
+        return _problem(request, 401, "api_key_required", "missing or invalid X-API-Key")
+    _client_var.set(client)
+    verdict = api_access.limiter.hit(client, group)
+    if not verdict.allowed:
+        return _problem(request, 429, "rate_limited", "rate limit exceeded",
+                        {"limit": verdict.limit, "window_s": api_access.limiter.window_s},
+                        headers={"Retry-After": str(verdict.retry_after_s)})
+    return None
+
+
 @api.middleware("http")
 async def _request_id(request: Request, call_next):
     request.state.request_id = f"req-{uuid.uuid4().hex[:12]}"
-    response = await call_next(request)
+    # Ключ проверяется здесь, а не зависимостью маршрута: зависимость FastAPI
+    # срабатывает после разбора тела, и клиент без ключа получал бы 400/422 по
+    # своим полям вместо 401. И у отказа уже есть request_id
+    _client_var.set(None)
+    denied = _check_access(request)
+    response = denied if denied is not None else await call_next(request)
     response.headers["X-Request-Id"] = request.state.request_id
     return response
 
@@ -98,7 +138,7 @@ _STATUS_BY_CODE = {"profile_not_found": 404, "material_not_found": 404, "source_
 
 
 def _problem(request: Request, status: int, code: str, title: str, params: Optional[dict] = None,
-             errors: Optional[list] = None) -> JSONResponse:
+             errors: Optional[list] = None, headers: Optional[dict] = None) -> JSONResponse:
     rid = _rid(request)
     body: dict[str, Any] = {
         "type": f"{ERRORS_DOC}#{code}", "title": title, "status": status,
@@ -111,7 +151,7 @@ def _problem(request: Request, status: int, code: str, title: str, params: Optio
     # Отказ — тоже факт для сверки: агент мог сказать «посчитал», а сервер ответил ошибкой
     _audit({"request_id": rid, "path": request.url.path, "status": status, "code": code,
             "params": params, "errors": errors})
-    return JSONResponse(body, status_code=status, media_type="application/problem+json")
+    return JSONResponse(body, status_code=status, media_type="application/problem+json", headers=headers)
 
 
 @api.exception_handler(CalcError)
