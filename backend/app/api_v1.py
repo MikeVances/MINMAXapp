@@ -20,7 +20,7 @@ from typing import Any, Literal, Optional
 
 from fastapi import FastAPI, Path, Query, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse, PlainTextResponse
+from fastapi.responses import JSONResponse, PlainTextResponse, Response
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .core import construction
@@ -533,9 +533,15 @@ CONTRACT_PATH = PROJECT_ROOT / "docs" / "api" / "v1" / "openapi.yaml"
 
 
 @api.get("/openapi.yaml", include_in_schema=False)
-def contract() -> PlainTextResponse:
-    return PlainTextResponse(CONTRACT_PATH.read_text(encoding="utf-8"), media_type="application/yaml",
-                             headers={"Cache-Control": "no-cache"})
+def contract(request: Request) -> Response:
+    try:
+        text = CONTRACT_PATH.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        # Площадка выложена без docs/ (копия только backend/). Голый 500 агент
+        # читает как «калькулятор сломан» — отдаём разбираемый отказ; он же
+        # попадает в журнал, и владелец площадки видит, что контракт не выложен
+        return _problem(request, 404, "contract_not_found", "API contract file is not deployed")
+    return PlainTextResponse(text, media_type="application/yaml", headers={"Cache-Control": "no-cache"})
 
 
 def _source_entry(value) -> Optional[dict]:

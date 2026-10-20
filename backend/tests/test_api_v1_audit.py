@@ -74,6 +74,20 @@ def test_contract_is_served_for_agent_platforms(client):
     assert "operationId: createVentilationDesign" in r.text and "request_id" in r.text
 
 
+def test_missing_contract_is_a_problem_not_a_crash(client, monkeypatch, tmp_path):
+    # Площадка развёрнута без docs/ — агент должен получить разбираемый отказ с
+    # request_id и кодом, а не голое «Internal Server Error», которое читается как
+    # «сломался калькулятор» и уводит его считать вручную
+    from backend.app import api_v1
+    monkeypatch.setattr(api_v1, "CONTRACT_PATH", tmp_path / "openapi.yaml")
+    r = client.get("/api/v1/openapi.yaml")
+    assert r.status_code == 404
+    assert r.headers["content-type"].startswith("application/problem+json")
+    assert r.json()["code"] == "contract_not_found"
+    # Отказ записан в журнал: владелец площадки увидит, что контракт не выложен
+    assert _entry(r.json()["instance"])["code"] == "contract_not_found"
+
+
 def test_climate_response_has_request_id(client, monkeypatch):
     # Температуры из климата агент переносит в проект — без номера их не сверить
     from backend.app import api_v1
