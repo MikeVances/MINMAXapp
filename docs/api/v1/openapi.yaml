@@ -168,6 +168,37 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "429": { $ref: "#/components/responses/TooManyRequests" }
 
+  /growth-profiles/{profile_id}:
+    get:
+      tags: [Catalog]
+      operationId: getGrowthProfile
+      summary: Профиль кросса по дням — масса, уставка температуры и влажности
+      description: |
+        Таблица по дням без расчёта корпуса. У встроенных профилей точка на каждый
+        день (0–56); у пользовательских пропуски достроены линейно — `interpolated`.
+        Источник у каждой колонки свой (`sources.weight`, `sources.climate`): у
+        встроенных профилей масса — таблица производителя кросса, температура — одна
+        методика для всех кроссов (Ross 2025 табл. 2.5, пересчёт по массе).
+        `temp_c` — уставка при RH профиля; при другой целевой RH расчёт сдвигает её
+        (Ross 2025 табл. 2.5), см. `target_temp_c` в ответах расчётов.
+      parameters:
+        - name: profile_id
+          in: path
+          required: true
+          schema: { type: string, pattern: "^[a-z0-9][a-z0-9_-]{0,63}$", example: cobb500 }
+      responses:
+        "200":
+          description: Профиль по дням
+          headers:
+            Cache-Control: { $ref: "#/components/headers/CacheControl" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GrowthProfileDays" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+
   /housing-systems:
     get:
       tags: [Catalog]
@@ -749,6 +780,35 @@ components:
         builtin: { type: boolean }
         first_day: { type: integer }
         last_day: { type: integer }
+
+    GrowthProfileDays:
+      type: object
+      required: [id, name, builtin, sources, days]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        breed: { type: string }
+        builtin: { type: boolean }
+        sources:
+          type: object
+          description: "Источник по колонкам: weight — масса, climate — температура и RH"
+          additionalProperties:
+            type: object
+            required: [citation]
+            additionalProperties: true
+            properties:
+              citation: { type: string }
+        days:
+          type: array
+          items:
+            type: object
+            required: [day, weight_g, temp_c, rh_pct, interpolated]
+            properties:
+              day: { type: integer }
+              weight_g: { type: [number, "null"] }
+              temp_c: { type: [number, "null"], description: "Уставка при RH профиля" }
+              rh_pct: { type: [number, "null"] }
+              interpolated: { type: boolean, description: "Значения достроены между опорными точками" }
 
     HousingSystem:
       type: object

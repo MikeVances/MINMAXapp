@@ -18,7 +18,7 @@ import uuid
 from logging.handlers import RotatingFileHandler
 from typing import Any, Literal, Optional
 
-from fastapi import FastAPI, Query, Request
+from fastapi import FastAPI, Path, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, PlainTextResponse
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -31,7 +31,7 @@ from .core import ventilation_requirement as vr
 from .core.build_info import APP_VERSION, build_info
 from .core.building_thermal import HeaterConfig
 from .core.errors import CalcError
-from .core.growth_profiles import PROFILE_ID_PATTERN, ProfileNotFound, list_profiles
+from .core.growth_profiles import PROFILE_ID_PATTERN, ProfileNotFound, list_profiles, load_profile
 from .core.paths import PROJECT_ROOT, data_path
 
 API_VERSION = "1.0.0"
@@ -513,6 +513,42 @@ CONTRACT_PATH = PROJECT_ROOT / "docs" / "api" / "v1" / "openapi.yaml"
 def contract() -> PlainTextResponse:
     return PlainTextResponse(CONTRACT_PATH.read_text(encoding="utf-8"), media_type="application/yaml",
                              headers={"Cache-Control": "no-cache"})
+
+
+def _source_entry(value) -> Optional[dict]:
+    """Источник колонки профиля: структура встроенного профиля или свободный текст."""
+    if isinstance(value, dict):
+        out = {k: v for k, v in value.items() if v is not None and k != "ref"}
+        return {"citation": value.get("ref") or "", **out}
+    if isinstance(value, str) and value:
+        return {"citation": value}
+    return None
+
+
+@api.get("/growth-profiles/{profile_id}")
+def get_growth_profile(profile_id: str = Path(..., pattern=PROFILE_ID_PATTERN)) -> JSONResponse:
+    """
+    Профиль по дням: масса, уставка температуры и влажности. Внешней системе и агенту
+    уставка нужна и без расчёта корпуса («какая температура на 25-й день»).
+
+    Источник у каждой колонки свой и называется отдельно: у встроенных профилей масса —
+    таблица производителя кросса, а температура — одна методика для всех кроссов
+    (Ross 2025 табл. 2.5, пересчёт по массе). Выдать их общей подписью «данные кросса»
+    значило бы ввести в заблуждение.
+    """
+    p = load_profile(profile_id)
+    given = {pt.day for pt in p.points}
+    sources = {k: e for k, e in ((k, _source_entry(v)) for k, v in (p.source or {}).items()) if e}
+    body: dict[str, Any] = {
+        "id": p.id, "name": p.name, "builtin": p.builtin, "sources": sources,
+        "days": [{"day": d.day, "weight_g": d.body_weight_g, "temp_c": d.min_temp_c,
+                  "rh_pct": d.rv_percent, "interpolated": d.day not in given}
+                 for d in p.daily().values()],
+    }
+    if p.breed:
+        body["breed"] = p.breed
+    # Встроенные меняются только с версией приложения, пользовательские — в любой момент
+    return JSONResponse(body, headers=_CATALOG_CACHE if p.builtin else {"Cache-Control": "no-cache"})
 
 
 @api.get("/housing-systems")
