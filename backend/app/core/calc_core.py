@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Callable, Optional
 
 from .errors import CalcError
@@ -235,7 +235,12 @@ def _stored_thermal(house_id: Optional[str]) -> HouseThermal:
 
 def compute(ci: CalcInput) -> CalcResult:
     """Расчёт для интерфейса: параметры и теплотехника — из сохранённых настроек."""
-    return compute_with(ci, CalcParams.from_app_config(load_app_config()), _stored_thermal(ci.house_id))
+    thermal = _stored_thermal(ci.house_id)
+    # Пол для плотности посадки Cobb — из сохранённых размеров корпуса: клеток в
+    # интерфейсе нет, а без площади у Cobb после 14-го дня остались бы значения Ross
+    if ci.stocking_floor_m2 is None and thermal.building is not None:
+        ci = replace(ci, stocking_floor_m2=thermal.building.floor_area_m2)
+    return compute_with(ci, CalcParams.from_app_config(load_app_config()), thermal)
 
 
 def compute_with(ci: CalcInput, params: CalcParams, thermal: HouseThermal) -> CalcResult:

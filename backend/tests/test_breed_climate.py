@@ -183,3 +183,22 @@ def test_custom_copy_keeps_its_own_temperatures(client):
         dst.unlink()
     assert j["target_temp_c"] == pytest.approx(20.7, abs=0.05)
     assert "cobb_2021_5_2" not in _source_ids(j)
+
+
+# ─── Интерфейс ───────────────────────────────────────────────────────────────
+
+def test_ui_takes_floor_from_stored_house_dimensions():
+    # Интерфейс не передаёт площадь пола, но хранит размеры корпуса: 120 × 16 м —
+    # тот же пол, что в запросах API, поэтому день 30 — те же 20.46 °C, а не 20.7 профиля
+    from backend.app.core.building_thermal import THERMAL_CONFIG_PATH
+    from backend.app.core.calc_core import CalcInput, compute
+    path = Path(THERMAL_CONFIG_PATH)
+    path.write_text(json.dumps({"houses": {"1": {
+        "building": {"length_m": 120, "width_m": 16, "height_m": 3.5}}}}), encoding="utf-8")
+    try:
+        r = compute(CalcInput(birds=30_000, age_days=30, outside_t=-5.0,
+                              growth_profile_id="cobb500", house_id="1"))
+    finally:
+        path.unlink()
+    assert r.setpoint_method == bc.DAY_COBB_DENSITY
+    assert r.min_temp_c == pytest.approx(21.0 - (HEADS_PER_M2 * 1.989 - 30.0) / 2.0, abs=0.01)
