@@ -72,3 +72,19 @@ def test_contract_is_served_for_agent_platforms(client):
     r = client.get("/api/v1/openapi.yaml")
     assert r.status_code == 200 and r.headers["content-type"].startswith("application/yaml")
     assert "operationId: createVentilationDesign" in r.text and "request_id" in r.text
+
+
+def test_climate_response_has_request_id(client, monkeypatch):
+    # Температуры из климата агент переносит в проект — без номера их не сверить
+    from backend.app import api_v1
+    n = 24 * 366
+    monkeypatch.setattr(api_v1.design_climate, "fetch_hourly",
+                        lambda *a, **k: ([-20 + 60 * i / (n - 1) for i in range(n)], [50.0] * n, 150.0))
+    api_v1._climate_cache.clear()
+    first = client.get("/api/v1/climate-designs", params={"latitude": 45.0, "longitude": 39.0})
+    again = client.get("/api/v1/climate-designs", params={"latitude": 45.0, "longitude": 39.0})
+    api_v1._climate_cache.clear()
+    assert first.json()["request_id"] == first.headers["x-request-id"]
+    # Из кэша — но со своим номером: кэш не должен раздавать чужой request_id
+    assert again.json()["request_id"] != first.json()["request_id"]
+    assert _entry(again.json()["request_id"])["status"] == 200

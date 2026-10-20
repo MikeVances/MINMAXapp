@@ -760,8 +760,9 @@ components:
 
     ClimateDesign:
       type: object
-      required: [winter_design_c, summer_design_db_c, summer_design_rh_pct, summer_mcwb_c, evap_wb_c, elevation_m, source_id]
+      required: [request_id, winter_design_c, summer_design_db_c, summer_design_rh_pct, summer_mcwb_c, evap_wb_c, elevation_m, source_id]
       properties:
+        request_id: { type: string, example: req-3f9a1c2b7d4e, description: "Номер запроса в журнале сервера" }
         winter_design_c: { type: number, description: "99.6 %" }
         summer_design_db_c: { type: number, description: "0.4 % сухой" }
         summer_design_rh_pct: { type: number, description: "Совпадающая RH" }

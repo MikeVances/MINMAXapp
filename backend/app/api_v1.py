@@ -494,10 +494,13 @@ def get_climate_design(request: Request, latitude: float = Query(..., ge=-90, le
         }
         with _climate_lock:
             _climate_cache[key] = cached
-    _audit({"request_id": _rid(request), "path": request.url.path, "status": 200,
+    rid = _rid(request)
+    _audit({"request_id": rid, "path": request.url.path, "status": 200,
             "request": {"latitude": latitude, "longitude": longitude},
             "result": {k: cached[k] for k in ("winter_design_c", "summer_design_db_c", "summer_design_rh_pct")}})
-    return JSONResponse(cached, headers=_CATALOG_CACHE)
+    # Температуры из этого ответа агент переносит в проект — им тоже нужен номер для
+    # сверки. В кэше request_id нет: у каждого запроса свой
+    return JSONResponse({"request_id": rid, **cached}, headers=_CATALOG_CACHE)
 
 
 # Выверенный контракт — для платформ агентов: описания инструментов они берут из
