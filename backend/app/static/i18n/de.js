@@ -610,6 +610,7 @@
     srv_calibration_implausible:     'mittlerer Hüllen-U-Wert {u} W/(m²·K) außerhalb des physikalischen Bereichs {min}–{max} — Test und Stallmaße prüfen',
     srv_envelope_implausible:        'mittlerer Hüllen-U-Wert {u} W/(m²·K) außerhalb des physikalischen Bereichs {min}–{max} — Schichtdicken (mm) und deklarierten U-Wert prüfen',
     srv_material_not_found:          'Material „{id}“ ist nicht im Baustoffkatalog',
+    srv_source_not_found:            'Quelle „{id}“ ist nicht im Quellenverzeichnis',
     srv_validation_failed:           'ungültiges Feld {field}',
     srv_cage_section_missing:        'für einen Käfigstall wird der Querschnitt der Käfigreihen benötigt (Reihen, Breite, Höhe)',
     srv_cage_section_implausible:    'Käfigreihen passen nicht in den Querschnitt: höher als die Wand, breiter als der Stall oder nur {free_pct} % frei (mindestens {min_pct} % nötig)',

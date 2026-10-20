@@ -16,6 +16,7 @@
 | 401 | <a id="api_key_required"></a>`api_key_required` | На площадке заданы ключи, а `X-API-Key` нет или он неверный | — |
 | 404 | <a id="profile_not_found"></a>`profile_not_found` | `growth_profile_id` нет в справочнике | `id` |
 | 404 | <a id="material_not_found"></a>`material_not_found` | `material_id` нет в справочнике конструкций | `id` |
+| 404 | <a id="source_not_found"></a>`source_not_found` | `source_id` нет в справочнике источников | `id` |
 | 422 | <a id="validation_failed"></a>`validation_failed` | Поле вне диапазона или не того вида; подробности — в `errors[]` по полям | — |
 | 422 | <a id="profile_day_missing"></a>`profile_day_missing` | В профиле нет массы или температуры на нужный день | `id`, `day` |
 | 422 | <a id="rh_out_of_table"></a>`rh_out_of_table` | Целевая RH вне таблицы Ross 2025 2.5 (40–70 %) | `rh`, `min`, `max` |

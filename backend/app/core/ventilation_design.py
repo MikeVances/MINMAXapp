@@ -76,27 +76,8 @@ NATURAL_LEAK_PRESSURE_PA = 4.0
 
 DEFAULT_HEATING_MARGIN_PCT = 15.0
 
-SOURCES = {
-    "cigr_1984": "CIGR (1984, rev. 1999) Climatization of Animal Houses, Report No. 2 — CO₂ norm",
-    "cigr_2002": "CIGR (2002) Heat and moisture production at animal and house levels",
-    "aarnink_2018": "Aarnink et al. (2018) Heat and moisture production in growing-finishing pigs "
-                    "and broilers, CIGR Journal art. 4781 — animal-level sensible share 0.67",
-    "ross_2025_t2_5": "Aviagen, Ross Broiler Management Handbook 2025, table 2.5 — temperature by RH",
-    "cobb_2021_9_1": "Cobb Broiler Management Guide 2021, §9.1 — installed minimum-ventilation capacity",
-    "cobb_2021_9_7": "Cobb Broiler Management Guide 2021, §9.7 — tunnel capacity 165–200 m³/h·m², "
-                     "air exchange 40–50 s",
-    "uga_leakage": "UGA Poultry House Leakage Estimating Spreadsheet 2014; Poultry411 Tightness Calculator",
-    "ashrae_2017_ch1": "ASHRAE Handbook Fundamentals 2017, ch. 1 — psychrometrics, standard atmosphere",
-    "uga_inlet_750cfm": "UGA (Czarick): 750 cfm of fan capacity per ft² of sidewall inlet opening",
-    "uga_pad_velocity": "UGA (Czarick) Evaporative cooling pad design spreadsheet — 350 fpm (1.78 m/s) "
-                        "for 150 mm pads, 225 fpm (1.14 m/s) for 100 mm",
-    "sanhe_pads": "SANHE evaporative pad pressure-drop curves (digitised manufacturer data)",
-    "amca_210": "AMCA 210 — fan ratings at standard air 1.2 kg/m³",
-    "practice_tunnel_rules_2026": "Poultry farmers' practice reported by the owner, 2026-10-19: "
-                                  "tunnel ventilation from day 21 at outdoor temperature ≥ 24 °C",
-    "practice_cage_tunnel_2026": "Owner's operating practice for cage houses, 2026-10-19: "
-                                 "4–5 m/s in aisles for ~2–2.5 m/s at the birds",
-}
+# Источники (`source_id`) с пересказом и ограничениями — в core/sources.py:
+# там же, где их читает справочник API /sources
 
 
 # ─── Входные данные ───────────────────────────────────────────────────────────

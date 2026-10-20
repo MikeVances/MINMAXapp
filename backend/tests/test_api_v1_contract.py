@@ -255,7 +255,7 @@ def test_bad_json_is_a_problem(client):
     _check(r.json(), _response_ref("/ventilation-designs", "post", 400, r.headers["content-type"]))
 
 
-@pytest.mark.parametrize("path", ["/construction-materials", "/growth-profiles", "/housing-systems"])
+@pytest.mark.parametrize("path", ["/construction-materials", "/growth-profiles", "/housing-systems", "/sources"])
 def test_catalogs_match_contract(client, path):
     r = client.get(f"/api/v1{path}")
     assert r.status_code == 200

@@ -15,6 +15,7 @@
       "page": 30,
       "column": "60 % RH",
       "method": "mitchell_by_weight",
+      "source_id": "ross_2025_t2_5",
       "url": "https://aviagen.com/assets/Tech_Center/Ross_Broiler/Aviagen-ROSS-Broiler-Handbook-EN.pdf"
     }
   },

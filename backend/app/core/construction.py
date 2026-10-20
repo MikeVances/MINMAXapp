@@ -33,12 +33,8 @@ from .errors import CalcError
 
 # ─── Источники ────────────────────────────────────────────────────────────────
 
-SOURCES: dict[str, str] = {
-    "br443_2019_s3": "BRE BR 443 (2019) Conventions for U-value calculations, §3 — "
-                     "design values per BS EN ISO 10456 / CIBSE Guide A",
-    "br443_2019_s4_3": "BRE BR 443 (2019) §4.3 — surface resistances per BS EN ISO 6946",
-    "marcegaglia_dop_100p_2022": "Marcegaglia DoP 100P 09/2022 (EN 14509), PIR core λD 0.022 W/(m·K)",
-}
+# Источники (`source_id`) с пересказом и ограничениями — в core/sources.py:
+# там же, где их читает справочник API /sources
 
 
 # ─── Материалы ────────────────────────────────────────────────────────────────

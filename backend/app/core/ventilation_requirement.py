@@ -32,12 +32,8 @@ from .ventilation_design import (
 )
 
 
-SOURCES = {
-    "cobb_2021_9_7_age": "Cobb Broiler Management Guide 2021, §9.7 — air speed limits by age "
-                         "and effective temperature below 30 °C",
-    "effective_temp_table": "Effective temperature vs air speed table (°F-based, used in the app's "
-                            "tunnel tab; primary source not identified — audit 2026-10-18)",
-}
+# Источники (`source_id`) с пересказом и ограничениями — в core/sources.py:
+# там же, где их читает справочник API /sources
 
 
 @dataclass(frozen=True)

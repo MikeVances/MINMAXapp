@@ -13,10 +13,11 @@ import pytest
 
 from backend.app.core.building_thermal import BuildingDimensions, envelope_area_m2
 from backend.app.core.construction import (
-    MATERIALS, SOURCES, HouseGeometry, Layer, Surface,
+    MATERIALS, HouseGeometry, Layer, Surface,
     envelope_areas, envelope_ua, surface_u,
 )
 from backend.app.core.errors import CalcError
+from backend.app.core.sources import CATALOG
 
 # Сэндвич-панель: сталь 0.5 мм + PIR 40 мм + сталь 0.5 мм
 PANEL_40 = Surface(layers=(Layer(0.5, "steel"), Layer(40, "pir_core"), Layer(0.5, "steel")))
@@ -133,7 +134,7 @@ def test_single_steel_sheet_is_still_plausible():
 
 def test_every_material_has_a_known_source():
     for m in MATERIALS.values():
-        assert m.source_id in SOURCES, m.id
+        assert m.source_id in CATALOG, m.id
         assert 0.01 <= m.lambda_w_mk <= 200, m.id
 
 

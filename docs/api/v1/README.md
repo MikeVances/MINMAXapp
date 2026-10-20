@@ -59,6 +59,8 @@
 | `POST /api/v1/ventilation-requirements` | потребность сейчас | Qmin/Qmax, туннель, тепло, находки-риски |
 | `GET /api/v1/construction-materials` | справочник материалов | λ и источник; U считает сервер по слоям |
 | `GET /api/v1/growth-profiles` | профили кроссов | встроенные с источником + пользовательские |
+| `GET /api/v1/growth-profiles/{id}` | профиль по дням | масса, уставка температуры и RH; источник по колонкам |
+| `GET /api/v1/sources`, `/sources/{id}` | справочник источников | что утверждает источник, как применён, где модель отличается (`limits`) |
 | `GET /api/v1/housing-systems` | способы содержания | что поддерживается |
 | `GET /api/v1/climate-designs?latitude&longitude` | расчётный климат | 99.6 % / 0.4 % по ERA5 (кэш) |
 

@@ -25,6 +25,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .core import construction
 from .core import design_climate
+from .core import sources
 from .core.tunnel_design import Pads
 from .core import ventilation_design as vd
 from .core import ventilation_requirement as vr
@@ -92,7 +93,8 @@ def _rid(request: Request) -> str:
 # HTTP-статус по коду ошибки ядра. Ссылка на несуществующий справочный объект — 404,
 # всё остальное, что ядро отвергло по смыслу, — 422 (данные разобраны, но считать по
 # ним нельзя)
-_STATUS_BY_CODE = {"profile_not_found": 404, "material_not_found": 404, "climate_unavailable": 502}
+_STATUS_BY_CODE = {"profile_not_found": 404, "material_not_found": 404, "source_not_found": 404,
+                   "climate_unavailable": 502}
 
 
 def _problem(request: Request, status: int, code: str, title: str, params: Optional[dict] = None,
@@ -319,8 +321,8 @@ def _note(n: vd.Note) -> dict:
 
 
 def _sources(ids: list[str], profile_citation: Optional[str]) -> list[dict]:
-    catalog = {**construction.SOURCES, **vd.SOURCES, **vr.SOURCES}
-    out = [{"id": i, "citation": catalog[i]} for i in ids if i in catalog]
+    # Тот же справочник, что отдаёт /sources: по id агент получит пересказ и ограничения
+    out = [{"id": i, "citation": sources.citation(i)} for i in ids if sources.get_source(i)]
     if profile_citation:
         out.append({"id": "growth_profile", "citation": profile_citation})
     return out
@@ -454,6 +456,27 @@ def list_construction_materials() -> JSONResponse:
     return JSONResponse({"data": data}, headers=_CATALOG_CACHE)
 
 
+# Справочник источников: по `source_id` из ответа расчёта агент получает выверенный
+# пересказ правила, как калькулятор его применяет и где модель от источника отличается.
+# Поиск по ключу, а не по полному тексту гайдов: второго канала чисел, мимо журнала
+# расчётов, у агента появиться не должно
+SOURCE_ID_PATTERN = r"^[a-z0-9][a-z0-9_]{0,63}$"
+
+
+@api.get("/sources")
+def list_sources() -> JSONResponse:
+    return JSONResponse({"data": [sources.as_dict(s) for s in sources.CATALOG.values()]},
+                        headers=_CATALOG_CACHE)
+
+
+@api.get("/sources/{source_id}")
+def get_source(source_id: str = Path(..., pattern=SOURCE_ID_PATTERN)) -> JSONResponse:
+    s = sources.get_source(source_id)
+    if s is None:
+        raise CalcError("source_not_found", id=source_id)
+    return JSONResponse(sources.as_dict(s), headers=_CATALOG_CACHE)
+
+
 @api.get("/growth-profiles")
 def list_growth_profiles() -> JSONResponse:
     data = []
@@ -489,7 +512,7 @@ def get_climate_design(request: Request, latitude: float = Query(..., ge=-90, le
             "winter_design_c": c.heating_996_c, "summer_design_db_c": c.cooling_04_db_c,
             "summer_design_rh_pct": c.cooling_04_rh_pct, "summer_mcwb_c": c.cooling_04_mcwb_c,
             "evap_wb_c": c.evap_04_wb_c, "elevation_m": c.elevation_m,
-            "source_id": "era5_open_meteo", "citation": design_climate.SOURCE,
+            "source_id": "era5_open_meteo", "citation": sources.citation("era5_open_meteo"),
             "latitude": key[0], "longitude": key[1],
         }
         with _climate_lock:

@@ -199,6 +199,61 @@ paths:
         "422": { $ref: "#/components/responses/Unprocessable" }
         "429": { $ref: "#/components/responses/TooManyRequests" }
 
+  /sources:
+    get:
+      tags: [Catalog]
+      operationId: listSources
+      summary: Справочник источников расчёта — все записи
+      description: |
+        Каждый `source_id`, который отдаёт расчёт (`sources`, `assumptions`,
+        `equipment`, справочники), есть здесь. Текст — наш выверенный пересказ на
+        русском, а не цитата документа: что утверждает источник, как калькулятор его
+        применяет и где модель от него отличается (`limits`). `kind` говорит, чего
+        источник стоит: норма, руководство производителя, практика со слов владельца
+        или неустановленный первоисточник. Десятки записей — без пагинации.
+      responses:
+        "200":
+          description: Список источников
+          headers:
+            Cache-Control: { $ref: "#/components/headers/CacheControl" }
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/SourceDetail" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+
+  /sources/{source_id}:
+    get:
+      tags: [Catalog]
+      operationId: getSource
+      summary: Источник по метке из ответа расчёта — что утверждает, как применён, ограничения
+      description: |
+        Метка `growth_profile` в `sources` ответа расчёта — не запись справочника:
+        источник массы профиля смотрите в `getGrowthProfile` (`sources.weight`).
+      parameters:
+        - name: source_id
+          in: path
+          required: true
+          schema: { type: string, pattern: "^[a-z0-9][a-z0-9_]{0,63}$", example: cobb_2021_9_7 }
+      responses:
+        "200":
+          description: Запись справочника
+          headers:
+            Cache-Control: { $ref: "#/components/headers/CacheControl" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SourceDetail" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+
   /housing-systems:
     get:
       tags: [Catalog]
@@ -759,6 +814,30 @@ components:
         url: { type: string, format: uri }
 
     # ── Справочники ───────────────────────────────────────────────────────────
+    SourceDetail:
+      type: object
+      required: [id, kind, citation, title, publisher, applies_to, statement, how_used]
+      properties:
+        id: { type: string, example: cobb_2021_9_7 }
+        kind:
+          type: string
+          enum: [standard, manufacturer, research, extension, data, practice, unverified]
+          description: |
+            standard — стандарт; manufacturer — руководство или паспорт производителя;
+            research — научная публикация; extension — методика университета (UGA);
+            data — набор данных; practice — практика со слов владельца, не публикация;
+            unverified — первоисточник не установлен
+        citation: { type: string, description: "Та же короткая ссылка, что в `sources` ответов расчёта" }
+        title: { type: string }
+        publisher: { type: string }
+        year: { type: integer }
+        locator: { type: string, description: "Раздел, таблица, страница — где проверить", example: "§9.7 Tunnel Ventilation, с. 78" }
+        url: { type: string, format: uri }
+        applies_to: { type: string, description: "К какой части расчёта относится" }
+        statement: { type: string, description: "Что утверждает источник — наш выверенный пересказ" }
+        how_used: { type: string, description: "Как калькулятор это применяет" }
+        limits: { type: string, description: "Где модель отличается от источника или чего он не покрывает" }
+
     ConstructionMaterial:
       type: object
       required: [id, name, lambda_w_mk, source_id]
@@ -798,6 +877,7 @@ components:
             additionalProperties: true
             properties:
               citation: { type: string }
+              source_id: { type: string, description: "Запись справочника `getSource`, если есть", example: ross_2025_t2_5 }
         days:
           type: array
           items:
