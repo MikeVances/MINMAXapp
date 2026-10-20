@@ -589,6 +589,8 @@
     gp_src_column:                    'kolumna {c}',
     gp_src_basis_as_hatched_on_farm:  'masa na fermie (z treścią przewodu pokarmowego), płeć mieszana',
     gp_src_method_mitchell_by_weight: 'temperatura według masy żywej (wzór dr. M. Mitchella, SRUC), przeliczona na dzienną masę tego krzyżowania; RH 60 %',
+    gp_src_method_cobb_rh_density:    'temperatura według wieku i RH do 14. dnia, potem według obsady kg/m² (w obliczeniu kurnika); RH 60 %',
+    gp_src_method_hubbard_by_age:     'temperatura według wieku, ogrzewanie całego kurnika; bez korekty RH',
     gp_src_copied_from:               'skopiowano z {id}',
 
     // ── Water supply note (pad cooling), house naming ──

@@ -6,7 +6,7 @@ from typing import Callable, Optional
 
 from .errors import CalcError
 from .growth_profiles import load_profile
-from .apparent_temp import rh_temperature_shift
+from .breed_climate import setpoint_for_day
 from .survival import survival_fraction
 from .psychro import humidity_ratio
 from .bird_heat import HouseHeat, house_heat_per_bird, house_sensible_fraction
@@ -123,6 +123,9 @@ class CalcInput:
     tunnel_section_m2: Optional[float] = None
     # Утечка при ~4 Па, м³/ч: обогрев греет не меньше этого воздуха (API v1)
     air_exchange_floor_m3h: float = 0.0
+    # Площадь пола под птицей, м² — для уставки Cobb по плотности посадки (API v1,
+    # подстилка). None → плотность не определена, у Cobb после 14-го дня — профиль
+    stocking_floor_m2: Optional[float] = None
 
 
 @dataclass
@@ -164,6 +167,9 @@ class CalcResult:
     heat_need_w: Optional[float] = None
     # Живая птица на этот день с учётом падежа
     birds_alive: Optional[float] = None
+    # Методика уставки этого дня (breed_climate.DAY_*) и плотность, если по ней считали
+    setpoint_method: Optional[str] = None
+    stocking_density_kg_m2: Optional[float] = None
 
 
 @dataclass(frozen=True)
@@ -250,7 +256,8 @@ def compute_with(ci: CalcInput, params: CalcParams, thermal: HouseThermal) -> Ca
     # Профиля нет → ProfileNotFound наружу: расчёт по «чьим-то» данным
     # хуже, чем явная ошибка (раньше здесь был тихий fallback на демо-профиль)
     profile_id = ci.growth_profile_id or params.default_growth_profile
-    point = load_profile(profile_id).point_for_day(age)
+    profile = load_profile(profile_id)
+    point = profile.point_for_day(age)
 
     if point.body_weight_g is None or point.min_temp_c is None:
         raise CalcError("profile_day_missing", id=profile_id, day=age)
@@ -259,17 +266,17 @@ def compute_with(ci: CalcInput, params: CalcParams, thermal: HouseThermal) -> Ca
     weight_kg       = max(body_weight_g / 1000.0, 0.0001)
     rv_percent      = ci.target_rh if ci.target_rh is not None else point.rv_percent
 
-    # Температура профиля — опорная при RH 60 %. При другой целевой RH птица
-    # ощущает ту же сухую температуру иначе: суше — уставку выше, влажнее — ниже
-    # (Ross Handbook 2025, табл. 2.5). Та же RH ниже — потолок влагобаланса,
-    # поэтому уставка и влажностный Qmin меняются согласованно.
-    # RH профиля вне таблицы (свой профиль с 80 %) — поправку не применяем.
-    t_target_inside = point.min_temp_c
-    if rv_percent is not None and 40.0 <= rv_percent <= 70.0:
-        t_target_inside += rh_temperature_shift(body_weight_g, rv_percent)
-
     # --- Effective birds with mortality ---
     birds_eff = ci.birds * survival_fraction(age, params.total_mortality_pct, params.cycle_days)
+
+    # Уставка — по методике производителя кросса (breed_climate): Ross — по массе
+    # и RH, Cobb — по возрасту, затем по плотности посадки, Hubbard — по возрасту.
+    # Та же RH — потолок влагобаланса, поэтому уставка и влажностный Qmin
+    # меняются согласованно. Живая птица 14-го дня — для плотности Cobb
+    birds_day14 = ci.birds * survival_fraction(14, params.total_mortality_pct, params.cycle_days)
+    setpoint = setpoint_for_day(profile, age, point, rv_percent, ci.stocking_floor_m2,
+                                birds_eff, birds_day14)
+    t_target_inside = setpoint.temp_c
 
     # Тепло одной птицы на уровне корпуса при уставке — одна модель для Qmax, горелок и влаги
     bird_heat = params.bird_heat_model(weight_kg, t_target_inside)
@@ -528,4 +535,6 @@ def compute_with(ci: CalcInput, params: CalcParams, thermal: HouseThermal) -> Ca
         calibration_ignored=calibration_ignored,
         heat_need_w=heat_need_w,
         birds_alive=birds_eff,
+        setpoint_method=setpoint.method,
+        stocking_density_kg_m2=setpoint.density_kg_m2,
     )

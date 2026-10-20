@@ -589,6 +589,8 @@
     gp_src_column:                    'Spalte {c}',
     gp_src_basis_as_hatched_on_farm:  'Lebendmasse im Stall (mit Darminhalt), gemischtgeschlechtlich',
     gp_src_method_mitchell_by_weight: 'Temperatur nach Lebendmasse (Formel Dr. M. Mitchell, SRUC), auf die Tagesmasse dieser Linie umgerechnet; RH 60 %',
+    gp_src_method_cobb_rh_density:    'Temperatur nach Alter und RH bis Tag 14, danach nach Besatzdichte kg/m² (in der Stallberechnung); RH 60 %',
+    gp_src_method_hubbard_by_age:     'Temperatur nach Alter, Heizung des ganzen Stalls; ohne RH-Korrektur',
     gp_src_copied_from:               'kopiert aus {id}',
 
     // ── Water supply note (pad cooling), house naming ──

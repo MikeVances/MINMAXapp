@@ -590,6 +590,8 @@
     gp_src_column:                    'колонка {c}',
     gp_src_basis_as_hatched_on_farm:  'масса on-farm (с кормом в ЖКТ), смешанный пол',
     gp_src_method_mitchell_by_weight: 'температура по живой массе (формула Dr. M. Mitchell, SRUC), пересчитана на массу этого кросса по дням; RH 60 %',
+    gp_src_method_cobb_rh_density:    'температура по возрасту и RH до 14-го дня, затем по плотности посадки кг/м² (в расчёте корпуса); RH 60 %',
+    gp_src_method_hubbard_by_age:     'температура по возрасту, обогрев всего корпуса; без поправки на RH',
     gp_src_copied_from:               'скопировано из {id}',
 
     // ── Water supply note (pad cooling), house naming ──

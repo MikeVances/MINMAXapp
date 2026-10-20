@@ -22,8 +22,9 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 from .bird_heat import animal_heat_per_bird, house_heat_per_bird
+from .breed_climate import DAY_COBB_FALLBACK, SOURCE_BY_DAY_METHOD
 from .building_thermal import HeaterConfig
-from .calc_core import CalcInput, CalcParams, HouseThermal, compute_with
+from .calc_core import CalcInput, CalcParams, CalcResult, HouseThermal, compute_with
 from .construction import (
     EnvelopeUA, HouseGeometry, Surface, envelope_areas, envelope_ua,
     surface_resistance_si,
@@ -320,11 +321,44 @@ def design(inp: DesignInput) -> DesignResult:
         return _design(inp)
 
 
+# Плотнее 42 кг/м² Cobb 2021 §5.2 держать не советует: тепло из-под птицы
+# вентиляцией уже не снять
+STOCKING_DENSITY_LIMIT_KG_M2 = 42.0
+
+
+def setpoint_notes(results: list[CalcResult], findings: list, assumptions: list,
+                   source_ids: set) -> None:
+    """
+    Источник уставки температуры и допущения её методики (breed_climate).
+
+    Методика своя у каждого кросса и даже у дня (Cobb: возраст, затем плотность),
+    поэтому источник берётся из того, как реально посчитан каждый день, а не
+    подписывается одним «Ross» на все кроссы.
+    """
+    methods = {r.setpoint_method for r in results}
+    source_ids |= {SOURCE_BY_DAY_METHOD[m] for m in methods if m in SOURCE_BY_DAY_METHOD}
+
+    dense = [r for r in results if r.stocking_density_kg_m2 is not None]
+    if dense:
+        assumptions.append(Note("cobb_density_transition", {
+            "density_from_kg_m2": round(dense[0].stocking_density_kg_m2, 1),
+            "density_to_kg_m2": round(dense[-1].stocking_density_kg_m2, 1)}, source_id="cobb_2021_5_2"))
+        over = [r for r in dense if r.stocking_density_kg_m2 > STOCKING_DENSITY_LIMIT_KG_M2]
+        if over:
+            findings.append(Note("stocking_density_high", {
+                "days": [r.profile_day_resolved for r in over],
+                "density_kg_m2": round(max(r.stocking_density_kg_m2 for r in over), 1),
+                "limit_kg_m2": STOCKING_DENSITY_LIMIT_KG_M2}, "warning", source_id="cobb_2021_5_2"))
+    if DAY_COBB_FALLBACK in methods:
+        assumptions.append(Note("cobb_density_unavailable", source_id="ross_2025_t2_5"))
+
+
 def _design(inp: DesignInput) -> DesignResult:
     g = inp.geometry
     warnings: list[Note] = []
     assumptions: list[Note] = []
-    source_ids = {"cigr_1984", "cigr_2002", "ross_2025_t2_5", "cobb_2021_9_1", "uga_leakage"}
+    # Источник уставки температуры добавит setpoint_notes — он свой у каждого кросса
+    source_ids = {"cigr_1984", "cigr_2002", "cobb_2021_9_1", "uga_leakage"}
     cages = inp.housing == "cages"
 
     # ── Ограждения и утечки ──
@@ -359,9 +393,11 @@ def _design(inp: DesignInput) -> DesignResult:
     winter_rh = 100.0
     assumptions.append(Note("winter_rh_saturated"))
 
+    # Пол под птицей — для уставки Cobb по плотности посадки; в клетках её нет
     common = dict(birds=inp.birds, growth_profile_id=inp.growth_profile_id,
                   target_rh=inp.target_rh_pct, tunnel_section_m2=section,
-                  house_width_m=g.width_m, house_height_m=_mean_height_m(g))
+                  house_width_m=g.width_m, house_height_m=_mean_height_m(g),
+                  stocking_floor_m2=None if cages else floor_m2)
 
     profile = load_profile(inp.growth_profile_id)
     last_profile_day = max(profile.daily()) if profile.points else 0
@@ -372,6 +408,7 @@ def _design(inp: DesignInput) -> DesignResult:
     humid_days, short_days, leak_days, condensation_days = [], [], [], []
     coldest = coldest_surface(env, ua, g)
     worst_condensation: Optional[tuple[float, float]] = None
+    winter_days: list[CalcResult] = []
 
     for d in range(1, inp.cycle_days + 1):
         w = compute_with(CalcInput(age_days=d, outside_t=inp.winter_design_c, outside_rh=winter_rh,
@@ -382,6 +419,7 @@ def _design(inp: DesignInput) -> DesignResult:
                                    outside_rh=inp.summer_design_rh_pct, **common),
                          summer_params, summer_thermal)
 
+        winter_days.append(w)
         exchange = max(w.q_min_m3h, q4_m3h)
         days.append(DesignDay(
             day=d, weight_g=w.weight_used_g, target_temp_c=round(w.min_temp_c, 2),
@@ -407,6 +445,7 @@ def _design(inp: DesignInput) -> DesignResult:
                 worst_condensation = cond
 
     # ── Находки ──
+    setpoint_notes(winter_days, warnings, assumptions, source_ids)
     if humid_days:
         warnings.append(Note("humidity_uncontrollable", {"days": humid_days}, "critical"))
     if short_days:

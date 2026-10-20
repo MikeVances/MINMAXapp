@@ -177,10 +177,14 @@ paths:
         Таблица по дням без расчёта корпуса. У встроенных профилей точка на каждый
         день (0–56); у пользовательских пропуски достроены линейно — `interpolated`.
         Источник у каждой колонки свой (`sources.weight`, `sources.climate`): у
-        встроенных профилей масса — таблица производителя кросса, температура — одна
-        методика для всех кроссов (Ross 2025 табл. 2.5, пересчёт по массе).
-        `temp_c` — уставка при RH профиля; при другой целевой RH расчёт сдвигает её
-        (Ross 2025 табл. 2.5), см. `target_temp_c` в ответах расчётов.
+        встроенных профилей масса — таблица производителя кросса, температура — по
+        методике производителя (`sources.climate.method`, запись справочника —
+        `sources.climate.source_id`): Aviagen (Ross, Arbor Acres) — по массе и RH (Ross
+        2025 табл. 2.5); Cobb 500 — по возрасту и RH до 14-го дня, затем по плотности
+        посадки (Cobb 2021 §5.2); Hubbard — по возрасту без поправки на RH.
+        `temp_c` — уставка при RH профиля. Уставку дня с учётом целевой RH и (у Cobb)
+        плотности посадки даёт только расчёт — `target_temp_c`; у Cobb после 14-го дня
+        `temp_c` — значения без плотности (Ross), их расчёт берёт только в клетках.
       parameters:
         - name: profile_id
           in: path
@@ -746,7 +750,7 @@ components:
         qmin_m3h: { type: number }
         qmin_basis: { type: string, enum: [co2, moisture] }
         qmax_m3h: { type: number }
-        target_temp_c: { type: number, description: "Уставка профиля на день с поправкой на целевую RH" }
+        target_temp_c: { type: number, description: "Уставка дня по методике кросса (источник — в `sources`): с поправкой на целевую RH, у Cobb — по плотности посадки" }
         weight_g: { type: number, description: "Масса по профилю на этот день" }
         air_exchange_m3h: { type: number, description: "Только с envelope: обмен для обогрева max(Qmin, утечка при 4 Па)" }
         tunnel:

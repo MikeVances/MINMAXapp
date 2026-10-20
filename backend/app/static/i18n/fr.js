@@ -589,6 +589,8 @@
     gp_src_column:                    'colonne {c}',
     gp_src_basis_as_hatched_on_farm:  'poids en élevage (avec contenu digestif), sexes mélangés',
     gp_src_method_mitchell_by_weight: 'température selon le poids vif (formule Dr M. Mitchell, SRUC), recalculée sur le poids journalier de cette souche ; HR 60 %',
+    gp_src_method_cobb_rh_density:    'température selon l’âge et l’HR jusqu’au jour 14, puis selon la densité kg/m² (dans le calcul du bâtiment) ; HR 60 %',
+    gp_src_method_hubbard_by_age:     'température selon l’âge, chauffage de tout le bâtiment ; sans correction d’HR',
     gp_src_copied_from:               'copié depuis {id}',
 
     // ── Water supply note (pad cooling), house naming ──

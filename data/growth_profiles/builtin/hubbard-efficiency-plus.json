@@ -10,212 +10,212 @@
       "url": "https://www.hubbardbreeders.com/wp-content/uploads/2025/09/broiler-performance-objectives-efficiency-plus-enfres.pdf"
     },
     "climate": {
-      "ref": "Aviagen, Ross Broiler Management Handbook 2025",
-      "table": "2.5",
-      "page": 30,
-      "column": "60 % RH",
-      "method": "mitchell_by_weight",
-      "source_id": "ross_2025_t2_5",
-      "url": "https://aviagen.com/assets/Tech_Center/Ross_Broiler/Aviagen-ROSS-Broiler-Handbook-EN.pdf"
+      "ref": "Hubbard, Efficiency Plus Broiler Guide V-2026-09",
+      "table": "Appendix 1",
+      "page": 10,
+      "column": "Whole house heating",
+      "method": "hubbard_by_age",
+      "source_id": "hubbard_2026_app1",
+      "url": "https://www.hubbardbreeders.com/medias/3262/broiler-guide-efficiency-plus-en.pdf"
     }
   },
   "points": [
     {
       "day": 0,
       "body_weight_g": 43.0,
-      "min_temp_c": 30.8,
+      "min_temp_c": 33.0,
       "rv_percent": 60.0
     },
     {
       "day": 1,
       "body_weight_g": 63.0,
-      "min_temp_c": 30.2,
+      "min_temp_c": 32.5,
       "rv_percent": 60.0
     },
     {
       "day": 2,
       "body_weight_g": 82.0,
-      "min_temp_c": 29.5,
+      "min_temp_c": 32.0,
       "rv_percent": 60.0
     },
     {
       "day": 3,
       "body_weight_g": 103.0,
-      "min_temp_c": 28.9,
+      "min_temp_c": 31.5,
       "rv_percent": 60.0
     },
     {
       "day": 4,
       "body_weight_g": 127.0,
-      "min_temp_c": 28.5,
+      "min_temp_c": 31.1,
       "rv_percent": 60.0
     },
     {
       "day": 5,
       "body_weight_g": 153.0,
-      "min_temp_c": 28.1,
+      "min_temp_c": 30.8,
       "rv_percent": 60.0
     },
     {
       "day": 6,
       "body_weight_g": 184.0,
-      "min_temp_c": 27.7,
+      "min_temp_c": 30.4,
       "rv_percent": 60.0
     },
     {
       "day": 7,
       "body_weight_g": 216.0,
-      "min_temp_c": 27.4,
+      "min_temp_c": 30.0,
       "rv_percent": 60.0
     },
     {
       "day": 8,
       "body_weight_g": 252.0,
-      "min_temp_c": 27.0,
+      "min_temp_c": 29.7,
       "rv_percent": 60.0
     },
     {
       "day": 9,
       "body_weight_g": 290.0,
-      "min_temp_c": 26.7,
+      "min_temp_c": 29.4,
       "rv_percent": 60.0
     },
     {
       "day": 10,
       "body_weight_g": 333.0,
-      "min_temp_c": 26.4,
+      "min_temp_c": 29.1,
       "rv_percent": 60.0
     },
     {
       "day": 11,
       "body_weight_g": 380.0,
-      "min_temp_c": 26.0,
+      "min_temp_c": 28.9,
       "rv_percent": 60.0
     },
     {
       "day": 12,
       "body_weight_g": 430.0,
-      "min_temp_c": 25.7,
+      "min_temp_c": 28.6,
       "rv_percent": 60.0
     },
     {
       "day": 13,
       "body_weight_g": 483.0,
-      "min_temp_c": 25.4,
+      "min_temp_c": 28.3,
       "rv_percent": 60.0
     },
     {
       "day": 14,
       "body_weight_g": 541.0,
-      "min_temp_c": 25.1,
+      "min_temp_c": 28.0,
       "rv_percent": 60.0
     },
     {
       "day": 15,
       "body_weight_g": 603.0,
-      "min_temp_c": 24.7,
+      "min_temp_c": 27.6,
       "rv_percent": 60.0
     },
     {
       "day": 16,
       "body_weight_g": 667.0,
-      "min_temp_c": 24.3,
+      "min_temp_c": 27.3,
       "rv_percent": 60.0
     },
     {
       "day": 17,
       "body_weight_g": 734.0,
-      "min_temp_c": 23.9,
+      "min_temp_c": 26.9,
       "rv_percent": 60.0
     },
     {
       "day": 18,
       "body_weight_g": 805.0,
-      "min_temp_c": 23.5,
+      "min_temp_c": 26.6,
       "rv_percent": 60.0
     },
     {
       "day": 19,
       "body_weight_g": 879.0,
-      "min_temp_c": 23.2,
+      "min_temp_c": 26.2,
       "rv_percent": 60.0
     },
     {
       "day": 20,
       "body_weight_g": 956.0,
-      "min_temp_c": 22.9,
+      "min_temp_c": 25.9,
       "rv_percent": 60.0
     },
     {
       "day": 21,
       "body_weight_g": 1035.0,
-      "min_temp_c": 22.6,
+      "min_temp_c": 25.5,
       "rv_percent": 60.0
     },
     {
       "day": 22,
       "body_weight_g": 1117.0,
-      "min_temp_c": 22.3,
+      "min_temp_c": 25.1,
       "rv_percent": 60.0
     },
     {
       "day": 23,
       "body_weight_g": 1200.0,
-      "min_temp_c": 21.9,
+      "min_temp_c": 24.6,
       "rv_percent": 60.0
     },
     {
       "day": 24,
       "body_weight_g": 1285.0,
-      "min_temp_c": 21.6,
+      "min_temp_c": 24.2,
       "rv_percent": 60.0
     },
     {
       "day": 25,
       "body_weight_g": 1373.0,
-      "min_temp_c": 21.3,
+      "min_temp_c": 23.8,
       "rv_percent": 60.0
     },
     {
       "day": 26,
       "body_weight_g": 1464.0,
-      "min_temp_c": 20.9,
+      "min_temp_c": 23.4,
       "rv_percent": 60.0
     },
     {
       "day": 27,
       "body_weight_g": 1554.0,
-      "min_temp_c": 20.7,
+      "min_temp_c": 22.9,
       "rv_percent": 60.0
     },
     {
       "day": 28,
       "body_weight_g": 1647.0,
-      "min_temp_c": 20.7,
+      "min_temp_c": 22.5,
       "rv_percent": 60.0
     },
     {
       "day": 29,
       "body_weight_g": 1741.0,
-      "min_temp_c": 20.7,
+      "min_temp_c": 22.1,
       "rv_percent": 60.0
     },
     {
       "day": 30,
       "body_weight_g": 1836.0,
-      "min_temp_c": 20.7,
+      "min_temp_c": 21.8,
       "rv_percent": 60.0
     },
     {
       "day": 31,
       "body_weight_g": 1933.0,
-      "min_temp_c": 20.7,
+      "min_temp_c": 21.4,
       "rv_percent": 60.0
     },
     {
       "day": 32,
       "body_weight_g": 2031.0,
-      "min_temp_c": 20.7,
+      "min_temp_c": 21.1,
       "rv_percent": 60.0
     },
     {
@@ -227,139 +227,139 @@
     {
       "day": 34,
       "body_weight_g": 2229.0,
-      "min_temp_c": 20.7,
+      "min_temp_c": 20.4,
       "rv_percent": 60.0
     },
     {
       "day": 35,
       "body_weight_g": 2330.0,
-      "min_temp_c": 20.7,
+      "min_temp_c": 20.0,
       "rv_percent": 60.0
     },
     {
       "day": 36,
       "body_weight_g": 2430.0,
-      "min_temp_c": 20.7,
+      "min_temp_c": 20.0,
       "rv_percent": 60.0
     },
     {
       "day": 37,
       "body_weight_g": 2529.0,
-      "min_temp_c": 20.7,
+      "min_temp_c": 20.0,
       "rv_percent": 60.0
     },
     {
       "day": 38,
       "body_weight_g": 2631.0,
-      "min_temp_c": 20.7,
+      "min_temp_c": 20.0,
       "rv_percent": 60.0
     },
     {
       "day": 39,
       "body_weight_g": 2730.0,
-      "min_temp_c": 20.7,
+      "min_temp_c": 20.0,
       "rv_percent": 60.0
     },
     {
       "day": 40,
       "body_weight_g": 2830.0,
-      "min_temp_c": 20.7,
+      "min_temp_c": 20.0,
       "rv_percent": 60.0
     },
     {
       "day": 41,
       "body_weight_g": 2929.0,
-      "min_temp_c": 20.7,
+      "min_temp_c": 20.0,
       "rv_percent": 60.0
     },
     {
       "day": 42,
       "body_weight_g": 3028.0,
-      "min_temp_c": 20.7,
+      "min_temp_c": 20.0,
       "rv_percent": 60.0
     },
     {
       "day": 43,
       "body_weight_g": 3126.0,
-      "min_temp_c": 20.7,
+      "min_temp_c": 20.0,
       "rv_percent": 60.0
     },
     {
       "day": 44,
       "body_weight_g": 3225.0,
-      "min_temp_c": 20.7,
+      "min_temp_c": 20.0,
       "rv_percent": 60.0
     },
     {
       "day": 45,
       "body_weight_g": 3323.0,
-      "min_temp_c": 20.7,
+      "min_temp_c": 20.0,
       "rv_percent": 60.0
     },
     {
       "day": 46,
       "body_weight_g": 3419.0,
-      "min_temp_c": 20.7,
+      "min_temp_c": 20.0,
       "rv_percent": 60.0
     },
     {
       "day": 47,
       "body_weight_g": 3515.0,
-      "min_temp_c": 20.7,
+      "min_temp_c": 20.0,
       "rv_percent": 60.0
     },
     {
       "day": 48,
       "body_weight_g": 3609.0,
-      "min_temp_c": 20.7,
+      "min_temp_c": 20.0,
       "rv_percent": 60.0
     },
     {
       "day": 49,
       "body_weight_g": 3704.0,
-      "min_temp_c": 20.7,
+      "min_temp_c": 20.0,
       "rv_percent": 60.0
     },
     {
       "day": 50,
       "body_weight_g": 3797.0,
-      "min_temp_c": 20.7,
+      "min_temp_c": 20.0,
       "rv_percent": 60.0
     },
     {
       "day": 51,
       "body_weight_g": 3888.0,
-      "min_temp_c": 20.7,
+      "min_temp_c": 20.0,
       "rv_percent": 60.0
     },
     {
       "day": 52,
       "body_weight_g": 3977.0,
-      "min_temp_c": 20.7,
+      "min_temp_c": 20.0,
       "rv_percent": 60.0
     },
     {
       "day": 53,
       "body_weight_g": 4067.0,
-      "min_temp_c": 20.7,
+      "min_temp_c": 20.0,
       "rv_percent": 60.0
     },
     {
       "day": 54,
       "body_weight_g": 4153.0,
-      "min_temp_c": 20.7,
+      "min_temp_c": 20.0,
       "rv_percent": 60.0
     },
     {
       "day": 55,
       "body_weight_g": 4239.0,
-      "min_temp_c": 20.7,
+      "min_temp_c": 20.0,
       "rv_percent": 60.0
     },
     {
       "day": 56,
       "body_weight_g": 4324.0,
-      "min_temp_c": 20.7,
+      "min_temp_c": 20.0,
       "rv_percent": 60.0
     }
   ]

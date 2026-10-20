@@ -10,140 +10,140 @@
       "url": "https://www.cobbgenetics.com/assets/Cobb-Files/2022-Cobb500-Broiler-Performance-Nutrition-Supplement.pdf"
     },
     "climate": {
-      "ref": "Aviagen, Ross Broiler Management Handbook 2025",
-      "table": "2.5",
-      "page": 30,
+      "ref": "Cobb-Vantress, Cobb Broiler Management Guide 2021",
+      "table": "5.2",
+      "page": 40,
       "column": "60 % RH",
-      "method": "mitchell_by_weight",
-      "source_id": "ross_2025_t2_5",
-      "url": "https://aviagen.com/assets/Tech_Center/Ross_Broiler/Aviagen-ROSS-Broiler-Handbook-EN.pdf"
+      "method": "cobb_rh_density",
+      "source_id": "cobb_2021_5_2",
+      "url": "https://www.cobbgenetics.com/assets/Cobb-Files/Broiler-Guide_English-2021-min.pdf"
     }
   },
   "points": [
     {
       "day": 0,
       "body_weight_g": 42.0,
-      "min_temp_c": 30.8,
+      "min_temp_c": 31.0,
       "rv_percent": 60.0
     },
     {
       "day": 1,
       "body_weight_g": 55.0,
-      "min_temp_c": 30.4,
+      "min_temp_c": 30.7,
       "rv_percent": 60.0
     },
     {
       "day": 2,
       "body_weight_g": 71.0,
-      "min_temp_c": 29.9,
+      "min_temp_c": 30.4,
       "rv_percent": 60.0
     },
     {
       "day": 3,
       "body_weight_g": 90.0,
-      "min_temp_c": 29.2,
+      "min_temp_c": 30.1,
       "rv_percent": 60.0
     },
     {
       "day": 4,
       "body_weight_g": 112.0,
-      "min_temp_c": 28.7,
+      "min_temp_c": 29.9,
       "rv_percent": 60.0
     },
     {
       "day": 5,
       "body_weight_g": 138.0,
-      "min_temp_c": 28.3,
+      "min_temp_c": 29.6,
       "rv_percent": 60.0
     },
     {
       "day": 6,
       "body_weight_g": 168.0,
-      "min_temp_c": 27.9,
+      "min_temp_c": 29.3,
       "rv_percent": 60.0
     },
     {
       "day": 7,
       "body_weight_g": 202.0,
-      "min_temp_c": 27.5,
+      "min_temp_c": 29.0,
       "rv_percent": 60.0
     },
     {
       "day": 8,
       "body_weight_g": 240.0,
-      "min_temp_c": 27.2,
+      "min_temp_c": 28.6,
       "rv_percent": 60.0
     },
     {
       "day": 9,
       "body_weight_g": 283.0,
-      "min_temp_c": 26.8,
+      "min_temp_c": 28.1,
       "rv_percent": 60.0
     },
     {
       "day": 10,
       "body_weight_g": 330.0,
-      "min_temp_c": 26.4,
+      "min_temp_c": 27.7,
       "rv_percent": 60.0
     },
     {
       "day": 11,
       "body_weight_g": 382.0,
-      "min_temp_c": 26.0,
+      "min_temp_c": 27.3,
       "rv_percent": 60.0
     },
     {
       "day": 12,
       "body_weight_g": 440.0,
-      "min_temp_c": 25.6,
+      "min_temp_c": 26.9,
       "rv_percent": 60.0
     },
     {
       "day": 13,
       "body_weight_g": 503.0,
-      "min_temp_c": 25.3,
+      "min_temp_c": 26.4,
       "rv_percent": 60.0
     },
     {
       "day": 14,
       "body_weight_g": 570.0,
-      "min_temp_c": 24.9,
+      "min_temp_c": 26.0,
       "rv_percent": 60.0
     },
     {
       "day": 15,
       "body_weight_g": 639.0,
-      "min_temp_c": 24.5,
+      "min_temp_c": 25.5,
       "rv_percent": 60.0
     },
     {
       "day": 16,
       "body_weight_g": 711.0,
-      "min_temp_c": 24.1,
+      "min_temp_c": 24.9,
       "rv_percent": 60.0
     },
     {
       "day": 17,
       "body_weight_g": 786.0,
-      "min_temp_c": 23.6,
+      "min_temp_c": 24.4,
       "rv_percent": 60.0
     },
     {
       "day": 18,
       "body_weight_g": 864.0,
-      "min_temp_c": 23.3,
+      "min_temp_c": 23.9,
       "rv_percent": 60.0
     },
     {
       "day": 19,
       "body_weight_g": 945.0,
-      "min_temp_c": 23.0,
+      "min_temp_c": 23.4,
       "rv_percent": 60.0
     },
     {
       "day": 20,
       "body_weight_g": 1029.0,
-      "min_temp_c": 22.6,
+      "min_temp_c": 22.8,
       "rv_percent": 60.0
     },
     {

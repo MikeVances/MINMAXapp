@@ -28,7 +28,7 @@ from .psychro import pressure_at_altitude_pa, site_pressure
 from .tunnel_speed_calc import EFFECTIVE_TEMP_MAX_C, _effective_temperature
 from .ventilation_design import (
     CAGE_BIRD_SPEED_SHARE, Airtightness, CageRow, Note, TunnelRules, _mean_height_m, tunnel_rule_params, _profile_citation, airtightness_q4,
-    build_envelope, cage_notes, coldest_surface, condensation, tunnel_target,
+    build_envelope, cage_notes, coldest_surface, condensation, setpoint_notes, tunnel_target,
 )
 
 
@@ -88,7 +88,8 @@ def _requirement(inp: RequirementInput) -> RequirementResult:
     g = inp.geometry
     findings: list[Note] = []
     assumptions: list[Note] = []
-    source_ids = {"cigr_1984", "cigr_2002", "ross_2025_t2_5", "cobb_2021_9_7_age"}
+    # Источник уставки температуры добавит setpoint_notes — он свой у каждого кросса
+    source_ids = {"cigr_1984", "cigr_2002", "cobb_2021_9_7_age"}
     cages = inp.housing == "cages"
     age = max(1, inp.age_days)
 
@@ -115,7 +116,9 @@ def _requirement(inp: RequirementInput) -> RequirementResult:
                   outside_rh=inp.outdoor_rh_pct, growth_profile_id=inp.growth_profile_id,
                   target_rh=inp.target_rh_pct, tunnel_section_m2=target.section_m2,
                   house_width_m=g.width_m, house_height_m=_mean_height_m(g),
-                  air_exchange_floor_m3h=q4_m3h)
+                  air_exchange_floor_m3h=q4_m3h,
+                  # Пол под птицей — для уставки Cobb по плотности; в клетках её нет
+                  stocking_floor_m2=None if cages else g.length_m * g.width_m)
 
     # Горелки «включены», только если снаружи холоднее уставки: иначе открытое
     # пламя добавило бы к Qmin воздух на разбавление CO₂ в жару. Уставку узнаём
@@ -138,6 +141,7 @@ def _requirement(inp: RequirementInput) -> RequirementResult:
     tunnel = _tunnel_now(inp, age, target, now, qmax, findings, source_ids, cages, params)
 
     # ── Находки ──
+    setpoint_notes([now], findings, assumptions, source_ids)
     if now.humidity_uncontrollable:
         findings.append(Note("humidity_uncontrollable", {"day": age}, "critical"))
     if now.heater_insufficient:

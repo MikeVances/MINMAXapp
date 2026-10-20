@@ -130,13 +130,24 @@ def test_unproven_sources_are_marked():
     assert all(s.limits for s in sources.CATALOG.values() if s.kind in ("practice", "unverified"))
 
 
+# Методика температуры встроенного профиля → её запись в справочнике. Кроссы Aviagen —
+# Ross табл. 2.5; у Cobb и Hubbard свои методики (breed_climate)
+PROFILE_METHOD = {
+    "ross308": ("mitchell_by_weight", "ross_2025_t2_5"),
+    "ross708": ("mitchell_by_weight", "ross_2025_t2_5"),
+    "arbor-acres-plus": ("mitchell_by_weight", "ross_2025_t2_5"),
+    "cobb500": ("cobb_rh_density", "cobb_2021_5_2"),
+    "hubbard-efficiency-plus": ("hubbard_by_age", "hubbard_2026_app1"),
+}
+
+
 def test_profile_temperature_points_to_its_method():
-    # Колонка температуры у всех встроенных кроссов — методика Ross; через source_id
-    # агент получает её ограничения (Cobb считает иначе). Читаем сами файлы: в
+    # Колонка температуры каждого встроенного кросса ссылается на СВОЮ методику:
+    # через source_id агент получает её ограничения. Читаем сами файлы: в
     # тестовом окружении вместо встроенных кроссов — синтетический профиль
     files = sorted((ROOT / "data/growth_profiles/builtin").glob("*.json"))
-    assert files, "встроенных профилей не нашли — проба не дошла до данных"
+    assert {f.stem for f in files} == set(PROFILE_METHOD), "новый кросс — назначьте ему методику"
     for f in files:
         climate = json.loads(f.read_text(encoding="utf-8"))["source"]["climate"]
-        assert climate["source_id"] == "ross_2025_t2_5", f.name
-    assert "Cobb" in sources.CATALOG["ross_2025_t2_5"].limits
+        assert (climate["method"], climate["source_id"]) == PROFILE_METHOD[f.stem], f.name
+        assert climate["source_id"] in sources.CATALOG
