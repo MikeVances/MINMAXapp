@@ -167,8 +167,10 @@ class CalcResult:
     heat_need_w: Optional[float] = None
     # Живая птица на этот день с учётом падежа
     birds_alive: Optional[float] = None
-    # Методика уставки этого дня (breed_climate.DAY_*) и плотность, если по ней считали
+    # Методика уставки этого дня (breed_climate.DAY_*)
     setpoint_method: Optional[str] = None
+    # Плотность посадки, кг живой массы на м² пола — у любого кросса, если площадь
+    # пола известна (у клеток — None). Уставку по ней считает только Cobb
     stocking_density_kg_m2: Optional[float] = None
 
 
@@ -541,5 +543,8 @@ def compute_with(ci: CalcInput, params: CalcParams, thermal: HouseThermal) -> Ca
         heat_need_w=heat_need_w,
         birds_alive=birds_eff,
         setpoint_method=setpoint.method,
-        stocking_density_kg_m2=setpoint.density_kg_m2,
+        # Та же формула, что у плотности Cobb в breed_climate: живая птица × масса
+        # профиля / пол. Отдаётся для всех кроссов — агенту не пересчитывать самому
+        stocking_density_kg_m2=(birds_eff * weight_kg / ci.stocking_floor_m2
+                                if ci.stocking_floor_m2 else None),
     )

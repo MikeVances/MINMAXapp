@@ -22,7 +22,7 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 from .bird_heat import animal_heat_per_bird, house_heat_per_bird
-from .breed_climate import DAY_COBB_FALLBACK, SOURCE_BY_DAY_METHOD
+from .breed_climate import DAY_COBB_DENSITY, DAY_COBB_FALLBACK, SOURCE_BY_DAY_METHOD
 from .building_thermal import HeaterConfig
 from .calc_core import CalcInput, CalcParams, CalcResult, HouseThermal, compute_with
 from .construction import (
@@ -163,6 +163,10 @@ class DesignDay:
     heating_need_kw: float
     air_exchange_m3h: float
     air_exchange_basis: str
+    # С чем считали уставку и влагу: RH из запроса или из профиля; None — ни там, ни там
+    target_rh_pct: Optional[float] = None
+    # Только пол: у клеток плотность на м² пола смысла не имеет
+    stocking_density_kg_m2: Optional[float] = None
 
 
 @dataclass
@@ -269,6 +273,10 @@ class TunnelTarget:
     speed_ms: tuple[float, float]        # у клеток — в проходах
     flow_m3h: tuple[float, float]
     source_id: str
+    # Какой критерий дал верхнюю (расчётную) границу расхода: floor_capacity —
+    # м³/ч на м² пола, air_exchange — смена объёма за 40 с, aisle_speed — скорость
+    # в проходах клеток. Вентиляторы подбираются по верхней границе
+    basis: str = "floor_capacity"
 
 
 def tunnel_target(g: HouseGeometry, housing: str, cage_rows: tuple[CageRow, ...]) -> TunnelTarget:
@@ -277,13 +285,17 @@ def tunnel_target(g: HouseGeometry, housing: str, cage_rows: tuple[CageRow, ...]
         section = cage_free_section_m2(g, cage_rows)
         speed = CAGE_AISLE_SPEED_MS
         return TunnelTarget(section, speed, tuple(v * section * 3600.0 for v in speed),
-                            "practice_cage_tunnel_2026")
+                            "practice_cage_tunnel_2026", "aisle_speed")
     section = g.width_m * _mean_height_m(g)
     volume_m3 = section * g.length_m
     floor_m2 = g.length_m * g.width_m
     flow = tuple(max(n * floor_m2, volume_m3 * 3600.0 / t)
                  for n, t in zip(TUNNEL_CAPACITY_M3H_M2, TUNNEL_AIR_EXCHANGE_S))
-    return TunnelTarget(section, tuple(q / 3600.0 / section for q in flow), flow, "cobb_2021_9_7")
+    # Высокий корпус (средняя высота больше ~2.2 м) упирается в смену объёма, а не в
+    # ёмкость на м² пола — агенту стоит знать, какое правило Cobb сработало
+    by_exchange = volume_m3 * 3600.0 / TUNNEL_AIR_EXCHANGE_S[1] > TUNNEL_CAPACITY_M3H_M2[1] * floor_m2
+    return TunnelTarget(section, tuple(q / 3600.0 / section for q in flow), flow, "cobb_2021_9_7",
+                        "air_exchange" if by_exchange else "floor_capacity")
 
 
 def build_envelope(g: HouseGeometry, ua_w_per_k: Optional[float], walls: Optional[Surface],
@@ -338,7 +350,9 @@ def setpoint_notes(results: list[CalcResult], findings: list, assumptions: list,
     methods = {r.setpoint_method for r in results}
     source_ids |= {SOURCE_BY_DAY_METHOD[m] for m in methods if m in SOURCE_BY_DAY_METHOD}
 
-    dense = [r for r in results if r.stocking_density_kg_m2 is not None]
+    # Плотность теперь есть у любого кросса с полом — допущения и предел Cobb
+    # относятся только к дням, где уставку по ней действительно считали
+    dense = [r for r in results if r.setpoint_method == DAY_COBB_DENSITY]
     if dense:
         assumptions.append(Note("cobb_density_transition", {
             "density_from_kg_m2": round(dense[0].stocking_density_kg_m2, 1),
@@ -428,6 +442,9 @@ def _design(inp: DesignInput) -> DesignResult:
             heating_need_kw=round((w.heat_need_w or 0.0) / 1000.0, 1),
             air_exchange_m3h=round(exchange),
             air_exchange_basis="leakage" if q4_m3h > w.q_min_m3h else "qmin",
+            target_rh_pct=w.rv_percent,
+            stocking_density_kg_m2=(round(w.stocking_density_kg_m2, 1)
+                                    if w.stocking_density_kg_m2 is not None else None),
         ))
         if w.humidity_uncontrollable:
             humid_days.append(d)
@@ -488,6 +505,7 @@ def _design(inp: DesignInput) -> DesignResult:
         # Боковые клапаны минвентиляции под верх мощности её вентиляторов (UGA)
         inlet_area_m2=round(min_vent_max / INLET_SPECIFIC_M3H_M2, 2),
         tunnel_fans_m3h=dict(min=round(tunnel_range[0]), max=round(tunnel_range[1]), source_id=tunnel_source),
+        tunnel_fans_basis=target.basis,
         tunnel_air_speed_ms=dict(min=round(speed_range[0], 2), max=round(speed_range[1], 2),
                                  source_id=tunnel_source),
         tunnel_free_section_m2=round(section, 2),

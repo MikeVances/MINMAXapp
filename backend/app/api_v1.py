@@ -396,7 +396,9 @@ def create_ventilation_design(req: DesignRequest, request: Request) -> JSONRespo
     body: dict[str, Any] = {
         "request_id": rid,
         "envelope_ua_w_per_k": result.envelope_ua_w_per_k,
-        "days": [vars(d) for d in result.days],
+        # Необязательные поля дня (RH, плотность) — опускаются, а не null: как
+        # остальные «только если» в контракте
+        "days": [{k: v for k, v in vars(d).items() if v is not None} for d in result.days],
         "peak": result.peak,
         "equipment": result.equipment,
         "warnings": [_note(n) for n in result.warnings],
@@ -468,7 +470,8 @@ def create_ventilation_requirement(req: RequirementRequest, request: Request) ->
         "sources": _sources(r.source_ids, r.profile_source),
         "api_version": API_VERSION, "app_version": _app_version(),
     }
-    for key in ("heating_need_kw", "heater_duty_pct", "air_exchange_m3h"):
+    for key in ("heating_need_kw", "heater_duty_pct", "air_exchange_m3h", "target_rh_pct",
+                "stocking_density_kg_m2"):
         if getattr(r, key) is not None:
             body[key] = getattr(r, key)
     _audit({"request_id": rid, "path": request.url.path, "status": 201,

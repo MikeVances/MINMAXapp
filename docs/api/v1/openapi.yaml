@@ -628,6 +628,15 @@ components:
         heating_need_kw: { type: number, description: "Горелки при зимней расчётной T: UA·ΔT + обмен воздуха − явное тепло птицы; 0 — тепла птицы хватает" }
         air_exchange_m3h: { type: number, description: "Обмен для обогрева: max(Qmin, утечка при 4 Па)" }
         air_exchange_basis: { type: string, enum: [qmin, leakage] }
+        target_rh_pct:
+          type: number
+          description: "Целевая RH, с которой посчитаны уставка и влажностный Qmin: из flock.target_rh_pct или из профиля. Нет — ни там, ни там"
+        stocking_density_kg_m2:
+          type: number
+          description: |
+            Только пол: живая птица (с падежом) × масса профиля / площадь пола, кг/м².
+            Есть у любого кросса; уставку по ней считает только Cobb после 14-го дня
+            (см. sources). Проходы не вычитаются — птица на подстилке занимает весь пол
 
     Equipment:
       type: object
@@ -636,6 +645,14 @@ components:
       properties:
         min_vent_fans_m3h: { $ref: "#/components/schemas/Range" }
         tunnel_fans_m3h: { $ref: "#/components/schemas/Range" }
+        tunnel_fans_basis:
+          type: string
+          enum: [floor_capacity, air_exchange, aisle_speed]
+          description: |
+            Какое правило дало верхнюю границу tunnel_fans_m3h (по ней подбираются
+            вентиляторы). Пол, Cobb §9.7 — больший из двух: floor_capacity — 200 м³/ч на м²
+            пола, air_exchange — смена объёма корпуса за 40 с (высокий корпус).
+            Клетки — aisle_speed: 4–5 м/с в проходах (практика)
         tunnel_air_speed_ms:
           description: "Пол — в сечении; клетки — в проходах между рядами"
           allOf: [{ $ref: "#/components/schemas/Range" }]
@@ -755,6 +772,8 @@ components:
         qmax_m3h: { type: number }
         target_temp_c: { type: number, description: "Уставка дня по методике кросса (источник — в `sources`): с поправкой на целевую RH, у Cobb — по плотности посадки" }
         weight_g: { type: number, description: "Масса по профилю на этот день" }
+        target_rh_pct: { type: number, description: "Целевая RH, с которой посчитаны уставка и влажностный Qmin (из запроса или профиля)" }
+        stocking_density_kg_m2: { type: number, description: "Только пол: живая птица × масса / площадь пола, кг/м²; у любого кросса" }
         air_exchange_m3h: { type: number, description: "Только с envelope: обмен для обогрева max(Qmin, утечка при 4 Па)" }
         tunnel:
           type: object

@@ -77,6 +77,9 @@ class RequirementResult:
     heater_duty_pct: Optional[float] = None
     air_exchange_m3h: Optional[float] = None
     profile_source: Optional[str] = None
+    # Как у DesignDay: RH, с которой считали, и плотность (только пол)
+    target_rh_pct: Optional[float] = None
+    stocking_density_kg_m2: Optional[float] = None
 
 
 def requirement(inp: RequirementInput) -> RequirementResult:
@@ -175,6 +178,9 @@ def _requirement(inp: RequirementInput) -> RequirementResult:
         target_temp_c=round(now.min_temp_c, 2), weight_g=now.weight_used_g, tunnel=tunnel,
         findings=findings, assumptions=assumptions, source_ids=sorted(source_ids),
         profile_source=_profile_citation(profile),
+        target_rh_pct=now.rv_percent,
+        stocking_density_kg_m2=(round(now.stocking_density_kg_m2, 1)
+                                if now.stocking_density_kg_m2 is not None else None),
     )
     if inp.has_envelope:
         result.heating_need_kw = round((now.heat_need_w or 0.0) / 1000.0, 1)
