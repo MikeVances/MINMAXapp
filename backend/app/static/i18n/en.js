@@ -598,6 +598,12 @@
     gp_src_basis_female:               'hens',
     gp_src_method_aviagen_turkey_by_age: 'temperature by age, whole-house brooding, lower bound of the range; no RH correction',
     gp_src_method_hybrid_turkey_by_age: 'temperature by age and sex, whole-room brooding without radiant heaters; no RH correction',
+    turkey_stage_lbl:                  'Stage',
+    turkey_stage_brooder:              'Brooding',
+    turkey_stage_grow_out:             'Grow-out',
+    turkey_first_day_lbl:              'From day (placement)',
+    turkey_last_day_lbl:               'To day',
+    sum_turkey_days:                   'days {from}–{to}',
     gp_src_copied_from:               'copied from {id}',
 
     // ── Water supply note (pad cooling), house naming ──

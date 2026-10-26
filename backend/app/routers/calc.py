@@ -1,11 +1,17 @@
 from __future__ import annotations
 
+import math
+from typing import Literal, Optional
+
 from fastapi import APIRouter
 from pydantic import BaseModel, Field
 
 from ..api_errors import api_error, from_calc_error
 from ..core.calc_core import compute, CalcInput, CalcResult
-from ..core.growth_profiles import ProfileNotFound
+from ..core.errors import CalcError
+from ..core.growth_profiles import ProfileNotFound, load_profile
+from ..core import turkey_norms
+from ..core.ventilation_design import check_species
 from ..core.survival import survival_fraction
 from ..core.tunnel_speed_calc import target_speed_range
 from ..core.app_config import load_app_config
@@ -123,10 +129,10 @@ def minmax(payload: CalcIn):
     )
 
 
-def _compute_or_http_error(ci: CalcInput) -> CalcResult:
+def _compute_or_http_error(ci: CalcInput, **overrides) -> CalcResult:
     """Ошибки данных профиля → понятный HTTP-ответ вместо 500."""
     try:
-        return compute(ci)
+        return compute(ci, **overrides)
     except ProfileNotFound as e:
         raise api_error(404, "profile_not_found", id=str(e))
     except ValueError as e:
@@ -148,6 +154,12 @@ class SummaryIn(BaseModel):
     # Сечение корпуса для туннельного расхода (ширина и средняя высота стена/конёк)
     house_width_m: float | None = Field(None, gt=0, le=200)
     house_height_m: float | None = Field(None, gt=0, le=30)
+    # Индейка: этап (подращивание / откорм) и его дни. Откорм начинается с дня
+    # пересадки: с него точки профиля и падёж корпуса. Не заданы дни — подращивание
+    # 1–35, откорм с 36-го до конца профиля. У бройлера этапов нет — цикл хозяйства
+    stage: Optional[Literal["brooder", "grow_out"]] = None
+    first_day: Optional[int] = Field(None, ge=1, le=153)
+    last_day: Optional[int] = Field(None, ge=2, le=154)
 
 
 class SummaryRow(BaseModel):
@@ -183,6 +195,11 @@ class SummaryOut(BaseModel):
     tunnel_target_day: int = 0
     tunnel_target_v_min_ms: float = 0.0
     tunnel_target_v_max_ms: float = 0.0
+    # Вид птицы профиля и дни, по которым шёл расчёт (у индейки — дни этапа)
+    species: str = "broiler"
+    stage: Optional[str] = None
+    first_day: int = 1
+    last_day: int = 0
 
 
 @router.post("/summary7", response_model=SummaryOut)
@@ -190,9 +207,40 @@ def summary7(payload: SummaryIn):
     outside_t = payload.outside_t
     # load_app_config не бросает исключений: битый файл → умолчания с записью в лог
     cfg = load_app_config()
-    cycle = max(cfg.cycle_days, 7)
-    # Еженедельные контрольные точки + последний день цикла
-    days = sorted(set([1] + list(range(7, cycle, 7)) + [cycle]))
+    try:
+        profile = load_profile(payload.growth_profile_id or cfg.default_growth_profile)
+    except ProfileNotFound as e:
+        raise api_error(404, "profile_not_found", id=str(e))
+    turkey = profile.species == "turkey"
+    try:
+        # Те же проверки, что в API v1: индейке нужен этап, бройлеру он запрещён.
+        # Предел дня бройлера здесь не нужен — дни берутся из настроек хозяйства
+        check_species(profile, "floor_litter", payload.stage, 0)
+        if not turkey and (payload.first_day or payload.last_day):
+            raise CalcError("stage_turkey_only", stage="days")
+        if turkey:
+            first = payload.first_day or (1 if payload.stage == turkey_norms.BROODER else 36)
+            last = payload.last_day or (35 if payload.stage == turkey_norms.BROODER
+                                        else max(profile.daily()))
+            if first >= last:
+                raise CalcError("first_day_after_last", first_day=first, last_day=last)
+    except ValueError as e:
+        raise from_calc_error(e)
+
+    if turkey:
+        # Этап индейки — свой цикл: падёж от дня посадки в корпус, тоннель 2 м/с
+        # (Hybrid CMG с. 51) вместо скорости бройлерной фермы из настроек
+        cycle = last
+        overrides = dict(cycle_days=last, placement_day=first, v_tunnel_ms=turkey_norms.TUNNEL_SPEED_MS)
+        days = sorted({first, last} | {d for d in range(7 * math.ceil(first / 7), last, 7) if d > first})
+        survival = lambda d: survival_fraction(d - first + 1, cfg.total_mortality_pct, last - first + 1)
+    else:
+        first = 1
+        cycle = max(cfg.cycle_days, 7)
+        overrides = {}
+        # Еженедельные контрольные точки + последний день цикла
+        days = sorted(set([1] + list(range(7, cycle, 7)) + [cycle]))
+        survival = lambda d: survival_fraction(d, cfg.total_mortality_pct, cfg.cycle_days)
     rows: list[SummaryRow] = []
 
     for d in days:
@@ -208,7 +256,7 @@ def summary7(payload: SummaryIn):
             growth_profile_id=payload.growth_profile_id,
             target_rh=payload.target_rh,
         )
-        cr = _compute_or_http_error(ci)
+        cr = _compute_or_http_error(ci, **overrides)
         q_min = round(cr.q_min_m3h, 3)
         q_max_nominal = round(cr.q_max_m3h, 3)
         q_max_final = q_max_nominal
@@ -216,7 +264,7 @@ def summary7(payload: SummaryIn):
         q_max_pct = None
         capacity_insufficient = False
         # Эффективное число птиц на этот день (для последующих представлений на голову/кг)
-        birds_eff = payload.birds * survival_fraction(d, cfg.total_mortality_pct, cfg.cycle_days)
+        birds_eff = payload.birds * survival(d)
         if payload.user_max_m3h is not None:
             q_max_final = min(q_max_nominal, float(payload.user_max_m3h))
             # Qmin не обрезаем — см. комментарий в minmax(); q_min_pct может быть > 100 %
@@ -247,7 +295,10 @@ def summary7(payload: SummaryIn):
             )
         )
 
-    v_min_target, v_max_target = target_speed_range(cycle)
+    if turkey:
+        v_min_target = v_max_target = turkey_norms.TUNNEL_SPEED_MS
+    else:
+        v_min_target, v_max_target = target_speed_range(cycle)
     return SummaryOut(
         house=payload.house,
         birds=payload.birds,
@@ -257,4 +308,8 @@ def summary7(payload: SummaryIn):
         tunnel_target_day=cycle,
         tunnel_target_v_min_ms=v_min_target,
         tunnel_target_v_max_ms=v_max_target,
+        species=profile.species,
+        stage=payload.stage,
+        first_day=first,
+        last_day=cycle,
     )

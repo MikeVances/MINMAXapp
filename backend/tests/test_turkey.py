@@ -333,3 +333,66 @@ def test_mixed_flock_co2_is_the_weighted_mean_per_bird():
     expected = (4000 * toms.rates_per_bird_min + 2000 * hens.rates_per_bird_min) / 6000
     assert mixed.rates_per_bird_min == pytest.approx(expected)
     assert (mixed.birds_alive, mixed.companion_alive) == (6000, 2000)
+
+
+# ─── Интерфейс: этапы индейки в расчёте профиля (/calc/summary7) ─────────────
+
+SUMMARY = {"house": "1", "birds": 6000, "growth_profile_id": "but6-toms", "outside_t": -10,
+           "house_width_m": 20, "house_height_m": 4}
+
+
+def test_summary_grow_out_runs_from_transfer_day(client):
+    r = client.post("/calc/summary7", json={**SUMMARY, "stage": "grow_out"})
+    assert r.status_code == 200, r.text
+    j = r.json()
+    days = [row["day"] for row in j["rows"]]
+    assert (days[0], days[1], days[-1]) == (36, 42, 154)
+    # Падёж — от дня посадки в корпус: в день пересадки живы все
+    assert j["rows"][0]["birds_eff"] == 6000
+    assert (j["species"], j["first_day"], j["last_day"], j["tunnel_target_v_max_ms"]) == ("turkey", 36, 154, 2.0)
+
+
+def test_summary_brooder_default_days_and_custom_days(client):
+    brooder = client.post("/calc/summary7", json={**SUMMARY, "stage": "brooder"}).json()
+    assert [row["day"] for row in brooder["rows"]] == [1, 7, 14, 21, 28, 35]
+    custom = client.post("/calc/summary7", json={**SUMMARY, "stage": "grow_out", "first_day": 50, "last_day": 120}).json()
+    assert [row["day"] for row in custom["rows"]][:2] == [50, 56] and custom["rows"][-1]["day"] == 120
+
+
+@pytest.mark.parametrize("patch, code", [
+    ({}, "turkey_stage_required"),
+    ({"growth_profile_id": "test-breed", "stage": "brooder"}, "stage_turkey_only"),
+    ({"growth_profile_id": "test-breed", "first_day": 5}, "stage_turkey_only"),
+    ({"stage": "grow_out", "first_day": 120, "last_day": 100}, "first_day_after_last"),
+])
+def test_summary_stage_input_is_checked(client, patch, code):
+    r = client.post("/calc/summary7", json={**SUMMARY, **patch})
+    assert r.status_code == 400 and r.json()["detail"]["code"] == code, r.text
+
+
+def test_summary_broiler_still_follows_the_farm_cycle(client):
+    j = client.post("/calc/summary7", json={**SUMMARY, "growth_profile_id": "test-breed"}).json()
+    assert j["species"] == "broiler" and j["rows"][0]["day"] == 1 and j["stage"] is None
+
+
+def test_summary_mortality_counts_from_placement_day(client, monkeypatch):
+    # Падёж 10 % за этап: живы все в день пересадки, 90 % в последний. Норма Aviagen
+    # (1 м³/ч на кг) правит Qmin — по ней видно, с каким поголовьем считало ЯДРО, а не
+    # только колонка birds_eff маршрута
+    from dataclasses import replace
+    from backend.app.core import app_config, calc_core
+    from backend.app.routers import calc as calc_router
+    cfg = replace(app_config.load_app_config(), total_mortality_pct=10.0)
+    monkeypatch.setattr(calc_core, "load_app_config", lambda: cfg)
+    monkeypatch.setattr(calc_router, "load_app_config", lambda: cfg)
+    rows = client.post("/calc/summary7", json={**SUMMARY, "stage": "grow_out"}).json()["rows"]
+    assert rows[0]["birds_eff"] == pytest.approx(6000) and rows[-1]["birds_eff"] == pytest.approx(5400)
+    for row in (rows[0], rows[-1]):
+        assert row["q_min_m3h"] == pytest.approx(row["weight_g"] / 1000 * row["birds_eff"], rel=1e-3)
+
+
+def test_summary_turkey_tunnel_is_two_metres_per_second(client):
+    # Жара, 140-й день: Qmax — туннель 2 м/с × сечение 20 × 4 м, а не скорость бройлерной фермы
+    rows = client.post("/calc/summary7", json={**SUMMARY, "stage": "grow_out", "outside_t": 32}).json()["rows"]
+    row = next(r for r in rows if r["day"] == 140)
+    assert row["q_max_nominal_m3h"] == pytest.approx(2.0 * 20 * 4 * 3600)

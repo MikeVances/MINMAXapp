@@ -64,6 +64,25 @@
         </label>
       </div>
 
+      <!-- Индейка: подращивание и откорм — разные корпуса и разные дни; у бройлера блока нет -->
+      <div id="prof-turkey-stage" class="field-row mb-14" hidden>
+        <label>
+          <span data-i18n="turkey_stage_lbl">Stage</span>
+          <select id="prof-stage">
+            <option value="brooder" data-i18n="turkey_stage_brooder">Brooding</option>
+            <option value="grow_out" data-i18n="turkey_stage_grow_out">Grow-out</option>
+          </select>
+        </label>
+        <label>
+          <span data-i18n="turkey_first_day_lbl">From day (placement)</span>
+          <input id="prof-first-day" type="text" data-num data-int inputmode="numeric" data-min="1" data-max="153">
+        </label>
+        <label>
+          <span data-i18n="turkey_last_day_lbl">To day</span>
+          <input id="prof-last-day" type="text" data-num data-int inputmode="numeric" data-min="2" data-max="154">
+        </label>
+      </div>
+
       <!-- Parameters row -->
       <div class="field-row mb-14">
         <label>

@@ -597,6 +597,12 @@
     gp_src_basis_female:               'Hennen',
     gp_src_method_aviagen_turkey_by_age: 'Temperatur nach Alter, Heizung des ganzen Stalls, untere Grenze des Bereichs; ohne RH-Korrektur',
     gp_src_method_hybrid_turkey_by_age: 'Temperatur nach Alter und Geschlecht, ganzer Stall ohne Strahler; ohne RH-Korrektur',
+    turkey_stage_lbl:                  'Phase',
+    turkey_stage_brooder:              'Aufzucht',
+    turkey_stage_grow_out:             'Mast',
+    turkey_first_day_lbl:              'Ab Tag (Einstallung)',
+    turkey_last_day_lbl:               'Bis Tag',
+    sum_turkey_days:                   'Tage {from}–{to}',
     gp_src_copied_from:               'kopiert aus {id}',
 
     // ── Water supply note (pad cooling), house naming ──

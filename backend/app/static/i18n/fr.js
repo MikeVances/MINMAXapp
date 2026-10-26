@@ -597,6 +597,12 @@
     gp_src_basis_female:               'femelles',
     gp_src_method_aviagen_turkey_by_age: 'température selon l’âge, chauffage de tout le bâtiment, borne basse de la plage ; sans correction d’HR',
     gp_src_method_hybrid_turkey_by_age: 'température selon l’âge et le sexe, tout le bâtiment sans radiants ; sans correction d’HR',
+    turkey_stage_lbl:                  'Phase',
+    turkey_stage_brooder:              'Démarrage',
+    turkey_stage_grow_out:             'Engraissement',
+    turkey_first_day_lbl:              'Du jour (mise en place)',
+    turkey_last_day_lbl:               'Au jour',
+    sum_turkey_days:                   'jours {from}–{to}',
     gp_src_copied_from:               'copié depuis {id}',
 
     // ── Water supply note (pad cooling), house naming ──

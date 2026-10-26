@@ -598,6 +598,12 @@
     gp_src_basis_female:               'индюшки',
     gp_src_method_aviagen_turkey_by_age: 'температура по возрасту, обогрев всего корпуса, нижняя граница диапазона; без поправки на RH',
     gp_src_method_hybrid_turkey_by_age: 'температура по возрасту и полу, обогрев всего корпуса без излучателей; без поправки на RH',
+    turkey_stage_lbl:                  'Этап',
+    turkey_stage_brooder:              'Подращивание',
+    turkey_stage_grow_out:             'Откорм',
+    turkey_first_day_lbl:              'С дня (посадка)',
+    turkey_last_day_lbl:               'По день',
+    sum_turkey_days:                   'дни {from}–{to}',
     gp_src_copied_from:               'скопировано из {id}',
 
     // ── Water supply note (pad cooling), house naming ──

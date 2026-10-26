@@ -189,9 +189,40 @@ document.addEventListener('DOMContentLoaded', () => {
     // Целевая RH — своя у каждого корпуса
     const rhEl = document.getElementById('prof-target-rh');
     const showRH = () => { const tb = profileTabs[selIdx]; rhEl.value = (tb && tb.target_rh != null) ? tb.target_rh : 60; };
-    selEl.addEventListener('change', () => { selIdx = parseInt(selEl.value, 10) || 0; showRH(); });
+    selEl.addEventListener('change', () => { selIdx = parseInt(selEl.value, 10) || 0; showRH(); showStage(); });
     showRH();
   }
+
+  // ── Этап индейки: подращивание и откорм ────────────────────────────────────
+  // Дни этапа по умолчанию: подращивание 1–35, откорм — с 36-го до конца профиля.
+  // Выбор хранится во вкладке корпуса, как целевая RH
+  const stageBox = document.getElementById('prof-turkey-stage');
+  const stageSel = document.getElementById('prof-stage');
+  const firstEl  = document.getElementById('prof-first-day');
+  const lastEl   = document.getElementById('prof-last-day');
+  let turkeyLastDay = null;   // null — выбран не профиль индейки
+
+  function stageDefaults(stage) { return stage === 'brooder' ? [1, 35] : [36, turkeyLastDay]; }
+
+  function showStage() {
+    stageBox.hidden = turkeyLastDay == null;
+    if (turkeyLastDay == null) return;
+    const tb = profileTabs[selIdx] || {};
+    stageSel.value = tb.turkey_stage || 'brooder';
+    const [f, l] = stageDefaults(stageSel.value);
+    firstEl.value = tb.turkey_first_day ?? f;
+    lastEl.value  = tb.turkey_last_day ?? l;
+  }
+
+  document.addEventListener('growthprofile:change', e => {
+    turkeyLastDay = e.detail.species === 'turkey' ? e.detail.last_day : null;
+    showStage();
+  });
+  // Другой этап — его дни по умолчанию: дни подращивания на откорме не имеют смысла
+  stageSel.addEventListener('change', () => {
+    const [f, l] = stageDefaults(stageSel.value);
+    firstEl.value = f; lastEl.value = l;
+  });
 
   async function calcProfile() {
     const tab = profileTabs[selIdx];
@@ -202,13 +233,28 @@ document.addEventListener('DOMContentLoaded', () => {
     // 0 остаётся нулём. Целевая RH вне 40–70 % тоже ошибка: таблица ощущаемой
     // температуры там не определена; пустая — сервер возьмёт RH профиля.
     if (!NumField.validate(['prof-outside-t', 'prof-outside-rh', 'prof-target-rh'])) return;
+    const turkey = turkeyLastDay != null;
+    if (turkey && !NumField.validate(['prof-first-day', 'prof-last-day'])) return;
     const outsideT  = NumField.value('prof-outside-t')  ?? 15;
     const outsideRH = NumField.value('prof-outside-rh') ?? 60;
     const targetRH  = NumField.value('prof-target-rh');
     tab.target_rh  = targetRH;
+    const stage = turkey ? {
+      stage: stageSel.value,
+      first_day: NumField.value('prof-first-day'),
+      last_day: NumField.value('prof-last-day'),
+    } : {};
     try {
       const tabs = JSON.parse(localStorage.getItem(STORE_KEY) || '[]');
-      if (tabs[selIdx]) { tabs[selIdx].target_rh = targetRH; localStorage.setItem(STORE_KEY, JSON.stringify(tabs)); }
+      if (tabs[selIdx]) {
+        tabs[selIdx].target_rh = targetRH;
+        if (turkey) {
+          tab.turkey_stage = tabs[selIdx].turkey_stage = stage.stage;
+          tab.turkey_first_day = tabs[selIdx].turkey_first_day = stage.first_day;
+          tab.turkey_last_day = tabs[selIdx].turkey_last_day = stage.last_day;
+        }
+        localStorage.setItem(STORE_KEY, JSON.stringify(tabs));
+      }
     } catch (e) { /* не запомнится — не критично */ }
     const mode      = document.getElementById('prof-view-mode').value;
 
@@ -226,6 +272,7 @@ document.addEventListener('DOMContentLoaded', () => {
       heater_on:    !!tab.heater_on,
       outside_t:    outsideT,
       outside_rh:   outsideRH,
+      ...stage,
     };
 
     profBtn.disabled = true; profBtn.textContent = t('btn_calculating');
@@ -257,7 +304,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const head = `
       <div class="kv"><span>${t('sum_outdoor')}</span><span>${fmtNum(outsideT, 1)} °C / ${fmtNum(outsideRH ?? 60, 0)} %</span></div>
       <div class="kv"><span>${t('sum_house_birds')}</span><span>${d.house} / ${fmtNum(d.birds)}</span></div>
-      <div class="kv"><span>${t('sum_sys_max')}</span><span>${d.user_max_m3h ?? '—'} ${t('unit_m3h_plain')}</span></div>`;
+      <div class="kv"><span>${t('sum_sys_max')}</span><span>${d.user_max_m3h ?? '—'} ${t('unit_m3h_plain')}</span></div>`
+      + (d.species === 'turkey'
+        ? `<div class="kv"><span>${t('turkey_stage_lbl')}</span><span>${t('turkey_stage_' + d.stage)}, ${t('sum_turkey_days', { from: d.first_day, to: d.last_day })}</span></div>`
+        : '');
 
     const headerByMode = {
       total:    [t('hdr_qmin_m3h'), t('hdr_qmax_m3h')],

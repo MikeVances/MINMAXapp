@@ -425,6 +425,9 @@
     if (houseSel) houseSelShown = houseSel.value;   // корпус, к которому относится показанный профиль
     rememberForHouse(id);
     renderAll();
+    // Расчёт профиля показывает этапы индейки только у её профилей — сообщаем вид
+    document.dispatchEvent(new CustomEvent('growthprofile:change', {
+      detail: { species: current.species || 'broiler', last_day: current.last_day } }));
   }
 
   function renderAll() {

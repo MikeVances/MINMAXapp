@@ -597,6 +597,12 @@
     gp_src_basis_female:               'indyczki',
     gp_src_method_aviagen_turkey_by_age: 'temperatura według wieku, ogrzewanie całego budynku, dolna granica zakresu; bez korekty RH',
     gp_src_method_hybrid_turkey_by_age: 'temperatura według wieku i płci, cały budynek bez promienników; bez korekty RH',
+    turkey_stage_lbl:                  'Etap',
+    turkey_stage_brooder:              'Odchów',
+    turkey_stage_grow_out:             'Tucz',
+    turkey_first_day_lbl:              'Od dnia (wstawienie)',
+    turkey_last_day_lbl:               'Do dnia',
+    sum_turkey_days:                   'dni {from}–{to}',
     gp_src_copied_from:               'skopiowano z {id}',
 
     // ── Water supply note (pad cooling), house naming ──
