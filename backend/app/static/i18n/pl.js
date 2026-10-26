@@ -591,6 +591,12 @@
     gp_src_method_mitchell_by_weight: 'temperatura według masy żywej (wzór dr. M. Mitchella, SRUC), przeliczona na dzienną masę tego krzyżowania; RH 60 %',
     gp_src_method_cobb_rh_density:    'temperatura według wieku i RH do 14. dnia, potem według obsady kg/m² (w obliczeniu kurnika); RH 60 %',
     gp_src_method_hubbard_by_age:     'temperatura według wieku, ogrzewanie całego kurnika; bez korekty RH',
+    gp_src_weight_day0:                'Masa piskląt jednodniowych',
+    gp_src_climate_mixed:              'Stado mieszane',
+    gp_src_basis_male:                 'indory',
+    gp_src_basis_female:               'indyczki',
+    gp_src_method_aviagen_turkey_by_age: 'temperatura według wieku, ogrzewanie całego budynku, dolna granica zakresu; bez korekty RH',
+    gp_src_method_hybrid_turkey_by_age: 'temperatura według wieku i płci, cały budynek bez promienników; bez korekty RH',
     gp_src_copied_from:               'skopiowano z {id}',
 
     // ── Water supply note (pad cooling), house naming ──

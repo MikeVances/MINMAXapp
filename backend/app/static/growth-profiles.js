@@ -114,9 +114,16 @@
   }
 
   // ── Недельная сетка таблицы ──────────────────────────────────────────────
+  // Сколько дней профиля показывать: у бройлера — цикл хозяйства из настроек, у
+  // индейки — весь профиль (цикл до 22 недель, в настройках бройлерной фермы его нет)
+  function shownLastDay() {
+    if (current.species === 'turkey') return current.last_day;
+    return Math.min(profileCfg.cycle_days || 42, current.last_day);
+  }
+
   function weeklyDays() {
     if (!current) return [];
-    const last = Math.min(profileCfg.cycle_days || 42, current.last_day);
+    const last = shownLastDay();
     const days = [Math.max(1, current.first_day)];
     for (let d = 7; d < last; d += 7) days.push(d);
     if (days[days.length - 1] !== last) days.push(last);
@@ -132,7 +139,7 @@
     const container = document.getElementById('profile-charts');
     if (!container || !current) return;
 
-    const cycleDays = profileCfg.cycle_days || 42;
+    const cycleDays = shownLastDay();
     const chartData = (current.days || []).filter(d => d.day >= 1 && d.day <= cycleDays);
     if (!chartData.length) { container.innerHTML = ''; return; }
     const anchors = weeklyDays().map(dayRow);
@@ -214,7 +221,9 @@
   // basis/method/url), подпись к которой собирается на языке интерфейса; строка —
   // свободный текст пользователя или служебное copied_from.
   function sourceEntryHTML(key, v) {
-    const label = ['weight', 'climate'].includes(key) ? t('gp_src_' + key) : escapeHtml(key);
+    // Индейка: масса суточной птицы — свой источник, смешанное стадо — своя таблица
+    const label = ['weight', 'climate', 'weight_day0', 'climate_mixed'].includes(key)
+      ? t('gp_src_' + key) : escapeHtml(key);
     if (v && typeof v === 'object') {
       const bits = [];
       if (v.ref)    bits.push(escapeHtml(v.ref));

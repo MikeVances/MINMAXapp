@@ -591,6 +591,12 @@
     gp_src_method_mitchell_by_weight: 'température selon le poids vif (formule Dr M. Mitchell, SRUC), recalculée sur le poids journalier de cette souche ; HR 60 %',
     gp_src_method_cobb_rh_density:    'température selon l’âge et l’HR jusqu’au jour 14, puis selon la densité kg/m² (dans le calcul du bâtiment) ; HR 60 %',
     gp_src_method_hubbard_by_age:     'température selon l’âge, chauffage de tout le bâtiment ; sans correction d’HR',
+    gp_src_weight_day0:                'Poids à un jour',
+    gp_src_climate_mixed:              'Lot mixte',
+    gp_src_basis_male:                 'mâles',
+    gp_src_basis_female:               'femelles',
+    gp_src_method_aviagen_turkey_by_age: 'température selon l’âge, chauffage de tout le bâtiment, borne basse de la plage ; sans correction d’HR',
+    gp_src_method_hybrid_turkey_by_age: 'température selon l’âge et le sexe, tout le bâtiment sans radiants ; sans correction d’HR',
     gp_src_copied_from:               'copié depuis {id}',
 
     // ── Water supply note (pad cooling), house naming ──

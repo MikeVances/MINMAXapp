@@ -592,6 +592,12 @@
     gp_src_method_mitchell_by_weight: 'температура по живой массе (формула Dr. M. Mitchell, SRUC), пересчитана на массу этого кросса по дням; RH 60 %',
     gp_src_method_cobb_rh_density:    'температура по возрасту и RH до 14-го дня, затем по плотности посадки кг/м² (в расчёте корпуса); RH 60 %',
     gp_src_method_hubbard_by_age:     'температура по возрасту, обогрев всего корпуса; без поправки на RH',
+    gp_src_weight_day0:                'Масса суточной птицы',
+    gp_src_climate_mixed:              'Смешанное стадо',
+    gp_src_basis_male:                 'индюки',
+    gp_src_basis_female:               'индюшки',
+    gp_src_method_aviagen_turkey_by_age: 'температура по возрасту, обогрев всего корпуса, нижняя граница диапазона; без поправки на RH',
+    gp_src_method_hybrid_turkey_by_age: 'температура по возрасту и полу, обогрев всего корпуса без излучателей; без поправки на RH',
     gp_src_copied_from:               'скопировано из {id}',
 
     // ── Water supply note (pad cooling), house naming ──

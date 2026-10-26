@@ -592,6 +592,12 @@
     gp_src_method_mitchell_by_weight: 'temperature by live weight (Dr. M. Mitchell, SRUC formula), recalculated to this breed\'s daily weight; RH 60 %',
     gp_src_method_cobb_rh_density:    'temperature by age and RH up to day 14, then by stocking density kg/m² (in the house calculation); RH 60 %',
     gp_src_method_hubbard_by_age:     'temperature by age, whole-house heating; no RH correction',
+    gp_src_weight_day0:                'Day-old weight',
+    gp_src_climate_mixed:              'Mixed flock',
+    gp_src_basis_male:                 'toms',
+    gp_src_basis_female:               'hens',
+    gp_src_method_aviagen_turkey_by_age: 'temperature by age, whole-house brooding, lower bound of the range; no RH correction',
+    gp_src_method_hybrid_turkey_by_age: 'temperature by age and sex, whole-room brooding without radiant heaters; no RH correction',
     gp_src_copied_from:               'copied from {id}',
 
     // ── Water supply note (pad cooling), house naming ──

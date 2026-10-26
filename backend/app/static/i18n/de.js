@@ -591,6 +591,12 @@
     gp_src_method_mitchell_by_weight: 'Temperatur nach Lebendmasse (Formel Dr. M. Mitchell, SRUC), auf die Tagesmasse dieser Linie umgerechnet; RH 60 %',
     gp_src_method_cobb_rh_density:    'Temperatur nach Alter und RH bis Tag 14, danach nach Besatzdichte kg/m² (in der Stallberechnung); RH 60 %',
     gp_src_method_hubbard_by_age:     'Temperatur nach Alter, Heizung des ganzen Stalls; ohne RH-Korrektur',
+    gp_src_weight_day0:                'Kükengewicht',
+    gp_src_climate_mixed:              'Gemischte Herde',
+    gp_src_basis_male:                 'Hähne',
+    gp_src_basis_female:               'Hennen',
+    gp_src_method_aviagen_turkey_by_age: 'Temperatur nach Alter, Heizung des ganzen Stalls, untere Grenze des Bereichs; ohne RH-Korrektur',
+    gp_src_method_hybrid_turkey_by_age: 'Temperatur nach Alter und Geschlecht, ganzer Stall ohne Strahler; ohne RH-Korrektur',
     gp_src_copied_from:               'kopiert aus {id}',
 
     // ── Water supply note (pad cooling), house naming ──
