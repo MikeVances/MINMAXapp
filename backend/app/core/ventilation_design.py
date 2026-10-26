@@ -33,6 +33,7 @@ from .errors import CalcError
 from .growth_profiles import load_profile
 from .leakage_calc import INLET_SPECIFIC_M3H_M2, RHO_AIR_KG_M3, _TIGHTNESS_THRESHOLDS
 from .tunnel_design import HIGH_TUNNEL_PRESSURE_PA, Pads, Resistance, pad_area_m2, select_fans
+from . import turkey_norms
 from .psychro import dew_point_c, pressure_at_altitude_pa, site_pressure
 
 
@@ -76,6 +77,10 @@ DEFAULT_AIRTIGHTNESS_CLASS = "moderate"
 NATURAL_LEAK_PRESSURE_PA = 4.0
 
 DEFAULT_HEATING_MARGIN_PCT = 15.0
+
+# Последний день бройлерного цикла, который калькулятор считает: профили Ross/Cobb/
+# Hubbard кончаются на 56–63 днях. У индейки цикл до 22 недель (154 дня)
+BROILER_LAST_DAY = 63
 
 # Источники (`source_id`) с пересказом и ограничениями — в core/sources.py:
 # там же, где их читает справочник API /sources
@@ -148,6 +153,12 @@ class DesignInput:
     pads: Optional[Pads] = None
     fan_curve: tuple[tuple[float, float], ...] = ()
     tunnel_static_pressure_pa: Optional[float] = None
+    # Индейка (2026-10-26): брудер и доращивание — разные корпуса. first_day — день
+    # посадки в этот корпус (на доращивание — день пересадки), cycle_days — последний
+    # день в нём; stage — тип корпуса (turkey_norms.BROODER | GROW_OUT), у индейки
+    # обязателен, у бройлера запрещён
+    first_day: int = 1
+    stage: Optional[str] = None
 
 
 # ─── Результат ────────────────────────────────────────────────────────────────
@@ -167,6 +178,8 @@ class DesignDay:
     target_rh_pct: Optional[float] = None
     # Только пол: у клеток плотность на м² пола смысла не имеет
     stocking_density_kg_m2: Optional[float] = None
+    # Индейка: живое поголовье на м² пола — в этих единицах руководства дают предел
+    stocking_density_head_m2: Optional[float] = None
 
 
 @dataclass
@@ -279,8 +292,17 @@ class TunnelTarget:
     basis: str = "floor_capacity"
 
 
-def tunnel_target(g: HouseGeometry, housing: str, cage_rows: tuple[CageRow, ...]) -> TunnelTarget:
-    """Цель туннеля корпуса: пол — Cobb §9.7 (больший из двух критериев), клетки — практика."""
+def tunnel_target(g: HouseGeometry, housing: str, cage_rows: tuple[CageRow, ...],
+                  species: str = "broiler") -> TunnelTarget:
+    """
+    Цель туннеля корпуса: пол — Cobb §9.7 (больший из двух критериев), клетки — практика,
+    индейка — скорость 2 м/с в сечении (Hybrid CMG с. 51, решение владельца).
+    """
+    if species == "turkey":
+        section = g.width_m * _mean_height_m(g)
+        v = turkey_norms.TUNNEL_SPEED_MS
+        flow = v * section * 3600.0
+        return TunnelTarget(section, (v, v), (flow, flow), turkey_norms.TUNNEL_SOURCE, "air_speed")
     if housing == "cages":
         section = cage_free_section_m2(g, cage_rows)
         speed = CAGE_AISLE_SPEED_MS
@@ -296,6 +318,62 @@ def tunnel_target(g: HouseGeometry, housing: str, cage_rows: tuple[CageRow, ...]
     by_exchange = volume_m3 * 3600.0 / TUNNEL_AIR_EXCHANGE_S[1] > TUNNEL_CAPACITY_M3H_M2[1] * floor_m2
     return TunnelTarget(section, tuple(q / 3600.0 / section for q in flow), flow, "cobb_2021_9_7",
                         "air_exchange" if by_exchange else "floor_capacity")
+
+
+def check_species(profile, housing: str, stage: Optional[str], last_day: int,
+                  broiler_max_day: int = BROILER_LAST_DAY) -> None:
+    """
+    Вход, который у этого вида птицы не имеет смысла, — ошибка, а не тихое игнорирование:
+    клеток у индейки нет, тип корпуса у бройлера не определён, а без типа у индейки
+    не выбрать ни норму вентиляторов, ни предел плотности.
+    """
+    if profile.species == "turkey":
+        if housing == "cages":
+            raise CalcError("housing_not_for_species", species="turkey", housing=housing)
+        if stage is None:
+            raise CalcError("turkey_stage_required")
+    else:
+        if stage is not None:
+            raise CalcError("stage_turkey_only", stage=stage)
+        if last_day > broiler_max_day:
+            raise CalcError("broiler_day_out_of_range", day=last_day, max_day=broiler_max_day)
+
+
+def species_notes(profile, assumptions: list, source_ids: set) -> None:
+    """Допущения и источники, которые вносит вид птицы (у бройлера — ничего нового)."""
+    if profile.species != "turkey":
+        return
+    source_ids.add("cigr_2002_turkey")
+    assumptions.append(Note("turkey_sensible_from_broiler", source_id="cigr_2002_turkey"))
+    day0 = (profile.source or {}).get("weight_day0")
+    if isinstance(day0, dict) and profile.builtin:
+        source_ids.add("xin_1998_turkey")
+        assumptions.append(Note("turkey_day0_weight", {"weight_g": day0.get("value_g")},
+                                source_id="xin_1998_turkey"))
+    if profile.min_vent_norm:
+        sid = turkey_norms.GUIDE_NORM_SOURCE[profile.min_vent_norm]
+        source_ids.add(sid)
+        assumptions.append(Note("qmin_includes_guide_norm", {"norm": profile.min_vent_norm}, source_id=sid))
+    # Пределы скорости по возрасту в ядре — Cobb (цыплята): у индейки своих нет
+    source_ids.add("cobb_2021_9_7_age")
+    assumptions.append(Note("turkey_tunnel_age_limits_from_broiler", source_id="cobb_2021_9_7_age"))
+
+
+def turkey_density_note(profile, stage: str, days: list[tuple[int, float]], findings: list,
+                        source_ids: set) -> None:
+    """
+    Плотность индейки в головах на м² против предела Aviagen. days — (день, гол/м²).
+    Предела нет (смешанное стадо на доращивании) — так и говорим, а не молчим.
+    """
+    limit = turkey_norms.density_limit(stage, profile.sex)
+    if limit is None:
+        return
+    source_ids.add(limit.source_id)
+    over = [(d, h) for d, h in days if h > limit.head_per_m2]
+    if over:
+        findings.append(Note("turkey_density_high", {
+            "days": [d for d, _ in over], "head_per_m2": round(max(h for _, h in over), 2),
+            "limit_head_per_m2": limit.head_per_m2}, "warning", source_id=limit.source_id))
 
 
 def build_envelope(g: HouseGeometry, ua_w_per_k: Optional[float], walls: Optional[Surface],
@@ -372,8 +450,16 @@ def _design(inp: DesignInput) -> DesignResult:
     warnings: list[Note] = []
     assumptions: list[Note] = []
     # Источник уставки температуры добавит setpoint_notes — он свой у каждого кросса
-    source_ids = {"cigr_1984", "cigr_2002", "cobb_2021_9_1", "uga_leakage"}
+    source_ids = {"cigr_1984", "cigr_2002", "uga_leakage"}
     cages = inp.housing == "cages"
+
+    # Профиль — первым: от вида птицы зависят цель туннеля, нормы и проверки входа
+    profile = load_profile(inp.growth_profile_id)
+    check_species(profile, inp.housing, inp.stage, inp.cycle_days)
+    if inp.first_day >= inp.cycle_days:
+        raise CalcError("first_day_after_last", first_day=inp.first_day, last_day=inp.cycle_days)
+    turkey = profile.species == "turkey"
+    species_notes(profile, assumptions, source_ids)
 
     # ── Ограждения и утечки ──
     ua, env = build_envelope(g, inp.ua_w_per_k, inp.walls, inp.roof, inp.end_walls,
@@ -382,7 +468,7 @@ def _design(inp: DesignInput) -> DesignResult:
     q4_m3h = airtightness_q4(floor_m2, inp.airtightness, assumptions)
 
     # ── Туннель: сечение и цель скорости ──
-    target = tunnel_target(g, inp.housing, inp.cage_rows)
+    target = tunnel_target(g, inp.housing, inp.cage_rows, profile.species)
     section, speed_range, tunnel_range = target.section_m2, target.speed_ms, target.flow_m3h
     tunnel_source = target.source_id
     if cages:
@@ -394,10 +480,12 @@ def _design(inp: DesignInput) -> DesignResult:
     share = CAGE_BIRD_SPEED_SHARE if cages else 1.0
     rules = tunnel_rule_params(inp.tunnel_rules, assumptions, source_ids)
     winter_params = CalcParams(total_mortality_pct=inp.mortality_pct, cycle_days=inp.cycle_days,
-                               v_tunnel_ms=speed_range[1], bird_speed_share=share, **rules)
+                               v_tunnel_ms=speed_range[1], bird_speed_share=share,
+                               placement_day=inp.first_day, **rules)
     # Клетки летом — явное тепло на уровне птицы (верхний край вилки): больше воздуха
     summer_params = CalcParams(total_mortality_pct=inp.mortality_pct, cycle_days=inp.cycle_days,
-                               v_tunnel_ms=speed_range[1], bird_speed_share=share, **rules,
+                               v_tunnel_ms=speed_range[1], bird_speed_share=share,
+                               placement_day=inp.first_day, **rules,
                                bird_heat_model=animal_heat_per_bird if cages else house_heat_per_bird)
     winter_thermal = HouseThermal(ua_w_per_k=ua, heater=inp.heater)
     summer_thermal = HouseThermal(ua_w_per_k=ua)
@@ -413,7 +501,6 @@ def _design(inp: DesignInput) -> DesignResult:
                   house_width_m=g.width_m, house_height_m=_mean_height_m(g),
                   stocking_floor_m2=None if cages else floor_m2)
 
-    profile = load_profile(inp.growth_profile_id)
     last_profile_day = max(profile.daily()) if profile.points else 0
     if inp.cycle_days > last_profile_day:
         warnings.append(Note("cycle_beyond_profile", {"last_day": last_profile_day}, "info"))
@@ -424,7 +511,9 @@ def _design(inp: DesignInput) -> DesignResult:
     worst_condensation: Optional[tuple[float, float]] = None
     winter_days: list[CalcResult] = []
 
-    for d in range(1, inp.cycle_days + 1):
+    head_density: list[tuple[int, float]] = []
+
+    for d in range(inp.first_day, inp.cycle_days + 1):
         w = compute_with(CalcInput(age_days=d, outside_t=inp.winter_design_c, outside_rh=winter_rh,
                                    heater_on=inp.heater is not None,
                                    air_exchange_floor_m3h=q4_m3h, **common),
@@ -445,7 +534,10 @@ def _design(inp: DesignInput) -> DesignResult:
             target_rh_pct=w.rv_percent,
             stocking_density_kg_m2=(round(w.stocking_density_kg_m2, 1)
                                     if w.stocking_density_kg_m2 is not None else None),
+            stocking_density_head_m2=(round(w.birds_alive / floor_m2, 2) if turkey else None),
         ))
+        if turkey:
+            head_density.append((d, w.birds_alive / floor_m2))
         if w.humidity_uncontrollable:
             humid_days.append(d)
         if w.heater_insufficient:
@@ -463,6 +555,8 @@ def _design(inp: DesignInput) -> DesignResult:
 
     # ── Находки ──
     setpoint_notes(winter_days, warnings, assumptions, source_ids)
+    if turkey:
+        turkey_density_note(profile, inp.stage, head_density, warnings, source_ids)
     if humid_days:
         warnings.append(Note("humidity_uncontrollable", {"days": humid_days}, "critical"))
     if short_days:
@@ -486,10 +580,20 @@ def _design(inp: DesignInput) -> DesignResult:
                 heating_kw=p_heat.heating_need_kw, heating_day=p_heat.day)
 
     # ── Оборудование ──
-    cold = inp.winter_design_c < COLD_CLIMATE_WINTER_C
-    norm = MIN_VENT_INSTALLED_COLD_M3H_M2 if cold else MIN_VENT_INSTALLED_HOT_M3H_M2
-    assumptions.append(Note("min_vent_climate_class", {
-        "class": "cold" if cold else "hot", "winter_design_c": inp.winter_design_c}))
+    if turkey:
+        # Индейка: норма Hybrid по типу корпуса, а не класс климата Cobb
+        per_m2 = turkey_norms.MIN_VENT_INSTALLED_M3H_M2[inp.stage]
+        norm = (per_m2, per_m2)
+        min_vent_source = turkey_norms.MIN_VENT_INSTALLED_SOURCE
+        assumptions.append(Note("min_vent_turkey_stage", {"stage": inp.stage, "m3h_per_m2": per_m2},
+                                source_id=min_vent_source))
+    else:
+        cold = inp.winter_design_c < COLD_CLIMATE_WINTER_C
+        norm = MIN_VENT_INSTALLED_COLD_M3H_M2 if cold else MIN_VENT_INSTALLED_HOT_M3H_M2
+        min_vent_source = "cobb_2021_9_1"
+        assumptions.append(Note("min_vent_climate_class", {
+            "class": "cold" if cold else "hot", "winter_design_c": inp.winter_design_c}))
+    source_ids.add(min_vent_source)
     margin = inp.heating_margin_pct
     assumptions.append(Note("heating_safety_margin", {"pct": margin}))
     if inp.heater is None:
@@ -501,7 +605,7 @@ def _design(inp: DesignInput) -> DesignResult:
     min_vent_max = max(p_qmin.qmin_m3h, norm[1] * floor_m2)
     equipment = dict(
         min_vent_fans_m3h=dict(min=round(max(p_qmin.qmin_m3h, norm[0] * floor_m2)),
-                               max=round(min_vent_max), source_id="cobb_2021_9_1"),
+                               max=round(min_vent_max), source_id=min_vent_source),
         # Боковые клапаны минвентиляции под верх мощности её вентиляторов (UGA)
         inlet_area_m2=round(min_vent_max / INLET_SPECIFIC_M3H_M2, 2),
         tunnel_fans_m3h=dict(min=round(tunnel_range[0]), max=round(tunnel_range[1]), source_id=tunnel_source),

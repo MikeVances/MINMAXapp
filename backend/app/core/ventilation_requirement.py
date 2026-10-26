@@ -28,8 +28,12 @@ from .psychro import pressure_at_altitude_pa, site_pressure
 from .tunnel_speed_calc import EFFECTIVE_TEMP_MAX_C, _effective_temperature
 from .ventilation_design import (
     CAGE_BIRD_SPEED_SHARE, Airtightness, CageRow, Note, TunnelRules, _mean_height_m, tunnel_rule_params, _profile_citation, airtightness_q4,
-    build_envelope, cage_notes, coldest_surface, condensation, setpoint_notes, tunnel_target,
+    build_envelope, cage_notes, check_species, coldest_surface, condensation, setpoint_notes,
+    species_notes, tunnel_target, turkey_density_note,
 )
+
+# Прежний предел возраста бройлера в сценарии «сейчас» (API до индейки: 0–70 сут)
+REQUIREMENT_BROILER_MAX_DAY = 70
 
 
 # Источники (`source_id`) с пересказом и ограничениями — в core/sources.py:
@@ -56,6 +60,8 @@ class RequirementInput:
     end_walls: Optional[Surface] = None
     heater: Optional[HeaterConfig] = None
     tunnel_rules: Optional[TunnelRules] = None
+    # Индейка: тип корпуса (turkey_norms.BROODER | GROW_OUT) — для предела плотности
+    stage: Optional[str] = None
 
     @property
     def has_envelope(self) -> bool:
@@ -80,6 +86,7 @@ class RequirementResult:
     # Как у DesignDay: RH, с которой считали, и плотность (только пол)
     target_rh_pct: Optional[float] = None
     stocking_density_kg_m2: Optional[float] = None
+    stocking_density_head_m2: Optional[float] = None
 
 
 def requirement(inp: RequirementInput) -> RequirementResult:
@@ -96,7 +103,14 @@ def _requirement(inp: RequirementInput) -> RequirementResult:
     cages = inp.housing == "cages"
     age = max(1, inp.age_days)
 
-    target = tunnel_target(g, inp.housing, inp.cage_rows)
+    # Профиль — первым: от вида птицы зависят цель туннеля, нормы и проверки входа.
+    # Предел возраста бройлера здесь прежний (70 сут), а не проектные 63
+    profile = load_profile(inp.growth_profile_id)
+    check_species(profile, inp.housing, inp.stage, inp.age_days, broiler_max_day=REQUIREMENT_BROILER_MAX_DAY)
+    turkey = profile.species == "turkey"
+    species_notes(profile, assumptions, source_ids)
+
+    target = tunnel_target(g, inp.housing, inp.cage_rows, profile.species)
     source_ids.add(target.source_id)
     if cages:
         cage_notes(assumptions, source_ids)
@@ -141,7 +155,8 @@ def _requirement(inp: RequirementInput) -> RequirementResult:
                            HouseThermal(ua_w_per_k=ua))
         qmax = max(hot.q_max_m3h, now.q_min_m3h)
 
-    tunnel = _tunnel_now(inp, age, target, now, qmax, findings, source_ids, cages, params)
+    tunnel = _tunnel_now(inp, age, target, now, qmax, findings, assumptions, source_ids, cages, params,
+                         profile.species)
 
     # ── Находки ──
     setpoint_notes([now], findings, assumptions, source_ids)
@@ -165,7 +180,9 @@ def _requirement(inp: RequirementInput) -> RequirementResult:
                     "surface": surface[0], "surface_c": round(cond[0], 1),
                     "dew_point_c": round(cond[1], 1)}, "warning"))
 
-    profile = load_profile(inp.growth_profile_id)
+    floor_m2 = g.length_m * g.width_m
+    if turkey:
+        turkey_density_note(profile, inp.stage, [(age, now.birds_alive / floor_m2)], findings, source_ids)
     last_day = max(profile.daily()) if profile.points else 0
     if inp.age_days > last_day:
         findings.append(Note("cycle_beyond_profile", {"last_day": last_day}, "info"))
@@ -181,6 +198,7 @@ def _requirement(inp: RequirementInput) -> RequirementResult:
         target_rh_pct=now.rv_percent,
         stocking_density_kg_m2=(round(now.stocking_density_kg_m2, 1)
                                 if now.stocking_density_kg_m2 is not None else None),
+        stocking_density_head_m2=round(now.birds_alive / floor_m2, 2) if turkey else None,
     )
     if inp.has_envelope:
         result.heating_need_kw = round((now.heat_need_w or 0.0) / 1000.0, 1)
@@ -191,7 +209,8 @@ def _requirement(inp: RequirementInput) -> RequirementResult:
 
 
 def _tunnel_now(inp: RequirementInput, age: int, target, now: CalcResult, qmax: float,
-                findings: list, source_ids: set, cages: bool, params: CalcParams) -> dict:
+                findings: list, assumptions: list, source_ids: set, cages: bool, params: CalcParams,
+                species: str) -> dict:
     """
     Цель туннеля на сегодня и ощущаемая температура у вентиляторов.
 
@@ -210,8 +229,11 @@ def _tunnel_now(inp: RequirementInput, age: int, target, now: CalcResult, qmax: 
         "target_speed_ms": {"min": round(speed[0], 2), "max": round(speed[1], 2),
                             "source_id": target.source_id},
         "free_section_m2": round(target.section_m2, 2),
-        "effective_temp_limit_c": EFFECTIVE_TEMP_MAX_C,
     }
+    # Таблица ощущаемой температуры и предел 32 °C — бройлерные (Cobb §9.7): для
+    # индейки их нет, и ощущаемую температуру мы не выдаём, а не выдумываем
+    if species != "turkey":
+        out["effective_temp_limit_c"] = EFFECTIVE_TEMP_MAX_C
     if cages:
         out["bird_speed_ms"] = {"min": round(speed[0] * share, 2), "max": round(speed[1] * share, 2),
                                 "source_id": "practice_cage_tunnel_2026"}
@@ -220,7 +242,9 @@ def _tunnel_now(inp: RequirementInput, age: int, target, now: CalcResult, qmax: 
     if age < params.tunnel_min_day and inp.outdoor_t_c >= now.min_temp_c:
         findings.append(Note("tunnel_not_allowed_age", {"min_day": params.tunnel_min_day}, "info"))
 
-    if now.tunnel_active:
+    if now.tunnel_active and species == "turkey":
+        assumptions.append(Note("effective_temp_not_for_turkey"))
+    elif now.tunnel_active:
         # Птица у вентиляторов дышит воздухом, нагретым по длине корпуса
         rise = air_temperature_rise_c(inp.birds, now.weight_used_g / 1000.0, inp.outdoor_t_c, qmax / 3600.0)
         v_bird = qmax / 3600.0 / target.section_m2 * share

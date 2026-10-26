@@ -1,0 +1,200 @@
+{
+  "id": "converter-novo-hens",
+  "name": "ConverterNOVO — hens",
+  "breed": "Hybrid ConverterNOVO",
+  "species": "turkey",
+  "sex": "female",
+  "min_vent_norm": "hybrid_turkey_per_week",
+  "source": {
+    "weight": {
+      "ref": "Hybrid Turkeys, Performance Goals ConverterNOVO Commercial Females, 202012 (2020, preliminary, ±5 %)",
+      "page": 1,
+      "url": "https://www.hybridturkeys.com/documents/886/ConverterNOVO_CS_Females.pdf",
+      "basis": "female"
+    },
+    "weight_day0": {
+      "ref": "Xin H., Chepete H.J., Shao J., Sell J.L. (1998) Trans. ASAE 41(5):1489–1498, eq. 6 (BM at D = 0, Nicholas toms)",
+      "value_g": 55.6,
+      "url": "https://doi.org/10.13031/2013.17299"
+    },
+    "climate": {
+      "ref": "Hybrid Turkeys, Technical guide for commercial products (Commercial Management Guide EN, 2023)",
+      "table": "Interior temperature guidelines (separate sexes)",
+      "page": 56,
+      "column": "Whole room brooding without radiant heaters",
+      "method": "hybrid_turkey_by_age",
+      "source_id": "hybrid_turkey_cmg_p56",
+      "url": "https://www.hendrix-genetics.com/documents/2183/Commercial_Management_Guide_EN.pdf"
+    }
+  },
+  "points": [
+    {
+      "day": 0,
+      "body_weight_g": 55.6,
+      "min_temp_c": 35.0,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 1,
+      "body_weight_g": null,
+      "min_temp_c": 35.0,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 7,
+      "body_weight_g": 150.0,
+      "min_temp_c": 35.0,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 8,
+      "body_weight_g": null,
+      "min_temp_c": 31.0,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 14,
+      "body_weight_g": 310.0,
+      "min_temp_c": 31.0,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 15,
+      "body_weight_g": null,
+      "min_temp_c": 28.0,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 21,
+      "body_weight_g": 570.0,
+      "min_temp_c": 28.0,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 22,
+      "body_weight_g": null,
+      "min_temp_c": 25.0,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 28,
+      "body_weight_g": 950.0,
+      "min_temp_c": 25.0,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 29,
+      "body_weight_g": null,
+      "min_temp_c": 23.0,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 35,
+      "body_weight_g": 1490.0,
+      "min_temp_c": 23.0,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 36,
+      "body_weight_g": null,
+      "min_temp_c": 22.0,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 42,
+      "body_weight_g": 2180.0,
+      "min_temp_c": 22.0,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 43,
+      "body_weight_g": null,
+      "min_temp_c": 20.0,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 49,
+      "body_weight_g": 2990.0,
+      "min_temp_c": 20.0,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 50,
+      "body_weight_g": null,
+      "min_temp_c": 19.0,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 56,
+      "body_weight_g": 3910.0,
+      "min_temp_c": 19.0,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 57,
+      "body_weight_g": null,
+      "min_temp_c": 18.0,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 63,
+      "body_weight_g": 4890.0,
+      "min_temp_c": 18.0,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 70,
+      "body_weight_g": 5910.0,
+      "min_temp_c": 18.0,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 77,
+      "body_weight_g": 6910.0,
+      "min_temp_c": 18.0,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 84,
+      "body_weight_g": 7880.0,
+      "min_temp_c": 18.0,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 91,
+      "body_weight_g": 8800.0,
+      "min_temp_c": 18.0,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 98,
+      "body_weight_g": 9670.0,
+      "min_temp_c": 18.0,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 105,
+      "body_weight_g": 10500.0,
+      "min_temp_c": 18.0,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 112,
+      "body_weight_g": 11310.0,
+      "min_temp_c": 18.0,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 119,
+      "body_weight_g": 12120.0,
+      "min_temp_c": 18.0,
+      "rv_percent": 60.0
+    },
+    {
+      "day": 126,
+      "body_weight_g": 12960.0,
+      "min_temp_c": 18.0,
+      "rv_percent": 60.0
+    }
+  ]
+}

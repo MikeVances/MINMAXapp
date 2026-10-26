@@ -163,6 +163,150 @@ _SOURCES: tuple[Source, ...] = (
                "обогрева, калькулятор считает обогрев всего корпуса.",
     ),
 
+    # ── Индейка ────────────────────────────────────────────────────────────────
+    Source(
+        id="cigr_2002_turkey", kind="research",
+        citation="CIGR (2002) Heat and moisture production at animal and house levels, §2.7.4 — turkeys",
+        title="Heat and moisture production at animal and house levels",
+        publisher="CIGR Working Group (Pedersen & Sällvik, eds.)", year=2002,
+        locator="§2.7.4, ур. 19, с. 12; табл. 2.2, с. 13; ур. 26, с. 18",
+        applies_to="тепло индейки в балансе корпуса (обогрев, Qmax по теплу, влага, CO₂)",
+        statement="Полное тепло индейки в термонейтральной зоне Φtot = 9.86·m^0.77 Вт (m — масса, кг; "
+                  "Chepete & Xin 2002, индейка 1992–1998). Поправка по температуре для птицы — "
+                  "ур. 26: 1000 + 20·(20 − t) Вт на hpu.",
+        how_used="Полное тепло — ур. 19 с поправкой ур. 26; доля явного тепла на уровне корпуса — "
+                 "бройлерная (ур. 33 / Aarnink ур. 13, подстилка), решение владельца 2026-10-26.",
+        limits="Своей доли явного тепла индейки на уровне корпуса в CIGR нет. Косвенная сверка: у "
+               "индюка 8.9 кг при 18 °C в камере явное тепло 69 % (Ota & McNally 1961), бройлерная "
+               "формула корпуса даёт 54 % — разница отчасти от испарения подстилки, которого в камере "
+               "нет. Обзор Chepete & Xin 2001 даёт для той же группы 9.83·M^0.74, рецензируемая "
+               "версия 2002 (по ней CIGR) не получена. Данных по тяжёлым индюкам мало.",
+        url="https://www.cigr.org/sites/default/files/documets/CIGR_4TH_WORK_GR.pdf",
+    ),
+    Source(
+        id="xin_1998_turkey", kind="research",
+        citation="Xin H. et al. (1998) Heat and moisture production and minimum ventilation "
+                 "requirements of tom turkeys during brooding-growing period",
+        title="Heat and Moisture Production and Minimum Ventilation Requirements of Tom Turkeys "
+              "During Brooding-growing Period",
+        publisher="Transactions of the ASAE 41(5):1489–1498", year=1998, locator="ур. 6",
+        applies_to="масса суточного индюшонка (день 0) во встроенных профилях индейки",
+        statement="Масса индюков Nicholas на подстилке по возрасту: BM = 0.0109·D³ + 0.7124·D² + "
+                  "10.057·D + 55.6 г, D — сутки; при D = 0 — 55.6 г.",
+        how_used="Точка дня 0 профилей B.U.T. 6 и Converter: в таблицах производителей массы "
+                 "суточной птицы нет, а край недели 1 (0.15–0.18 кг) завысил бы тепло и CO₂ "
+                 "первых дней втрое.",
+        limits="Другой кросс (Nicholas) и 1990-е годы; самки — то же значение.",
+        url="https://doi.org/10.13031/2013.17299",
+    ),
+    Source(
+        id="aviagen_turkey_cl23_t5", kind="manufacturer",
+        citation="Aviagen Turkeys, Management Guidelines for Commercial Turkeys CL23 V4, Table 5 — "
+                 "target environmental temperatures",
+        title="Management Guidelines for Commercial Turkeys", publisher="Aviagen Turkeys", year=2024,
+        locator="табл. 5, с. 21; RH — табл. 8, с. 26",
+        applies_to="уставка температуры по дням для B.U.T. 6",
+        statement="Обогрев всего корпуса (Whole House Brooding), M+F: день 1 — 36–37 °C, 2 — 35–36, "
+                  "3 — 34–35, дни 4–7 — «decrease 1 °C per day», нед. 2 — 27–28, 3 — 25–26, 4 — 23–24, "
+                  "5 — 21–22, 6 — 20–21, 7 — 19–20, 8 — 18–19, 9 — 17–18, с 10-й «until depletion» — "
+                  "16–17. RH 50–70 % (табл. 8).",
+        how_used="Уставка дня — нижняя граница диапазона ступенью на всю неделю (решение владельца "
+                 "2026-10-26); дни 4–7 — 33, 32, 31, 30 °C. Поправки на RH нет. Целевая RH — 70 %, "
+                 "верх диапазона: потолок влагобаланса.",
+        limits="Дни 4–7 — наше прочтение «минус 1 °C в день» от 34 °C. Колонка Ambient (обогрев "
+               "кольцами) для дней 1–7 в таблице пуста — брудинг кольцами не считается.",
+        url="https://aviagenturkeys.com/wp-content/uploads/2025/08/"
+            "CL23_V4_Management-Guidelines-for-Growing-Commercial-Turkeys_EN.pdf",
+    ),
+    Source(
+        id="hybrid_turkey_cmg_p56", kind="manufacturer",
+        citation="Hybrid Turkeys, Commercial Management Guide (2023), interior temperature guidelines",
+        title="Technical guide for Hybrid Turkeys commercial products", publisher="Hybrid Turkeys",
+        year=2023, locator="с. 56 (раздельно по полу), с. 57 (смешанные стада); RH — с. 46",
+        applies_to="уставка температуры по дням для Converter и ConverterNOVO",
+        statement="Колонка Whole room brooding without radiant heaters, самцы: 1–7 сут — 35 °C, "
+                  "8–14 — 31, 15–21 — 28, 22–28 — 25, 29–35 — 23, 36–42 — 22, 43–56 — 20, 57–63 — 19, "
+                  "64–70 — 18, 71–77 — 17, 78–84 — 16, 85–98 — 15, > 99 — 14; самки до 49 сут — так же, "
+                  "50–56 — 19, 57–91 — 18. RH 40–60 %.",
+        how_used="Уставка дня — ступенью по таблице своего пола, без поправки на RH; после конца "
+                 "таблицы самок (91 сут) — 18 °C. Целевая RH — 60 %, верх диапазона.",
+        limits="Брудинг кольцами и обогрев с излучателями (колонки 29 и 32 °C в первую неделю) не "
+               "считаются: взята колонка обогрева всего корпуса — худшая для отопления.",
+        url="https://www.hendrix-genetics.com/documents/2183/Commercial_Management_Guide_EN.pdf",
+    ),
+    Source(
+        id="aviagen_turkey_cl23_min_vent", kind="manufacturer",
+        citation="Aviagen Turkeys CL23 V4 — minimum ventilation 1 m³ per kg live weight per hour",
+        title="Management Guidelines for Commercial Turkeys", publisher="Aviagen Turkeys", year=2024,
+        locator="раздел Ventilation, с. 30",
+        applies_to="минимальная вентиляция (Qmin) для B.U.T. 6",
+        statement="«ventilate a turkey house by providing a constant minimum ratio of 1m3 of air /kg "
+                  "live weight/hour. This is applicable throughout the production cycle» (CO₂ < 2500 ppm).",
+        how_used="Норма = 1 м³/ч × масса профиля × живое поголовье; Qmin = max(CO₂, норма, влага), "
+                 "основание guide, если правит норма.",
+        limits="У тяжёлого индюка норма примерно вдвое выше расчёта по CO₂ — для Aviagen минимум "
+               "на откорме почти всегда задаёт она.",
+        url="https://aviagenturkeys.com/wp-content/uploads/2025/08/"
+            "CL23_V4_Management-Guidelines-for-Growing-Commercial-Turkeys_EN.pdf",
+    ),
+    Source(
+        id="hybrid_turkey_cmg_p46", kind="manufacturer",
+        citation="Hybrid Turkeys, Commercial Management Guide (2023) — air renewal by week of age",
+        title="Technical guide for Hybrid Turkeys commercial products", publisher="Hybrid Turkeys",
+        year=2023, locator="с. 46 (таблица), с. 68",
+        applies_to="минимальная вентиляция (Qmin) для Converter и ConverterNOVO",
+        statement="1-я неделя: 1.7 м³/ч на м² при плотности < 10 гол/м² или 0.17 м³/ч на индейку при "
+                  "> 10 гол/м²; 2-я — вдвое, 3-я — втрое, 4-я — вчетверо, «etc.». Объёмы — фактические, "
+                  "с учётом потери производительности вентиляторов.",
+        how_used="Норма = 0.17 м³/ч × неделя возраста × живое поголовье, при плотности < 10 гол/м² "
+                 "и известной площади — 1.7 м³/ч × неделя × м² пола. Qmin = max(CO₂, норма, влага).",
+        limits="Рост «etc.» после 4-й недели — наше продолжение линейного ряда. На откорме норма "
+               "ниже расчёта по CO₂, и минимум задаёт CO₂.",
+        url="https://www.hendrix-genetics.com/documents/2183/Commercial_Management_Guide_EN.pdf",
+    ),
+    Source(
+        id="hybrid_turkey_cmg_p51", kind="manufacturer",
+        citation="Hybrid Turkeys, Commercial Management Guide (2023) — tunnel ventilation, 2 m/s",
+        title="Technical guide for Hybrid Turkeys commercial products", publisher="Hybrid Turkeys",
+        year=2023, locator="с. 51",
+        applies_to="проектная скорость воздуха в тоннеле для индейки",
+        statement="«An air speed of 2 m/s (approximately 7 kph) reduces perceived temperature by 6 to "
+                  "10°C»; мощность вентиляторов VP = S × A × 3600 (S — сечение, A — нужная скорость).",
+        how_used="Цель тоннеля индейки — 2 м/с в сечении корпуса (решение владельца 2026-10-26); "
+                 "пределы скорости по возрасту — бройлерные Cobb §9.7.",
+        limits="Это иллюстрация, а не норма: другой цифры у источников индейки нет (Aviagen CL23 "
+               "даёт только график wind chill). Пределы по возрасту перенесены с бройлера.",
+        url="https://www.hendrix-genetics.com/documents/2183/Commercial_Management_Guide_EN.pdf",
+    ),
+    Source(
+        id="hybrid_turkey_ventcalc", kind="manufacturer",
+        citation="Hybrid Turkeys, Ventilation Calculator Metric v28032022 — installed minimum ventilation",
+        title="Ventilation Calculator Metric", publisher="Hybrid Turkeys", year=2022,
+        locator="лист расчёта, примечание к норме брудера",
+        applies_to="установленная мощность вентиляторов минвентиляции для индейки",
+        statement="«Hybrid recommends a minimum of 18.3 m3h/m2 for brooders»; справочно Brood 18.3, "
+                  "Finish 27.5, Tunnel 36.6 м³/ч·м² (автор ссылается на Czarick, UGA).",
+        how_used="Нижняя граница вентиляторов минвентиляции — 18.3 м³/ч·м² в брудере и 27.5 на "
+                 "доращивании (решение владельца 2026-10-26).",
+        limits="Значение Finish в файле справочное, рекомендацией названо только 18.3 для брудера.",
+        url="https://www.hybridturkeys.com/documents/1191/Ventilation_Calculator_Metric_v28032022.xlsx",
+    ),
+    Source(
+        id="aviagen_turkey_cl23_density", kind="manufacturer",
+        citation="Aviagen Turkeys CL23 V4 — stocking density for brood and move",
+        title="Management Guidelines for Commercial Turkeys", publisher="Aviagen Turkeys", year=2024,
+        locator="с. 13; табл. 2, с. 12",
+        applies_to="предупреждение о плотности посадки индейки",
+        statement="В брудерном корпусе — не больше 8–10 птиц на м², на доращивании — 2.8–3.2 самца "
+                  "или 5–6 самок на м².",
+        how_used="Предупреждение, если живое поголовье на м² пола выше верхней границы: брудер 10, "
+                 "доращивание 3.2 (самцы) или 6 (самки). Предел Cobb 42 кг/м² к индейке не применяется.",
+        limits="Плотности в кг/м² руководство не даёт; для смешанного стада на доращивании предела "
+               "нет — предупреждение не выдаётся.",
+        url="https://aviagenturkeys.com/wp-content/uploads/2025/08/"
+            "CL23_V4_Management-Guidelines-for-Growing-Commercial-Turkeys_EN.pdf",
+    ),
+
     # ── Вентиляция: нормы оборудования ─────────────────────────────────────────
     Source(
         id="cobb_2021_9_1", kind="manufacturer",

@@ -21,6 +21,12 @@
 
 Точки могут идти с пропусками (например, понедельно): промежуточные дни
 заполняются линейной интерполяцией при чтении.
+
+Необязательные поля (индейка, 2026-10-26):
+  "species": "broiler" | "turkey" — вид птицы: от него закон тепла (bird_heat);
+             нет поля — бройлер, как у всех профилей до индейки
+  "sex": "male" | "female" — пол стада, для которого дана кривая массы
+  "min_vent_norm": код нормы минимальной вентиляции производителя (turkey_norms)
 """
 
 from __future__ import annotations
@@ -45,6 +51,9 @@ GROWTH_PROFILES_DIR = data_path("GROWTH_PROFILES_DIR", "data/growth_profiles")
 PROFILE_ID_PATTERN = r"^[a-z0-9][a-z0-9_-]{0,63}$"
 
 DEFAULT_PROFILE_ID = "ross308"
+
+SPECIES = ("broiler", "turkey")
+SEXES = ("male", "female")
 
 
 class ProfileNotFound(LookupError):
@@ -77,6 +86,10 @@ class GrowthProfile:
     # Значение может быть и строкой (свободный текст пользователя, copied_from).
     source: Dict[str, Any] = field(default_factory=dict)
     points: List[GrowthPoint] = field(default_factory=list)
+    species: str = "broiler"
+    sex: Optional[str] = None
+    # Норма минвентиляции производителя (turkey_norms.GUIDE_NORMS); None — нормы нет
+    min_vent_norm: Optional[str] = None
 
     def daily(self) -> Dict[int, GrowthPoint]:
         """Все дни от первой до последней точки, пропуски — линейной интерполяцией."""
@@ -165,14 +178,18 @@ def _from_file(path: Path, builtin: bool) -> GrowthProfile:
         builtin=builtin,
         source=dict(raw.get("source") or {}),
         points=sorted(points, key=lambda p: p.day),
+        species=raw.get("species") or "broiler",
+        sex=raw.get("sex"),
+        min_vent_norm=raw.get("min_vent_norm"),
     )
 
 
 def _to_json(profile: GrowthProfile) -> dict:
-    return {
+    out = {
         "id": profile.id,
         "name": profile.name,
         "breed": profile.breed,
+        "species": profile.species,
         "source": profile.source,
         "points": [
             {
@@ -184,6 +201,12 @@ def _to_json(profile: GrowthProfile) -> dict:
             for p in sorted(profile.points, key=lambda p: p.day)
         ],
     }
+    # Пол и норма — только когда заданы: файл бройлера остаётся прежнего вида
+    if profile.sex:
+        out["sex"] = profile.sex
+    if profile.min_vent_norm:
+        out["min_vent_norm"] = profile.min_vent_norm
+    return out
 
 
 # ─── Публичный API ───────────────────────────────────────────────────────────

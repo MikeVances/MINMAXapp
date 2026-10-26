@@ -138,6 +138,12 @@ PROFILE_METHOD = {
     "arbor-acres-plus": ("mitchell_by_weight", "ross_2025_t2_5"),
     "cobb500": ("cobb_rh_density", "cobb_2021_5_2"),
     "hubbard-efficiency-plus": ("hubbard_by_age", "hubbard_2026_app1"),
+    "but6-toms": ("aviagen_turkey_by_age", "aviagen_turkey_cl23_t5"),
+    "but6-hens": ("aviagen_turkey_by_age", "aviagen_turkey_cl23_t5"),
+    "converter-toms": ("hybrid_turkey_by_age", "hybrid_turkey_cmg_p56"),
+    "converter-hens": ("hybrid_turkey_by_age", "hybrid_turkey_cmg_p56"),
+    "converter-novo-toms": ("hybrid_turkey_by_age", "hybrid_turkey_cmg_p56"),
+    "converter-novo-hens": ("hybrid_turkey_by_age", "hybrid_turkey_cmg_p56"),
 }
 
 

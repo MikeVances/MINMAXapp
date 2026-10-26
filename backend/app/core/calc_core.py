@@ -11,6 +11,7 @@ from .survival import survival_fraction
 from .psychro import humidity_ratio
 from .bird_heat import HouseHeat, house_heat_per_bird, house_sensible_fraction
 from .ventilation_calc import calc_q_min_per_bird
+from .turkey_norms import guide_min_vent_m3h
 from .app_config import load_app_config
 from .building_thermal import (
     BuildingDimensions,
@@ -73,6 +74,19 @@ def regime_ceiling_m3h(age: int, tunnel_min_day: int, q_min_co2: float,
     if tunnel_requirement:
         return tunnel_requirement, False
     return 4.0 * q_min_co2, True
+
+
+def qmin_basis_of(co2_m3h: float, moisture_m3h: Optional[float], guide_m3h: Optional[float]) -> str:
+    """
+    Что определило Qmin: наибольшая из ветвей. При равенстве — CO₂, затем норма:
+    влагу называем причиной, только когда она действительно требует больше.
+    """
+    best, basis = co2_m3h, "co2"
+    if guide_m3h is not None and guide_m3h > best:
+        best, basis = guide_m3h, "guide"
+    if moisture_m3h is not None and moisture_m3h > best:
+        basis = "moisture"
+    return basis
 
 
 def moisture_qmin_m3h(vapour_g_per_h: float, rho_in: float, delta_w_g_per_kg: float,
@@ -143,7 +157,9 @@ class CalcResult:
     heater_air_m3h: Optional[float] = None
     heater_duty_cycle: Optional[float] = None
     tunnel_active: bool = False
-    qmin_basis: str = "co2"  # "co2" | "moisture" — какое ограничение определило Qmin
+    # "co2" | "moisture" | "guide" — какое ограничение определило Qmin
+    # (guide — норма минвентиляции производителя кросса, у индейки)
+    qmin_basis: str = "co2"
     # Требуемый туннельный расход корпуса v × S × 3600, м³/ч (None — нет размеров)
     tunnel_requirement_m3h: Optional[float] = None
     # Qmax не посчитан: нужен туннельный расход, а размеров корпуса нет (Qmax = Qmin)
@@ -172,6 +188,10 @@ class CalcResult:
     # Плотность посадки, кг живой массы на м² пола — у любого кросса, если площадь
     # пола известна (у клеток — None). Уставку по ней считает только Cobb
     stocking_density_kg_m2: Optional[float] = None
+    # Вид птицы профиля (bird_heat.BROILER | TURKEY) — от него закон тепла
+    species: str = "broiler"
+    # Норма минвентиляции производителя на этот день, м³/ч (None — у кросса её нет)
+    qmin_guide_m3h: Optional[float] = None
 
 
 @dataclass(frozen=True)
@@ -196,6 +216,9 @@ class CalcParams:
     # проходах 4–5 м/с, у птицы 2–2.5, практика владельца). Предел Cobb по возрасту
     # — для скорости У ПТИЦЫ, поэтому в проходе клеточного зала он вдвое выше
     bird_speed_share: float = 1.0
+    # День посадки в ЭТОТ корпус: на доращивании индейки птица приходит из брудера,
+    # и падёж корпуса распределяется от дня посадки до cycle_days, а не от дня 1
+    placement_day: int = 1
 
     @classmethod
     def from_app_config(cls, cfg) -> "CalcParams":
@@ -274,7 +297,10 @@ def compute_with(ci: CalcInput, params: CalcParams, thermal: HouseThermal) -> Ca
     rv_percent      = ci.target_rh if ci.target_rh is not None else point.rv_percent
 
     # --- Effective birds with mortality ---
-    birds_eff = ci.birds * survival_fraction(age, params.total_mortality_pct, params.cycle_days)
+    # Отсчёт падежа — от дня посадки в корпус: survival(день посадки) = 1
+    shift = params.placement_day - 1
+    birds_eff = ci.birds * survival_fraction(age - shift, params.total_mortality_pct,
+                                             params.cycle_days - shift)
 
     # Уставка — по методике производителя кросса (breed_climate): Ross — по массе
     # и RH, Cobb — по возрасту, затем по плотности посадки, Hubbard — по возрасту.
@@ -285,16 +311,28 @@ def compute_with(ci: CalcInput, params: CalcParams, thermal: HouseThermal) -> Ca
                                 birds_eff, birds_day14)
     t_target_inside = setpoint.temp_c
 
-    # Тепло одной птицы на уровне корпуса при уставке — одна модель для Qmax, горелок и влаги
-    bird_heat = params.bird_heat_model(weight_kg, t_target_inside)
+    # Тепло одной птицы на уровне корпуса при уставке — одна модель для Qmax, горелок и
+    # влаги. Закон полного тепла — по виду птицы профиля (бройлер, индейка)
+    species = profile.species
+    bird_heat = params.bird_heat_model(weight_kg, t_target_inside, species)
 
     # --- Qmin: биологический минимум по CO₂ (CIGR 1984) из живой массы ---
     # Норма считается из веса профиля роста, а не хранится в нём: профиль — это
     # данные кросса (вес, температура, RH), а вентиляция — следствие физики.
     safety = params.safety_factor_qmin
-    per_bird_min = calc_q_min_per_bird(weight_kg, safety)
-    q_min = birds_eff * per_bird_min
-    q_min_co2 = q_min
+    per_bird_min = calc_q_min_per_bird(weight_kg, safety, species)
+    q_min_co2 = birds_eff * per_bird_min
+
+    # Норма производителя кросса (индейка: Aviagen — на кг, Hybrid — на голову по
+    # неделям) — ещё одна нижняя граница рядом с CO₂, а не замена ему: норма не знает
+    # ни горелок, ни влажности снаружи. Qmin = max(CO₂, норма, влага)
+    q_min_guide: Optional[float] = None
+    if profile.min_vent_norm:
+        q_min_guide = guide_min_vent_m3h(profile.min_vent_norm, birds_eff, weight_kg, age,
+                                         ci.stocking_floor_m2)
+    q_min = max(q_min_co2, q_min_guide or 0.0)
+    # Нижний предел без влаги: от него — потолок переходного режима (4 × минимум)
+    q_min_floor = q_min
 
     # --- Туннель: требуемый расход — свойство КОРПУСА, а не поголовья ---
     # Q_tunnel = v × S_сечения × 3600. Раньше мощность туннеля хранилась на голову
@@ -386,14 +424,14 @@ def compute_with(ci: CalcInput, params: CalcParams, thermal: HouseThermal) -> Ca
     # --- Влагобаланс (ШАГ 1): птицы, без пара горелок ---
     # Вычисляем до секции горелок, чтобы duty_cycle учитывал полный Qmin.
     # Пар горелок добавляется ниже как уточнение.
-    qmin_basis = "co2"
+    qmin_basis = qmin_basis_of(q_min_co2, None, q_min_guide)
     humidity_uncontrollable = False
     _delta_w: Optional[float] = None   # сохраняем для шага 2 (с паром горелок)
     _G_birds_gph: float = 0.0
 
     # Потолок режима для влажностного Qmin — тот же, что ограничивает Qmax
     moisture_ceiling, ceiling_needs_geometry = regime_ceiling_m3h(
-        age, tunnel_min_day, q_min_co2, tunnel_flow_for_age)
+        age, tunnel_min_day, q_min_floor, tunnel_flow_for_age)
     _rho_in = air_density_kg_m3(t_target_inside)   # с поправкой на высоту фермы
 
     if rv_percent is not None:
@@ -463,9 +501,10 @@ def compute_with(ci: CalcInput, params: CalcParams, thermal: HouseThermal) -> Ca
                 q_moist, capped = moisture_qmin_m3h(
                     _G_birds_gph + gas_m3h * 1607.0, _rho_in, _delta_w, moisture_ceiling)
                 humidity_uncontrollable = humidity_uncontrollable or capped
-                qmin_basis = "moisture" if q_moist > q_min_co2 + heater_air else "co2"
+                qmin_basis = qmin_basis_of(q_min_co2 + heater_air, q_moist, q_min_guide)
             elif heater_air > 0:
-                qmin_basis = "co2"
+                # Сюда попадает только открытое пламя без целевой RH: влага не считалась
+                qmin_basis = qmin_basis_of(q_min_co2 + heater_air, None, q_min_guide)
 
     # Горелки включены, но загрузку не найти — нет калибровки UA или данных о горелке.
     # Раньше здесь добавлялось 0.10 / 0.05 / 0.025 м³/ч на голову по возрасту: числа
@@ -547,4 +586,6 @@ def compute_with(ci: CalcInput, params: CalcParams, thermal: HouseThermal) -> Ca
         # профиля / пол. Отдаётся для всех кроссов — агенту не пересчитывать самому
         stocking_density_kg_m2=(birds_eff * weight_kg / ci.stocking_floor_m2
                                 if ci.stocking_floor_m2 else None),
+        species=species,
+        qmin_guide_m3h=q_min_guide,
     )

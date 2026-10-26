@@ -12,7 +12,7 @@ API библиотеки профилей роста (см. core/growth_profiles
 from __future__ import annotations
 
 import re
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Literal, Optional, Union
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
@@ -42,9 +42,11 @@ router = APIRouter()
 # ref/page/table/column/basis/method/url — клиент собирает из неё подпись на своём языке
 SourceValue = Union[str, Dict[str, Union[str, int, float]]]
 
+# Пределы — под индюка: цикл до 22 недель (154 дня) и масса до ~25 кг. С бройлерными
+# (70 дней, 10 кг) встроенный профиль индейки не открывался — ответ падал в 500
 class PointModel(BaseModel):
-    day: int = Field(..., ge=0, le=70)
-    body_weight_g: Optional[float] = Field(None, gt=0, le=10_000)
+    day: int = Field(..., ge=0, le=160)
+    body_weight_g: Optional[float] = Field(None, gt=0, le=40_000)
     min_temp_c: Optional[float] = Field(None, ge=0, le=45)
     rv_percent: Optional[float] = Field(None, ge=0, le=100)
 
@@ -60,6 +62,9 @@ class ProfileSummary(BaseModel):
     breed: Optional[str] = None
     builtin: bool
     source: Dict[str, SourceValue] = {}
+    species: str = "broiler"
+    sex: Optional[str] = None
+    min_vent_norm: Optional[str] = None
     first_day: int
     last_day: int
 
@@ -74,7 +79,12 @@ class ProfileIn(BaseModel):
     name: str = Field(..., min_length=1, max_length=80)
     breed: Optional[str] = Field(None, max_length=80)
     source: Dict[str, SourceValue] = Field(default_factory=dict)
-    points: List[PointModel] = Field(..., min_length=2, max_length=71)
+    points: List[PointModel] = Field(..., min_length=2, max_length=161)
+    # Копия кросса индейки остаётся индейкой: вид задаёт закон тепла, норма —
+    # нижнюю границу Qmin. Без этих полей копия молча считалась бы бройлером
+    species: Literal["broiler", "turkey"] = "broiler"
+    sex: Optional[Literal["male", "female"]] = None
+    min_vent_norm: Optional[Literal["aviagen_turkey_per_kg", "hybrid_turkey_per_week"]] = None
 
 
 # ─── Преобразования ──────────────────────────────────────────────────────────
@@ -83,6 +93,7 @@ def _summary(p: GrowthProfile) -> ProfileSummary:
     days = [pt.day for pt in p.points]
     return ProfileSummary(
         id=p.id, name=p.name, breed=p.breed, builtin=p.builtin, source=p.source,
+        species=p.species, sex=p.sex, min_vent_norm=p.min_vent_norm,
         first_day=min(days), last_day=max(days),
     )
 
@@ -93,7 +104,7 @@ def _full(p: GrowthProfile) -> ProfileOut:
         DayModel(
             day=d.day, body_weight_g=d.body_weight_g, min_temp_c=d.min_temp_c,
             rv_percent=d.rv_percent,
-            q_min_per_bird=(calc_q_min_per_bird(d.body_weight_g / 1000.0, safety)
+            q_min_per_bird=(calc_q_min_per_bird(d.body_weight_g / 1000.0, safety, p.species)
                             if d.body_weight_g else None),
         )
         for d in p.daily().values()
@@ -143,12 +154,20 @@ def put_profile(profile_id: str, payload: ProfileIn):
     if sum(1 for pt in payload.points if pt.min_temp_c is not None) < 2:
         raise api_error(422, "profile_needs_two_temps")
 
+    # Нормы минвентиляции — руководства по индейке: у бройлера такая норма считала бы
+    # минимум по чужим данным
+    if payload.min_vent_norm and payload.species != "turkey":
+        raise api_error(422, "profile_norm_turkey_only", norm=payload.min_vent_norm)
+
     profile = GrowthProfile(
         id=profile_id,
         name=payload.name,
         breed=payload.breed,
         source=payload.source,
         points=[GrowthPoint(**pt.model_dump()) for pt in payload.points],
+        species=payload.species,
+        sex=payload.sex,
+        min_vent_norm=payload.min_vent_norm,
     )
     try:
         return _full(save_custom_profile(profile))

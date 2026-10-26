@@ -274,7 +274,12 @@ class FlockIn(_Strict):
     housing: Literal["floor_litter", "cages"]
     mortality_pct: float = Field(4.0, ge=0, le=100)
     target_rh_pct: Optional[float] = Field(None, ge=40, le=70)
-    cycle_days: int = Field(..., ge=21, le=63)
+    # Последний день в корпусе. Верх — цикл индюка (22 нед); бройлеру ядро не даст
+    # больше 63 (broiler_day_out_of_range): предел зависит от вида птицы профиля
+    cycle_days: int = Field(..., ge=21, le=154)
+    # Индейка: день посадки в этот корпус (на доращивание — день пересадки) и тип корпуса
+    first_day: int = Field(1, ge=1, le=153)
+    stage: Optional[Literal["brooder", "grow_out"]] = None
 
 
 class ClimateIn(_Strict):
@@ -329,8 +334,10 @@ class FlockNowIn(_Strict):
     birds: int = Field(..., ge=1, le=200_000)
     growth_profile_id: str = Field(..., pattern=PROFILE_ID_PATTERN)
     housing: Literal["floor_litter", "cages"]
-    age_days: int = Field(..., ge=0, le=70)
+    # Верх — цикл индюка; бройлеру ядро не даст больше 70 (broiler_day_out_of_range)
+    age_days: int = Field(..., ge=0, le=154)
     target_rh_pct: Optional[float] = Field(None, ge=40, le=70)
+    stage: Optional[Literal["brooder", "grow_out"]] = None
 
 
 class ConditionsIn(_Strict):
@@ -382,6 +389,7 @@ def create_ventilation_design(req: DesignRequest, request: Request) -> JSONRespo
         **_house_parts(req.house), **_envelope_parts(req.envelope),
         birds=flock.birds, growth_profile_id=flock.growth_profile_id, housing=flock.housing,
         mortality_pct=flock.mortality_pct, target_rh_pct=flock.target_rh_pct, cycle_days=flock.cycle_days,
+        first_day=flock.first_day, stage=flock.stage,
         winter_design_c=clim.winter_design_c, summer_design_db_c=clim.summer_design_db_c,
         summer_design_rh_pct=clim.summer_design_rh_pct,
         heater=_heater(req.heaters),
@@ -459,6 +467,7 @@ def create_ventilation_requirement(req: RequirementRequest, request: Request) ->
         outdoor_t_c=cond.outdoor_t_c, outdoor_rh_pct=cond.outdoor_rh_pct,
         heater=_heater(req.heaters),
         tunnel_rules=req.tunnel_rules.to_core() if req.tunnel_rules else None,
+        stage=flock.stage,
     ))
     rid = _rid(request)
     body: dict[str, Any] = {
@@ -471,7 +480,7 @@ def create_ventilation_requirement(req: RequirementRequest, request: Request) ->
         "api_version": API_VERSION, "app_version": _app_version(),
     }
     for key in ("heating_need_kw", "heater_duty_pct", "air_exchange_m3h", "target_rh_pct",
-                "stocking_density_kg_m2"):
+                "stocking_density_kg_m2", "stocking_density_head_m2"):
         if getattr(r, key) is not None:
             body[key] = getattr(r, key)
     _audit({"request_id": rid, "path": request.url.path, "status": 201,
@@ -526,9 +535,11 @@ def list_growth_profiles() -> JSONResponse:
     for p in list_profiles():
         days = [pt.day for pt in p.points]
         item: dict[str, Any] = {"id": p.id, "name": p.name, "builtin": p.builtin,
-                                "first_day": min(days), "last_day": max(days)}
+                                "species": p.species, "first_day": min(days), "last_day": max(days)}
         if p.breed:
             item["breed"] = p.breed
+        if p.sex:
+            item["sex"] = p.sex
         data.append(item)
     # Пользовательские профили меняются без новой версии — не кэшировать надолго
     return JSONResponse({"data": data}, headers={"Cache-Control": "no-cache"})
@@ -612,13 +623,17 @@ def get_growth_profile(profile_id: str = Path(..., pattern=PROFILE_ID_PATTERN)) 
     given = {pt.day for pt in p.points}
     sources = {k: e for k, e in ((k, _source_entry(v)) for k, v in (p.source or {}).items()) if e}
     body: dict[str, Any] = {
-        "id": p.id, "name": p.name, "builtin": p.builtin, "sources": sources,
+        "id": p.id, "name": p.name, "builtin": p.builtin, "species": p.species, "sources": sources,
         "days": [{"day": d.day, "weight_g": d.body_weight_g, "temp_c": d.min_temp_c,
                   "rh_pct": d.rv_percent, "interpolated": d.day not in given}
                  for d in p.daily().values()],
     }
     if p.breed:
         body["breed"] = p.breed
+    if p.sex:
+        body["sex"] = p.sex
+    if p.min_vent_norm:
+        body["min_vent_norm"] = p.min_vent_norm
     # Встроенные меняются только с версией приложения, пользовательские — в любой момент
     return JSONResponse(body, headers=_CATALOG_CACHE if p.builtin else {"Cache-Control": "no-cache"})
 

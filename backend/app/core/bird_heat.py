@@ -26,6 +26,16 @@ house levels», в изложении Aarnink (CIGR Journal, art. 4781):
 
 Норма CO₂ (ventilation_calc, CIGR 1984) этой поправкой намеренно не меняется:
 она сверена с таблицей Aviagen 2018 в пределах ~10 %.
+
+Индейка (с 2026-10-26): полное тепло — свой закон CIGR 2002, §2.7.4, ур. 19:
+Q_total(20 °C) = 9.86 · m^0.77 (Chepete & Xin 2002, индейка 1992–1998). Своей
+формулы доли явного тепла на уровне корпуса у индейки в CIGR нет — берём бройлерную
+ур. 13 (тоже подстилка): решение владельца, в ответе — пометка turkey_sensible_from_broiler.
+Сверка (косвенная): у индюка 8.9 кг при 18 °C явное тепло 69 % полного (Ota & McNally
+1961, NC State AG-775, табл. 1), ур. 13 при 18 °C даёт 0.61·1040 − 74 = 560 из 1040 —
+54 %. Сравнение не прямое: камера Ota & McNally — уровень ПТИЦЫ, без испарения из
+подстилки, а ур. 13 — уровень корпуса. Если у индейки подстилка испаряет меньше, чем
+у бройлера, формула занижает явное тепло, а с ним летний Qmax.
 """
 
 from __future__ import annotations
@@ -34,6 +44,22 @@ from dataclasses import dataclass
 
 # ур. 11: полное тепло при 20 °C, Вт на (кг живой массы)^0.75
 TOTAL_HEAT_COEFF_20C = 10.62
+
+BROILER = "broiler"
+TURKEY = "turkey"
+
+# Полное тепло при 20 °C по виду птицы: (коэффициент, показатель степени массы).
+# Бройлер — CIGR 2002 ур. 11 (как и раньше); индейка — CIGR 2002 ур. 19
+SPECIES_TOTAL_HEAT_20C = {
+    BROILER: (TOTAL_HEAT_COEFF_20C, 0.75),
+    TURKEY: (9.86, 0.77),
+}
+
+
+def total_heat_20c_w(weight_kg: float, species: str = BROILER) -> float:
+    """Полное тепло одной птицы при 20 °C, Вт. Неизвестный вид — ошибка, а не бройлер."""
+    coeff, exponent = SPECIES_TOTAL_HEAT_20C[species]
+    return coeff * max(weight_kg, 0.0) ** exponent
 
 # Теплота парообразования воды при температуре корпуса, Дж/г (~25 °C)
 LATENT_HEAT_J_PER_G = 2430.0
@@ -76,16 +102,16 @@ class HouseHeat:
 ANIMAL_LEVEL_SENSIBLE_FRACTION = 0.67
 
 
-def animal_heat_per_bird(weight_kg: float, t_inside_c: float) -> HouseHeat:
+def animal_heat_per_bird(weight_kg: float, t_inside_c: float, species: str = BROILER) -> HouseHeat:
     """Тепло одной птицы на уровне ПТИЦЫ: полное — как у корпуса, явное — 0.67 полного."""
-    total = TOTAL_HEAT_COEFF_20C * max(weight_kg, 0.0) ** 0.75 * total_heat_factor(t_inside_c)
+    total = total_heat_20c_w(weight_kg, species) * total_heat_factor(t_inside_c)
     sensible = ANIMAL_LEVEL_SENSIBLE_FRACTION * total
     return HouseHeat(total_w=total, sensible_w=sensible, latent_w=total - sensible)
 
 
-def house_heat_per_bird(weight_kg: float, t_inside_c: float) -> HouseHeat:
+def house_heat_per_bird(weight_kg: float, t_inside_c: float, species: str = BROILER) -> HouseHeat:
     """Явное и скрытое тепло одной птицы массой weight_kg при температуре корпуса T."""
-    q20 = TOTAL_HEAT_COEFF_20C * max(weight_kg, 0.0) ** 0.75
+    q20 = total_heat_20c_w(weight_kg, species)
     total = q20 * total_heat_factor(t_inside_c)
     sensible = q20 * house_sensible_fraction(t_inside_c)
     return HouseHeat(total_w=total, sensible_w=sensible, latent_w=total - sensible)

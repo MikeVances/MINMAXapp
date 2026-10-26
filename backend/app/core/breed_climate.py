@@ -12,6 +12,10 @@
   Hubbard Efficiency Plus — Broiler Guide V-2026-09, прил. 1 (с. 10): только по
       ВОЗРАСТУ («whole house heating»), без поправок на RH и плотность.
 
+  Индейка (2026-10-26) — Aviagen Turkeys CL23 табл. 5 и Hybrid CMG с. 56: только по
+      ВОЗРАСТУ, нижней границей диапазона (решение владельца), без поправки на RH —
+      ни один из двух производителей её не даёт.
+
 Возрастные таблицы Cobb (до 14-го дня) и Hubbard записаны в самих профилях
 (data/growth_profiles/builtin) — здесь только то, что от возраста не выводится:
 плотность Cobb и сдвиг по RH. Методику объявляет поле source.climate.method
@@ -32,14 +36,23 @@ from .growth_profiles import GrowthPoint, GrowthProfile
 ROSS = "mitchell_by_weight"
 COBB = "cobb_rh_density"
 HUBBARD = "hubbard_by_age"
+TURKEY_AVIAGEN = "aviagen_turkey_by_age"
+TURKEY_HYBRID = "hybrid_turkey_by_age"
 
 # Код методики конкретного дня (уходит в ответ расчёта и в выбор источника)
 DAY_ROSS = "mitchell_by_weight"
 DAY_PROFILE = "custom_profile"
 DAY_HUBBARD = "hubbard_by_age"
+TURKEY_AVIAGEN = "aviagen_turkey_by_age"
+TURKEY_HYBRID = "hybrid_turkey_by_age"
 DAY_COBB_AGE = "cobb_by_age_rh"
 DAY_COBB_DENSITY = "cobb_by_density"
 DAY_COBB_FALLBACK = "cobb_fallback_ross"
+DAY_TURKEY_AVIAGEN = TURKEY_AVIAGEN
+DAY_TURKEY_HYBRID = TURKEY_HYBRID
+# Свой профиль индейки: температура пользователя без поправки по RH — поправка
+# Ross табл. 2.5 построена по массе бройлера (до ~3 кг), у индюка в 20 кг её нет
+DAY_TURKEY_PROFILE = "custom_turkey_profile"
 
 # Метка справочника /sources для каждой методики дня
 SOURCE_BY_DAY_METHOD = {
@@ -51,6 +64,8 @@ SOURCE_BY_DAY_METHOD = {
     DAY_COBB_DENSITY: "cobb_2021_5_2",
     # Плотность не известна — после 14-го дня значения профиля, это Ross
     DAY_COBB_FALLBACK: "ross_2025_t2_5",
+    DAY_TURKEY_AVIAGEN: "aviagen_turkey_cl23_t5",
+    DAY_TURKEY_HYBRID: "hybrid_turkey_cmg_p56",
 }
 
 
@@ -158,6 +173,12 @@ def setpoint_for_day(
     if method == HUBBARD:
         # Hubbard поправки на RH не даёт: уставка — только по возрасту
         return Setpoint(base, DAY_HUBBARD)
+
+    # Индейка: таблицы производителей — только по возрасту (уже в профиле)
+    if method in (TURKEY_AVIAGEN, TURKEY_HYBRID):
+        return Setpoint(base, method)
+    if profile.species == "turkey":
+        return Setpoint(base, DAY_TURKEY_PROFILE)
 
     if method == COBB:
         if age <= COBB_AGE_TABLE_LAST_DAY:

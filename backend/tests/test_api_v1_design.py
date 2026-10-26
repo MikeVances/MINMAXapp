@@ -305,6 +305,6 @@ def test_catalogs(client):
     assert {"pir_core", "brick_exposed", "concrete_reinforced", "timber_softwood"} <= ids
     profiles = client.get("/api/v1/growth-profiles").json()["data"]
     assert {"id": "test-breed", "name": "Тестовый кросс", "breed": "Test", "builtin": True,
-            "first_day": 1, "last_day": 42} in profiles
+            "species": "broiler", "first_day": 1, "last_day": 42} in profiles
     housing = client.get("/api/v1/housing-systems").json()["data"]
     assert {h["id"] for h in housing} == {"floor_litter", "cages"}
