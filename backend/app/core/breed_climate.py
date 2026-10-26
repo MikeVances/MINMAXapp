@@ -158,6 +158,7 @@ def setpoint_for_day(
     floor_m2: Optional[float],
     birds_now: float,
     birds_day14: float,
+    mixed: bool = False,
 ) -> Setpoint:
     """
     Уставка температуры на день по методике кросса.
@@ -174,7 +175,10 @@ def setpoint_for_day(
         # Hubbard поправки на RH не даёт: уставка — только по возрасту
         return Setpoint(base, DAY_HUBBARD)
 
-    # Индейка: таблицы производителей — только по возрасту (уже в профиле)
+    # Индейка: таблицы производителей — только по возрасту (уже в профиле). Смешанное
+    # стадо до выборки самок — своя таблица, если она у производителя есть (Hybrid)
+    if mixed and profile.mixed_temps:
+        base = profile.mixed_temp_for_day(age)
     if method in (TURKEY_AVIAGEN, TURKEY_HYBRID):
         return Setpoint(base, method)
     if profile.species == "turkey":

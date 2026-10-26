@@ -236,6 +236,7 @@ def test_ui_profile_route_opens_a_turkey_profile(client):
 def test_custom_copy_of_a_turkey_stays_a_turkey(client):
     src = client.get("/profiles/converter-toms").json()
     body = {"name": "Мои индюки", "species": "turkey", "sex": "male", "min_vent_norm": src["min_vent_norm"],
+            "mixed_temps": src["mixed_temps"],
             "points": [{k: p[k] for k in ("day", "body_weight_g", "min_temp_c", "rv_percent")}
                        for p in src["points"]]}
     assert client.put("/profiles/my-toms", json=body).status_code == 200
@@ -245,6 +246,10 @@ def test_custom_copy_of_a_turkey_stays_a_turkey(client):
         # Тот же закон тепла и та же норма Hybrid — те же числа, что у встроенного кросса
         assert (mine["qmin_m3h"], mine["qmin_basis"]) == (theirs["qmin_m3h"], theirs["qmin_basis"])
         assert "cigr_2002_turkey" in {s["id"] for s in mine["sources"]}
+        # Смешанное стадо по копии — та же таблица смешанных стад Hybrid
+        mixed = {"hens": {"growth_profile_id": "converter-hens", "birds": 6000}, "age_days": 22}
+        a = _post(client, "/api/v1/ventilation-requirements", _with(REQ, flock={"growth_profile_id": "my-toms", **mixed}))
+        assert a["target_temp_c"] == 26.0
     finally:
         client.delete("/profiles/my-toms")
 
@@ -254,3 +259,77 @@ def test_turkey_norm_on_a_broiler_profile_is_rejected(client):
             "points": [{"day": 0, "body_weight_g": 42, "min_temp_c": 33}, {"day": 42, "body_weight_g": 3000, "min_temp_c": 20}]}
     r = client.put("/profiles/broiler-with-norm", json=body)
     assert r.status_code == 422 and r.json()["detail"]["code"] == "profile_norm_turkey_only", r.text
+
+
+# ─── Смешанное стадо ─────────────────────────────────────────────────────────
+
+MIXED_REQ = _with(REQ, flock={"growth_profile_id": "but6-toms", "age_days": 70, "birds": 3000,
+                              "hens": {"growth_profile_id": "but6-hens", "birds": 3000}})
+
+
+def test_mixed_flock_guide_is_the_sum_over_sexes(client):
+    # Aviagen 1 м³/кг·ч: 3000 × 7.60 кг (индюки, 10-я неделя) + 3000 × 5.71 кг (индюшки)
+    j = _post(client, "/api/v1/ventilation-requirements", MIXED_REQ)
+    assert (j["qmin_basis"], j["qmin_m3h"]) == ("guide", round(3000 * 7.60 + 3000 * 5.71))
+    assert j["weight_g"] == pytest.approx((7600 + 5710) / 2)
+    assert "mixed_flock_average_bird" in _codes(j["assumptions"])
+
+
+def test_mixed_flock_heat_counts_both_sexes(client):
+    # Qmax по тепловому балансу без ограждений (UA = 0) пропорционален явному теплу
+    # корпуса, а уставка B.U.T. 6 общая для M+F: максимум смешанного стада равен сумме
+    # максимумов индюков и индюшек по отдельности. 10 °C снаружи — баланс, не туннель
+    mild = {"outdoor_t_c": 10.0, "outdoor_rh_pct": 50.0}
+    toms = _post(client, "/api/v1/ventilation-requirements",
+                 _with(REQ, flock={"age_days": 70, "birds": 3000}, conditions=mild))
+    hens = _post(client, "/api/v1/ventilation-requirements",
+                 _with(REQ, flock={"growth_profile_id": "but6-hens", "age_days": 70, "birds": 3000},
+                       conditions=mild))
+    mixed = _post(client, "/api/v1/ventilation-requirements", _with(MIXED_REQ, conditions=mild))
+    assert not mixed["tunnel"]["active"]
+    assert mixed["qmax_m3h"] == pytest.approx(toms["qmax_m3h"] + hens["qmax_m3h"], abs=2)
+
+
+def test_mixed_hybrid_flock_uses_the_mixed_table_until_removal(client):
+    # Hybrid с. 57: смешанное стадо 22–28 сут — 26 °C (у индюков 25); с. 56 после выборки
+    body = _with(DESIGN, flock={"growth_profile_id": "converter-toms", "first_day": 1, "cycle_days": 140,
+                                "stage": "grow_out", "hens": {"growth_profile_id": "converter-hens",
+                                                              "birds": 6000, "removal_day": 98}})
+    days = {d["day"]: d for d in _post(client, "/api/v1/ventilation-designs", body)["days"]}
+    assert days[22]["target_temp_c"] == 26.0 and days[98]["target_temp_c"] == 16.0
+    # День 99: индюшек нет — таблица самцов (> 99 — 14 °C), плотность вдвое ниже
+    assert days[99]["target_temp_c"] == 14.0
+    assert days[99]["stocking_density_head_m2"] == pytest.approx(days[98]["stocking_density_head_m2"] / 2, abs=0.01)
+
+
+def test_mixed_grow_out_says_there_is_no_density_limit(client):
+    body = _with(DESIGN, flock={"birds": 9000, "hens": {"growth_profile_id": "but6-hens", "birds": 9000}})
+    j = _post(client, "/api/v1/ventilation-designs", body)
+    assert "turkey_density_high" not in _codes(j["warnings"])
+    assert "turkey_density_no_limit" in _codes(j["assumptions"])
+
+
+@pytest.mark.parametrize("hens, code", [
+    ({"growth_profile_id": "converter-hens", "birds": 100}, "mixed_flock_mismatch"),
+    ({"growth_profile_id": "but6-toms", "birds": 100}, "mixed_flock_mismatch"),
+    ({"growth_profile_id": "but6-hens", "birds": 100, "removal_day": 20}, "hens_removal_out_of_range"),
+])
+def test_mixed_flock_input_is_checked(client, hens, code):
+    r = client.post("/api/v1/ventilation-designs", json=_with(DESIGN, flock={"hens": hens}))
+    assert r.status_code == 422 and r.json()["code"] == code, r.text
+
+
+def test_mixed_flock_co2_is_the_weighted_mean_per_bird():
+    # CO₂ (CIGR 1984) линеен по головам: на голову смешанного стада — средневзвешенное
+    # по полам. В API это не видно — там правят норма или влага, поэтому — ядро
+    from backend.app.core.calc_core import CalcInput, CalcParams, FlockGroup, HouseThermal, compute_with
+    params, thermal = CalcParams(total_mortality_pct=0.0, cycle_days=154), HouseThermal()
+    mixed = compute_with(CalcInput(birds=4000, age_days=98, outside_t=-10, growth_profile_id="converter-toms",
+                                   companion=FlockGroup("converter-hens", 2000)), params, thermal)
+    toms = compute_with(CalcInput(birds=4000, age_days=98, outside_t=-10, growth_profile_id="converter-toms"),
+                        params, thermal)
+    hens = compute_with(CalcInput(birds=2000, age_days=98, outside_t=-10, growth_profile_id="converter-hens"),
+                        params, thermal)
+    expected = (4000 * toms.rates_per_bird_min + 2000 * hens.rates_per_bird_min) / 6000
+    assert mixed.rates_per_bird_min == pytest.approx(expected)
+    assert (mixed.birds_alive, mixed.companion_alive) == (6000, 2000)

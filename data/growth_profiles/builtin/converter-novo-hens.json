@@ -25,6 +25,14 @@
       "method": "hybrid_turkey_by_age",
       "source_id": "hybrid_turkey_cmg_p56",
       "url": "https://www.hendrix-genetics.com/documents/2183/Commercial_Management_Guide_EN.pdf"
+    },
+    "climate_mixed": {
+      "ref": "Hybrid Turkeys, Technical guide for commercial products (Commercial Management Guide EN, 2023)",
+      "source_id": "hybrid_turkey_cmg_p56",
+      "url": "https://www.hendrix-genetics.com/documents/2183/Commercial_Management_Guide_EN.pdf",
+      "page": 57,
+      "table": "Interior temperature guidelines (mixed sexes)",
+      "column": "Whole room brooding without radiant heaters"
     }
   },
   "points": [
@@ -196,5 +204,55 @@
       "min_temp_c": 18.0,
       "rv_percent": 60.0
     }
+  ],
+  "mixed_temps": [
+    [
+      1,
+      35.0
+    ],
+    [
+      8,
+      31.0
+    ],
+    [
+      15,
+      28.0
+    ],
+    [
+      22,
+      26.0
+    ],
+    [
+      29,
+      24.0
+    ],
+    [
+      36,
+      22.0
+    ],
+    [
+      43,
+      21.0
+    ],
+    [
+      50,
+      20.0
+    ],
+    [
+      57,
+      19.0
+    ],
+    [
+      71,
+      18.0
+    ],
+    [
+      92,
+      16.0
+    ],
+    [
+      99,
+      14.0
+    ]
   ]
 }

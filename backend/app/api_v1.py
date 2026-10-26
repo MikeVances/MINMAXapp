@@ -33,6 +33,7 @@ from .core import ventilation_design as vd
 from .core import ventilation_requirement as vr
 from .core.build_info import APP_VERSION, build_info
 from .core.building_thermal import HeaterConfig
+from .core.calc_core import FlockGroup
 from .core.errors import CalcError
 from .core.growth_profiles import PROFILE_ID_PATTERN, ProfileNotFound, list_profiles, load_profile
 from .core.paths import PROJECT_ROOT, data_path
@@ -268,6 +269,17 @@ class HouseIn(_Strict):
         return self
 
 
+class HensNowIn(_Strict):
+    # Смешанное стадо индейки: самки в том же корпусе (основной профиль — самцы)
+    growth_profile_id: str = Field(..., pattern=PROFILE_ID_PATTERN)
+    birds: int = Field(..., ge=1, le=200_000)
+
+
+class HensIn(HensNowIn):
+    # Последний день самок в корпусе (выборка); нет — до конца цикла
+    removal_day: Optional[int] = Field(None, ge=1, le=154)
+
+
 class FlockIn(_Strict):
     birds: int = Field(..., ge=1, le=200_000)
     growth_profile_id: str = Field(..., pattern=PROFILE_ID_PATTERN)
@@ -280,6 +292,7 @@ class FlockIn(_Strict):
     # Индейка: день посадки в этот корпус (на доращивание — день пересадки) и тип корпуса
     first_day: int = Field(1, ge=1, le=153)
     stage: Optional[Literal["brooder", "grow_out"]] = None
+    hens: Optional[HensIn] = None
 
 
 class ClimateIn(_Strict):
@@ -338,6 +351,7 @@ class FlockNowIn(_Strict):
     age_days: int = Field(..., ge=0, le=154)
     target_rh_pct: Optional[float] = Field(None, ge=40, le=70)
     stage: Optional[Literal["brooder", "grow_out"]] = None
+    hens: Optional[HensNowIn] = None
 
 
 class ConditionsIn(_Strict):
@@ -390,6 +404,8 @@ def create_ventilation_design(req: DesignRequest, request: Request) -> JSONRespo
         birds=flock.birds, growth_profile_id=flock.growth_profile_id, housing=flock.housing,
         mortality_pct=flock.mortality_pct, target_rh_pct=flock.target_rh_pct, cycle_days=flock.cycle_days,
         first_day=flock.first_day, stage=flock.stage,
+        hens=FlockGroup(flock.hens.growth_profile_id, flock.hens.birds, flock.hens.removal_day)
+        if flock.hens else None,
         winter_design_c=clim.winter_design_c, summer_design_db_c=clim.summer_design_db_c,
         summer_design_rh_pct=clim.summer_design_rh_pct,
         heater=_heater(req.heaters),
@@ -468,6 +484,7 @@ def create_ventilation_requirement(req: RequirementRequest, request: Request) ->
         heater=_heater(req.heaters),
         tunnel_rules=req.tunnel_rules.to_core() if req.tunnel_rules else None,
         stage=flock.stage,
+        hens=FlockGroup(flock.hens.growth_profile_id, flock.hens.birds) if flock.hens else None,
     ))
     rid = _rid(request)
     body: dict[str, Any] = {

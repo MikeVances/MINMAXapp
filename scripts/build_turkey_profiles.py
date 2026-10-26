@@ -78,6 +78,17 @@ HYBRID_FEMALE_TEMPS = [(1, 35), (8, 31), (15, 28), (22, 25), (29, 23), (36, 22),
                        (50, 19), (57, 18)]
 
 
+# Hybrid CMG, «Interior temperature guidelines (mixed sexes)», с. 57, та же колонка:
+# смешанное стадо до выборки самок. После выборки в корпусе одни самцы — уставка
+# по таблице самцов (наше прочтение: «keep a temperature of 18°C until the females
+# are removed» — строки 71–91 и есть эти 18 °C)
+HYBRID_MIXED_TEMPS = [(1, 35), (8, 31), (15, 28), (22, 26), (29, 24), (36, 22), (43, 21),
+                      (50, 20), (57, 19), (71, 18), (92, 16), (99, 14)]
+HYBRID_MIXED_SOURCE = {"page": 57,
+                       "table": "Interior temperature guidelines (mixed sexes)",
+                       "column": "Whole room brooding without radiant heaters"}
+
+
 # ─── Влажность ───────────────────────────────────────────────────────────────
 
 # Целевая RH — потолок влагобаланса: верхняя граница допустимого диапазона.
@@ -151,14 +162,22 @@ def _points(weights_kg: list[float], temps: list[tuple[int, float]], rh: float) 
 
 
 def _profile(pid: str, name: str, breed: str, sex: str, weight_ref: dict, climate: dict,
-             norm: str, weights: list[float], temps: list[tuple[int, float]], rh: float) -> dict:
-    return {
+             norm: str, weights: list[float], temps: list[tuple[int, float]], rh: float,
+             mixed: list[tuple[int, float]] | None = None) -> dict:
+    out = {
         "id": pid, "name": name, "breed": breed,
         "species": "turkey", "sex": sex, "min_vent_norm": norm,
         "source": {"weight": {**weight_ref, "basis": sex}, "weight_day0": DAY0_SOURCE,
                    "climate": climate},
         "points": _points(weights, temps, rh),
     }
+    # Уставка смешанного стада — ступени таблицы (первый день, °C). Нет поля — таблица
+    # производителя общая для M+F (Aviagen), уставка смешанного стада та же
+    if mixed:
+        out["mixed_temps"] = [[d, float(t_c)] for d, t_c in mixed]
+        out["source"]["climate_mixed"] = {**{k: v for k, v in climate.items() if k in ("ref", "url", "source_id")},
+                                          **HYBRID_MIXED_SOURCE}
+    return out
 
 
 def build() -> list[dict]:
@@ -176,16 +195,16 @@ def build() -> list[dict]:
                  AVIAGEN_CLIMATE, aviagen, BUT6_FEMALES, AVIAGEN_TEMPS, AVIAGEN_RH),
         _profile("converter-toms", "Converter — toms", "Hybrid Converter", "male",
                  conv("Males", 1908, "Male"), HYBRID_CLIMATE, hybrid,
-                 CONVERTER_MALES, HYBRID_MALE_TEMPS, HYBRID_RH),
+                 CONVERTER_MALES, HYBRID_MALE_TEMPS, HYBRID_RH, HYBRID_MIXED_TEMPS),
         _profile("converter-hens", "Converter — hens", "Hybrid Converter", "female",
                  conv("Females", 1907, "Female"), HYBRID_CLIMATE, hybrid,
-                 CONVERTER_FEMALES, HYBRID_FEMALE_TEMPS, HYBRID_RH),
+                 CONVERTER_FEMALES, HYBRID_FEMALE_TEMPS, HYBRID_RH, HYBRID_MIXED_TEMPS),
         _profile("converter-novo-toms", "ConverterNOVO — toms", "Hybrid ConverterNOVO", "male",
                  novo("Males", 885, "Males"), HYBRID_CLIMATE, hybrid,
-                 NOVO_MALES, HYBRID_MALE_TEMPS, HYBRID_RH),
+                 NOVO_MALES, HYBRID_MALE_TEMPS, HYBRID_RH, HYBRID_MIXED_TEMPS),
         _profile("converter-novo-hens", "ConverterNOVO — hens", "Hybrid ConverterNOVO", "female",
                  novo("Females", 886, "Females"), HYBRID_CLIMATE, hybrid,
-                 NOVO_FEMALES, HYBRID_FEMALE_TEMPS, HYBRID_RH),
+                 NOVO_FEMALES, HYBRID_FEMALE_TEMPS, HYBRID_RH, HYBRID_MIXED_TEMPS),
     ]
 
 

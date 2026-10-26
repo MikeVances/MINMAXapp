@@ -600,6 +600,18 @@ components:
                     Только индейка, обязателен (иначе 422 turkey_stage_required); у бройлера —
                     422 stage_turkey_only. От него — норма вентиляторов минвентиляции (Hybrid:
                     18.3 / 27.5 м³/ч·м²) и предел плотности (Aviagen, гол/м²)
+                hens:
+                  type: object
+                  additionalProperties: false
+                  required: [growth_profile_id, birds]
+                  description: |
+                    Смешанное стадо индейки: индюшки того же кросса в этом корпусе (основной
+                    профиль — индюки). Расчёт — по «средней птице» корпуса (assumption
+                    mixed_flock_average_bird), до выборки — уставка смешанных стад
+                  properties:
+                    growth_profile_id: { type: string, pattern: "^[a-z0-9][a-z0-9_-]{0,63}$", example: converter-hens }
+                    birds: { type: integer, minimum: 1, maximum: 200000 }
+                    removal_day: { type: integer, minimum: 1, maximum: 154, description: "Последний день индюшек в корпусе; нет — до конца" }
         climate: { $ref: "#/components/schemas/Climate" }
         heaters:
           description: "Есть — проверить их достаточность; нет — только требуемая мощность"
@@ -778,6 +790,14 @@ components:
             age_days: { type: integer, minimum: 0, maximum: 154, description: "Бройлер — до 70 (иначе 422 broiler_day_out_of_range), индейка — до 154" }
             target_rh_pct: { type: number, minimum: 40, maximum: 70, description: "Нет — RH профиля" }
             stage: { type: string, enum: [brooder, grow_out], description: "Только индейка, обязателен: предел плотности Aviagen" }
+            hens:
+              type: object
+              additionalProperties: false
+              required: [growth_profile_id, birds]
+              description: "Смешанное стадо индейки: индюшки того же кросса, ТЕКУЩЕЕ поголовье"
+              properties:
+                growth_profile_id: { type: string, pattern: "^[a-z0-9][a-z0-9_-]{0,63}$" }
+                birds: { type: integer, minimum: 1, maximum: 200000 }
         conditions:
           type: object
           required: [outdoor_t_c, outdoor_rh_pct]

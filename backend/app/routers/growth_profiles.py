@@ -65,6 +65,8 @@ class ProfileSummary(BaseModel):
     species: str = "broiler"
     sex: Optional[str] = None
     min_vent_norm: Optional[str] = None
+    # Уставка смешанного стада: [первый день ступени, °C] (Hybrid с. 57)
+    mixed_temps: Optional[List[List[float]]] = None
     first_day: int
     last_day: int
 
@@ -85,6 +87,9 @@ class ProfileIn(BaseModel):
     species: Literal["broiler", "turkey"] = "broiler"
     sex: Optional[Literal["male", "female"]] = None
     min_vent_norm: Optional[Literal["aviagen_turkey_per_kg", "hybrid_turkey_per_week"]] = None
+    # Пары (первый день, °C); без неё копия кросса Hybrid считала бы смешанное стадо по
+    # таблице самцов
+    mixed_temps: Optional[List[List[float]]] = Field(None, max_length=40)
 
 
 # ─── Преобразования ──────────────────────────────────────────────────────────
@@ -94,6 +99,7 @@ def _summary(p: GrowthProfile) -> ProfileSummary:
     return ProfileSummary(
         id=p.id, name=p.name, breed=p.breed, builtin=p.builtin, source=p.source,
         species=p.species, sex=p.sex, min_vent_norm=p.min_vent_norm,
+        mixed_temps=[list(s) for s in p.mixed_temps] if p.mixed_temps else None,
         first_day=min(days), last_day=max(days),
     )
 
@@ -158,6 +164,11 @@ def put_profile(profile_id: str, payload: ProfileIn):
     # минимум по чужим данным
     if payload.min_vent_norm and payload.species != "turkey":
         raise api_error(422, "profile_norm_turkey_only", norm=payload.min_vent_norm)
+    # Ступень — пара (день, °C) по возрастанию дня: иначе ступени перепутаются молча
+    steps = payload.mixed_temps or []
+    if any(len(s) != 2 or not 0 <= s[1] <= 45 for s in steps) or \
+            [s[0] for s in steps] != sorted({s[0] for s in steps}):
+        raise api_error(422, "profile_mixed_temps_invalid")
 
     profile = GrowthProfile(
         id=profile_id,
@@ -168,6 +179,7 @@ def put_profile(profile_id: str, payload: ProfileIn):
         species=payload.species,
         sex=payload.sex,
         min_vent_norm=payload.min_vent_norm,
+        mixed_temps=[(int(s[0]), float(s[1])) for s in payload.mixed_temps] if payload.mixed_temps else None,
     )
     try:
         return _full(save_custom_profile(profile))

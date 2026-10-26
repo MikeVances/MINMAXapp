@@ -114,6 +114,29 @@ def moisture_qmin_m3h(vapour_g_per_h: float, rho_in: float, delta_w_g_per_kg: fl
 
 # ─── Модели данных ────────────────────────────────────────────────────────────
 
+@dataclass(frozen=True)
+class FlockGroup:
+    """
+    Вторая группа птицы в том же корпусе — самки индейки в смешанном стаде.
+    last_day — последний день группы в корпусе (выборка); после него её нет.
+    Падёж — тот же процент, что у основной группы.
+    """
+    growth_profile_id: str
+    birds: int
+    last_day: Optional[int] = None
+
+
+def mix_heat(groups: list[tuple[float, HouseHeat]]) -> HouseHeat:
+    """
+    Тепло «средней птицы» корпуса из групп (живое поголовье, тепло одной птицы):
+    дальше расчёт умножает его на всё поголовье — и получает сумму по группам.
+    """
+    n = sum(count for count, _ in groups) or 1.0
+    return HouseHeat(total_w=sum(c * h.total_w for c, h in groups) / n,
+                     sensible_w=sum(c * h.sensible_w for c, h in groups) / n,
+                     latent_w=sum(c * h.latent_w for c, h in groups) / n)
+
+
 @dataclass
 class CalcInput:
     birds: int
@@ -140,6 +163,8 @@ class CalcInput:
     # Площадь пола под птицей, м² — для уставки Cobb по плотности посадки (API v1,
     # подстилка). None → плотность не определена, у Cobb после 14-го дня — профиль
     stocking_floor_m2: Optional[float] = None
+    # Смешанное стадо: вторая группа (самки индейки) до дня выборки
+    companion: Optional[FlockGroup] = None
 
 
 @dataclass
@@ -192,6 +217,10 @@ class CalcResult:
     species: str = "broiler"
     # Норма минвентиляции производителя на этот день, м³/ч (None — у кросса её нет)
     qmin_guide_m3h: Optional[float] = None
+    # Смешанное стадо: живые птицы и масса второй группы в этот день (None — её нет:
+    # стадо однополое или самок уже выбрали). weight_used_g — средняя по корпусу
+    companion_alive: Optional[float] = None
+    companion_weight_g: Optional[float] = None
 
 
 @dataclass(frozen=True)
@@ -307,8 +336,22 @@ def compute_with(ci: CalcInput, params: CalcParams, thermal: HouseThermal) -> Ca
     # Та же RH — потолок влагобаланса, поэтому уставка и влажностный Qmin
     # меняются согласованно. Живая птица 14-го дня — для плотности Cobb
     birds_day14 = ci.birds * survival_fraction(14, params.total_mortality_pct, params.cycle_days)
+
+    # Вторая группа (самки смешанного стада) — до дня выборки включительно
+    companion = None
+    group = ci.companion
+    if group is not None and (group.last_day is None or age <= group.last_day):
+        c_profile = load_profile(group.growth_profile_id)
+        c_point = c_profile.point_for_day(age)
+        if c_point.body_weight_g is None:
+            raise CalcError("profile_day_missing", id=group.growth_profile_id, day=age)
+        c_birds = group.birds * survival_fraction(age - shift, params.total_mortality_pct,
+                                                  params.cycle_days - shift)
+        companion = (c_profile, c_point, c_birds)
+
+    # Пока в корпусе обе группы — уставка смешанного стада (своя таблица у Hybrid)
     setpoint = setpoint_for_day(profile, age, point, rv_percent, ci.stocking_floor_m2,
-                                birds_eff, birds_day14)
+                                birds_eff, birds_day14, mixed=companion is not None)
     t_target_inside = setpoint.temp_c
 
     # Тепло одной птицы на уровне корпуса при уставке — одна модель для Qmax, горелок и
@@ -321,6 +364,26 @@ def compute_with(ci: CalcInput, params: CalcParams, thermal: HouseThermal) -> Ca
     # данные кросса (вес, температура, RH), а вентиляция — следствие физики.
     safety = params.safety_factor_qmin
     per_bird_min = calc_q_min_per_bird(weight_kg, safety, species)
+
+    # --- Смешанное стадо: дальше корпус видит «среднюю птицу» ---
+    # Тепло, пар, CO₂ и масса — средние по живому поголовью обеих групп; всё ниже
+    # умножает их на суммарное поголовье и получает сумму по группам. Нормы
+    # производителей линейны по головам и массе (Aviagen — Σ n·w, Hybrid — Σ n),
+    # поэтому норма «средней птицы» на всё поголовье тоже равна сумме — без потерь
+    companion_alive = companion_weight_g = None
+    if companion is not None:
+        c_profile, c_point, c_birds = companion
+        c_kg = max(c_point.body_weight_g / 1000.0, 0.0001)
+        groups = [(birds_eff, bird_heat),
+                  (c_birds, params.bird_heat_model(c_kg, t_target_inside, c_profile.species))]
+        bird_heat = mix_heat(groups)
+        n_total = birds_eff + c_birds
+        per_bird_min = (birds_eff * per_bird_min
+                        + c_birds * calc_q_min_per_bird(c_kg, safety, c_profile.species)) / n_total
+        weight_kg = (birds_eff * weight_kg + c_birds * c_kg) / n_total
+        body_weight_g = weight_kg * 1000.0
+        companion_alive, companion_weight_g = c_birds, c_point.body_weight_g
+        birds_eff = n_total
     q_min_co2 = birds_eff * per_bird_min
 
     # Норма производителя кросса (индейка: Aviagen — на кг, Hybrid — на голову по
@@ -588,4 +651,6 @@ def compute_with(ci: CalcInput, params: CalcParams, thermal: HouseThermal) -> Ca
                                 if ci.stocking_floor_m2 else None),
         species=species,
         qmin_guide_m3h=q_min_guide,
+        companion_alive=companion_alive,
+        companion_weight_g=companion_weight_g,
     )

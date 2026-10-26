@@ -21,14 +21,15 @@ from typing import Optional
 
 from .bird_heat import animal_heat_per_bird, house_heat_per_bird
 from .building_thermal import HeaterConfig, air_temperature_rise_c
-from .calc_core import CalcInput, CalcParams, CalcResult, HouseThermal, compute_with, tunnel_speed_limit_ms
+from .calc_core import (CalcInput, CalcParams, CalcResult, FlockGroup, HouseThermal, compute_with,
+                        tunnel_speed_limit_ms)
 from .construction import HouseGeometry, Surface
 from .growth_profiles import load_profile
 from .psychro import pressure_at_altitude_pa, site_pressure
 from .tunnel_speed_calc import EFFECTIVE_TEMP_MAX_C, _effective_temperature
 from .ventilation_design import (
     CAGE_BIRD_SPEED_SHARE, Airtightness, CageRow, Note, TunnelRules, _mean_height_m, tunnel_rule_params, _profile_citation, airtightness_q4,
-    build_envelope, cage_notes, check_species, coldest_surface, condensation, setpoint_notes,
+    build_envelope, cage_notes, check_hens, check_species, coldest_surface, condensation, setpoint_notes,
     species_notes, tunnel_target, turkey_density_note,
 )
 
@@ -62,6 +63,8 @@ class RequirementInput:
     tunnel_rules: Optional[TunnelRules] = None
     # Индейка: тип корпуса (turkey_norms.BROODER | GROW_OUT) — для предела плотности
     stage: Optional[str] = None
+    # Смешанное стадо индейки: самки, которые сейчас в корпусе (текущее поголовье)
+    hens: Optional["FlockGroup"] = None
 
     @property
     def has_envelope(self) -> bool:
@@ -107,6 +110,7 @@ def _requirement(inp: RequirementInput) -> RequirementResult:
     # Предел возраста бройлера здесь прежний (70 сут), а не проектные 63
     profile = load_profile(inp.growth_profile_id)
     check_species(profile, inp.housing, inp.stage, inp.age_days, broiler_max_day=REQUIREMENT_BROILER_MAX_DAY)
+    check_hens(profile, inp.hens, age, age)
     turkey = profile.species == "turkey"
     species_notes(profile, assumptions, source_ids)
 
@@ -135,7 +139,11 @@ def _requirement(inp: RequirementInput) -> RequirementResult:
                   house_width_m=g.width_m, house_height_m=_mean_height_m(g),
                   air_exchange_floor_m3h=q4_m3h,
                   # Пол под птицей — для уставки Cobb по плотности; в клетках её нет
-                  stocking_floor_m2=None if cages else g.length_m * g.width_m)
+                  stocking_floor_m2=None if cages else g.length_m * g.width_m,
+                  companion=inp.hens)
+    if inp.hens is not None:
+        assumptions.append(Note("mixed_flock_average_bird", {
+            "hens_profile": inp.hens.growth_profile_id, "hens_birds": inp.hens.birds}))
 
     # Горелки «включены», только если снаружи холоднее уставки: иначе открытое
     # пламя добавило бы к Qmin воздух на разбавление CO₂ в жару. Уставку узнаём
@@ -182,7 +190,8 @@ def _requirement(inp: RequirementInput) -> RequirementResult:
 
     floor_m2 = g.length_m * g.width_m
     if turkey:
-        turkey_density_note(profile, inp.stage, [(age, now.birds_alive / floor_m2)], findings, source_ids)
+        turkey_density_note(profile, inp.stage, [(age, now.birds_alive / floor_m2)], findings, assumptions,
+                            source_ids, mixed=inp.hens is not None)
     last_day = max(profile.daily()) if profile.points else 0
     if inp.age_days > last_day:
         findings.append(Note("cycle_beyond_profile", {"last_day": last_day}, "info"))

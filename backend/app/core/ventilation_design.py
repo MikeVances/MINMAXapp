@@ -24,7 +24,7 @@ from typing import Optional
 from .bird_heat import animal_heat_per_bird, house_heat_per_bird
 from .breed_climate import DAY_COBB_DENSITY, DAY_COBB_FALLBACK, SOURCE_BY_DAY_METHOD
 from .building_thermal import HeaterConfig
-from .calc_core import CalcInput, CalcParams, CalcResult, HouseThermal, compute_with
+from .calc_core import CalcInput, CalcParams, CalcResult, FlockGroup, HouseThermal, compute_with
 from .construction import (
     EnvelopeUA, HouseGeometry, Surface, envelope_areas, envelope_ua,
     surface_resistance_si,
@@ -159,6 +159,8 @@ class DesignInput:
     # обязателен, у бройлера запрещён
     first_day: int = 1
     stage: Optional[str] = None
+    # Смешанное стадо индейки: самки в том же корпусе до дня выборки (last_day)
+    hens: Optional[FlockGroup] = None
 
 
 # ─── Результат ────────────────────────────────────────────────────────────────
@@ -339,6 +341,24 @@ def check_species(profile, housing: str, stage: Optional[str], last_day: int,
             raise CalcError("broiler_day_out_of_range", day=last_day, max_day=broiler_max_day)
 
 
+def check_hens(profile, hens: Optional[FlockGroup], first_day: int, last_day: int) -> None:
+    """
+    Смешанное стадо — индюки (основной профиль) и индюшки (hens) с одной нормой
+    минвентиляции: у разных производителей нормы разные, и «средняя птица» корпуса
+    считалась бы по чужой норме. Уставку даёт основной профиль (индюков), поэтому
+    свой профиль индюшек с той же нормой — допустим.
+    """
+    if hens is None:
+        return
+    hens_profile = load_profile(hens.growth_profile_id)
+    if (profile.species != "turkey" or profile.sex != "male" or hens_profile.species != "turkey"
+            or hens_profile.sex != "female" or profile.min_vent_norm != hens_profile.min_vent_norm):
+        raise CalcError("mixed_flock_mismatch", toms=profile.id, hens=hens_profile.id)
+    if hens.last_day is not None and not first_day <= hens.last_day <= last_day:
+        raise CalcError("hens_removal_out_of_range", day=hens.last_day, first_day=first_day,
+                        last_day=last_day)
+
+
 def species_notes(profile, assumptions: list, source_ids: set) -> None:
     """Допущения и источники, которые вносит вид птицы (у бройлера — ничего нового)."""
     if profile.species != "turkey":
@@ -360,13 +380,16 @@ def species_notes(profile, assumptions: list, source_ids: set) -> None:
 
 
 def turkey_density_note(profile, stage: str, days: list[tuple[int, float]], findings: list,
-                        source_ids: set) -> None:
+                        assumptions: list, source_ids: set, mixed: bool = False) -> None:
     """
     Плотность индейки в головах на м² против предела Aviagen. days — (день, гол/м²).
     Предела нет (смешанное стадо на доращивании) — так и говорим, а не молчим.
     """
-    limit = turkey_norms.density_limit(stage, profile.sex)
+    limit = turkey_norms.density_limit(stage, None if mixed else profile.sex)
     if limit is None:
+        assumptions.append(Note("turkey_density_no_limit", {"stage": stage},
+                                source_id="aviagen_turkey_cl23_density"))
+        source_ids.add("aviagen_turkey_cl23_density")
         return
     source_ids.add(limit.source_id)
     over = [(d, h) for d, h in days if h > limit.head_per_m2]
@@ -458,6 +481,7 @@ def _design(inp: DesignInput) -> DesignResult:
     check_species(profile, inp.housing, inp.stage, inp.cycle_days)
     if inp.first_day >= inp.cycle_days:
         raise CalcError("first_day_after_last", first_day=inp.first_day, last_day=inp.cycle_days)
+    check_hens(profile, inp.hens, inp.first_day, inp.cycle_days)
     turkey = profile.species == "turkey"
     species_notes(profile, assumptions, source_ids)
 
@@ -499,7 +523,11 @@ def _design(inp: DesignInput) -> DesignResult:
     common = dict(birds=inp.birds, growth_profile_id=inp.growth_profile_id,
                   target_rh=inp.target_rh_pct, tunnel_section_m2=section,
                   house_width_m=g.width_m, house_height_m=_mean_height_m(g),
-                  stocking_floor_m2=None if cages else floor_m2)
+                  stocking_floor_m2=None if cages else floor_m2, companion=inp.hens)
+    if inp.hens is not None:
+        assumptions.append(Note("mixed_flock_average_bird", {
+            "hens_profile": inp.hens.growth_profile_id, "hens_birds": inp.hens.birds,
+            "hens_last_day": inp.hens.last_day}))
 
     last_profile_day = max(profile.daily()) if profile.points else 0
     if inp.cycle_days > last_profile_day:
@@ -556,7 +584,8 @@ def _design(inp: DesignInput) -> DesignResult:
     # ── Находки ──
     setpoint_notes(winter_days, warnings, assumptions, source_ids)
     if turkey:
-        turkey_density_note(profile, inp.stage, head_density, warnings, source_ids)
+        turkey_density_note(profile, inp.stage, head_density, warnings, assumptions, source_ids,
+                            mixed=inp.hens is not None)
     if humid_days:
         warnings.append(Note("humidity_uncontrollable", {"days": humid_days}, "critical"))
     if short_days:

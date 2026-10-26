@@ -31,6 +31,8 @@
 | 422 | <a id="housing_not_for_species"></a>`housing_not_for_species` | Способ содержания не считается для вида птицы профиля (индейка в клетках) | `species`, `housing` |
 | 422 | <a id="broiler_day_out_of_range"></a>`broiler_day_out_of_range` | День за пределом бройлерного цикла: проект — до 63, сценарий «сейчас» — до 70 (поля допускают 154 для индейки) | `day`, `max_day` |
 | 422 | <a id="first_day_after_last"></a>`first_day_after_last` | `flock.first_day` не раньше `cycle_days` | `first_day`, `last_day` |
+| 422 | <a id="mixed_flock_mismatch"></a>`mixed_flock_mismatch` | `flock.hens` — не индюшки или с другой нормой минвентиляции, чем у индюков основного профиля (нормы производителей разные; уставку даёт профиль индюков) | `toms`, `hens` |
+| 422 | <a id="hens_removal_out_of_range"></a>`hens_removal_out_of_range` | День выборки индюшек вне дней корпуса | `day`, `first_day`, `last_day` |
 | 429 | <a id="rate_limited"></a>`rate_limited` | Превышен лимит частоты; заголовок `Retry-After` | `limit`, `window_s` |
 | 502 | <a id="climate_unavailable"></a>`climate_unavailable` | Open-Meteo не ответил или вернул меньше года данных | — |
 
@@ -79,5 +81,7 @@
 | `qmin_includes_guide_norm` | Qmin = max(CO₂, норма производителя кросса, влага); `params.norm` — код нормы, основание `guide` в `qmin_basis`, когда правит она |
 | `turkey_tunnel_age_limits_from_broiler` | Индейка: пределы скорости в тоннеле по возрасту — бройлерные Cobb §9.7 (до 21-го дня), у индейки своих нет |
 | `effective_temp_not_for_turkey` | Индейка: ощущаемая температура в тоннеле не считается — таблица и предел бройлерные |
+| `mixed_flock_average_bird` | Смешанное стадо: тепло, пар, CO₂ и масса — средние по живому поголовью индюков и индюшек (`weight_g` дня — средняя); до выборки уставка — таблица смешанных стад производителя (Hybrid с. 57; у Aviagen табл. 5 общая для M+F), после — таблица самцов; `params.hens_profile`, `params.hens_birds`, `params.hens_last_day` |
+| `turkey_density_no_limit` | Индейка: для смешанного стада на доращивании руководство предела плотности не даёт — предупреждения о плотности нет; `params.stage` |
 | `heating_without_combustion_products` | Горелки не заданы — обогрев посчитан без воздуха на разбавление CO₂ и пара открытого пламени; для газовых горелок открытого горения передайте `heaters` |
 | `materials_iso_10456` | λ — BS EN ISO 10456 в изложении BRE BR 443 (2019) §3, R_si/R_se — ISO 6946 по BR 443 §4.3; панель по слоям без стыков — U из декларации точнее |

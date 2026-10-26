@@ -27,6 +27,8 @@
              нет поля — бройлер, как у всех профилей до индейки
   "sex": "male" | "female" — пол стада, для которого дана кривая массы
   "min_vent_norm": код нормы минимальной вентиляции производителя (turkey_norms)
+  "mixed_temps": [[первый день ступени, °C], ...] — уставка смешанного стада (самцы и
+             самки в одном корпусе), если у производителя она своя (Hybrid с. 57)
 """
 
 from __future__ import annotations
@@ -90,6 +92,18 @@ class GrowthProfile:
     sex: Optional[str] = None
     # Норма минвентиляции производителя (turkey_norms.GUIDE_NORMS); None — нормы нет
     min_vent_norm: Optional[str] = None
+    # Ступени уставки смешанного стада: (первый день, °C); None — таблица общая для M+F
+    mixed_temps: Optional[List[tuple]] = None
+
+    def mixed_temp_for_day(self, day: int) -> Optional[float]:
+        """Уставка смешанного стада на день — ступень, в которую день попадает."""
+        if not self.mixed_temps:
+            return None
+        value = None
+        for first_day, temp_c in self.mixed_temps:
+            if day >= first_day or value is None:
+                value = float(temp_c)
+        return value
 
     def daily(self) -> Dict[int, GrowthPoint]:
         """Все дни от первой до последней точки, пропуски — линейной интерполяцией."""
@@ -181,6 +195,7 @@ def _from_file(path: Path, builtin: bool) -> GrowthProfile:
         species=raw.get("species") or "broiler",
         sex=raw.get("sex"),
         min_vent_norm=raw.get("min_vent_norm"),
+        mixed_temps=[tuple(s) for s in raw["mixed_temps"]] if raw.get("mixed_temps") else None,
     )
 
 
@@ -206,6 +221,8 @@ def _to_json(profile: GrowthProfile) -> dict:
         out["sex"] = profile.sex
     if profile.min_vent_norm:
         out["min_vent_norm"] = profile.min_vent_norm
+    if profile.mixed_temps:
+        out["mixed_temps"] = [list(s) for s in profile.mixed_temps]
     return out
 
 
