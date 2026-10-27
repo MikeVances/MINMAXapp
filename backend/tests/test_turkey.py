@@ -396,3 +396,15 @@ def test_summary_turkey_tunnel_is_two_metres_per_second(client):
     rows = client.post("/calc/summary7", json={**SUMMARY, "stage": "grow_out", "outside_t": 32}).json()["rows"]
     row = next(r for r in rows if r["day"] == 140)
     assert row["q_max_nominal_m3h"] == pytest.approx(2.0 * 20 * 4 * 3600)
+
+
+@pytest.mark.parametrize("path, body", [
+    ("/api/v1/ventilation-requirements", REQ),
+    ("/api/v1/ventilation-designs", DESIGN),
+])
+def test_turkey_in_cages_is_refused_before_asking_for_cage_rows(client, path, body):
+    # Найдено приёмкой агентом 2026-10-27: без cage_rows API отвечал «дайте сечение
+    # батарей» (cage_section_missing) — клиент собирал размеры, чтобы получить отказ
+    # по виду птицы. Индейку в клетках не считаем — это и должно прийти первым
+    r = client.post(path, json=_with(body, flock={"housing": "cages"}))
+    assert r.status_code == 422 and r.json()["code"] == "housing_not_for_species", r.text

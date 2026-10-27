@@ -397,8 +397,7 @@ def _app_version() -> str:
 @api.post("/ventilation-designs", status_code=201)
 def create_ventilation_design(req: DesignRequest, request: Request) -> JSONResponse:
     flock, clim = req.flock, req.climate
-    if flock.housing == "cages" and not req.house.cage_rows:
-        raise CalcError("cage_section_missing")
+    _check_cages(flock, req.house)
     result = vd.design(vd.DesignInput(
         **_house_parts(req.house), **_envelope_parts(req.envelope),
         birds=flock.birds, growth_profile_id=flock.growth_profile_id, housing=flock.housing,
@@ -442,6 +441,20 @@ def create_ventilation_design(req: DesignRequest, request: Request) -> JSONRespo
     return JSONResponse(body, status_code=201, headers={"Cache-Control": "no-store"})
 
 
+def _check_cages(flock, house: HouseIn) -> None:
+    """
+    Клетки: сначала — считаются ли они для этого вида птицы, и только потом — есть ли
+    сечение батарей. В обратном порядке индейка в клетках без cage_rows получала
+    «дайте сечение батарей», а с ними — отказ по виду (приёмка агентом 2026-10-27).
+    """
+    if flock.housing != "cages":
+        return
+    if load_profile(flock.growth_profile_id).species == "turkey":
+        raise CalcError("housing_not_for_species", species="turkey", housing=flock.housing)
+    if not house.cage_rows:
+        raise CalcError("cage_section_missing")
+
+
 def _heater(h: Optional[HeatersIn]) -> Optional[HeaterConfig]:
     # gas_indirect воздух корпуса не загрязняет — для модели это как электрический
     if h is None:
@@ -474,8 +487,7 @@ def _envelope_parts(env: Optional[EnvelopeIn]) -> dict:
 @api.post("/ventilation-requirements", status_code=201)
 def create_ventilation_requirement(req: RequirementRequest, request: Request) -> JSONResponse:
     flock, cond = req.flock, req.conditions
-    if flock.housing == "cages" and not req.house.cage_rows:
-        raise CalcError("cage_section_missing")
+    _check_cages(flock, req.house)
     r = vr.requirement(vr.RequirementInput(
         **_house_parts(req.house), **_envelope_parts(req.envelope),
         birds=flock.birds, growth_profile_id=flock.growth_profile_id, housing=flock.housing,
