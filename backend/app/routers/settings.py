@@ -11,6 +11,7 @@ from ..api_errors import api_error
 from ..write_access import require_write_token
 from ..core.app_config import AppConfig, load_app_config, save_app_config
 from ..core.growth_profiles import ProfileNotFound, load_profile
+from ..core.production_lines import DEFAULT_LINE, LINES
 from ..core.design_climate import design_conditions, fetch_hourly
 from ..core.errors import CalcError
 from ..api_errors import from_calc_error
@@ -100,3 +101,12 @@ def put_design_climate(req: DesignClimateRequest):
         cfg.altitude_m = float(dc.elevation_m)
     save_app_config(cfg)
     return AppCfg(**asdict(cfg))
+
+
+# ---- Направления производства ----
+@router.get("/production-lines")
+def get_production_lines():
+    """Справочник направлений для формы корпуса: вид птицы, содержание, готовность."""
+    return {"default": DEFAULT_LINE,
+            "lines": [{"id": l.id, "species": l.species, "housing": l.housing, "status": l.status}
+                      for l in LINES]}

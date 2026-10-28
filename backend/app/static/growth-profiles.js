@@ -80,7 +80,8 @@
   profileCfg = { cycle_days: 42 };
   const STORE_KEY = 'vent_mvp_tabs_v1';
 
-  let profilesList = [];     // [{id, name, breed, builtin, source, first_day, last_day}]
+  let profilesList = [];     // [{id, name, breed, builtin, source, species, first_day, last_day}]
+  let linesCatalog = { default: 'broiler_floor', lines: [] };   // направления производства
   let current      = null;   // полный профиль: {…, points: [...], days: [...]}
   let editedDays   = {};     // день → {body_weight_g, min_temp_c, rv_percent} — правки в таблице
   let houseSelShown = null;  // корпус, для которого показан профиль: к нему возвращает отказ от сброса правок
@@ -106,11 +107,26 @@
     tabs[idx].growth_profile_id = profileId;
     try { localStorage.setItem(STORE_KEY, JSON.stringify(tabs)); } catch (e) { /* выбор не запомнится — не критично */ }
   }
+  // ── Профили направления корпуса ─────────────────────────────────────────
+  // Корпус индейки видит только профили индейки, бройлерный — бройлерные: иначе
+  // расчёт молча шёл бы по профилю чужого вида птицы
+  function houseLine() {
+    return ProductionLines.lineOf(readTabs()[currentHouseIdx()], linesCatalog, profilesList);
+  }
+  function profilesForHouse() {
+    const species = ProductionLines.speciesOf(houseLine(), linesCatalog);
+    return species ? profilesList.filter(p => (p.species || 'broiler') === species) : profilesList;
+  }
+
   function profileForHouse() {
     const tab = readTabs()[currentHouseIdx()];
+    const allowed = profilesForHouse();
     const wanted = tab && tab.growth_profile_id;
-    if (wanted && profilesList.some(p => p.id === wanted)) return wanted;
-    return profileCfg.default_growth_profile || (profilesList[0] && profilesList[0].id);
+    if (wanted && allowed.some(p => p.id === wanted)) return wanted;
+    // Умолчание фермы — бройлерный профиль: корпусу индейки оно не подходит
+    const farmDefault = profileCfg.default_growth_profile;
+    if (farmDefault && allowed.some(p => p.id === farmDefault)) return farmDefault;
+    return allowed[0] && allowed[0].id;
   }
 
   // ── Недельная сетка таблицы ──────────────────────────────────────────────
@@ -391,16 +407,19 @@
 
   // ── Load ─────────────────────────────────────────────────────────────────
   async function loadProfilesList() {
-    profilesList = await fetchJSON('./profiles');
+    [profilesList, linesCatalog] = await Promise.all([
+      fetchJSON('./profiles'), fetchJSON('./settings/production-lines')]);
     renderProfilesList();
   }
 
   // Группы списка подписаны из словаря — вызывается и при смене языка
   function renderProfilesList() {
     growthSel.innerHTML = '';
+    const allowed = profilesForHouse();
+    if (!allowed.length) setStatus(t('gp_none_for_line', { line: t('line_' + houseLine()) }));
     // Сначала профили производителей, затем свои — двумя группами
     [[true, t('gp_builtin')], [false, t('gp_custom')]].forEach(([builtin, label]) => {
-      const items = profilesList.filter(p => p.builtin === builtin);
+      const items = allowed.filter(p => p.builtin === builtin);
       if (!items.length) return;
       const group = document.createElement('optgroup');
       group.label = label;
@@ -414,7 +433,7 @@
     });
     // Перестройка списка сбрасывает select на первый вариант — вернуть текущий профиль,
     // иначе расчёт уйдёт по чужому кроссу
-    if (current && profilesList.some(p => p.id === current.id)) growthSel.value = current.id;
+    if (current && allowed.some(p => p.id === current.id)) growthSel.value = current.id;
   }
 
   async function selectProfile(id) {
@@ -470,6 +489,7 @@
       return;
     }
     houseSelShown = houseSel.value;
+    renderProfilesList();   // у другого корпуса может быть другое направление
     selectProfile(profileForHouse()).catch(() => {});
   });
 

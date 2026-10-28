@@ -65,6 +65,7 @@ const elHouse      = document.getElementById('house');
 const elBirds      = document.getElementById('birds');
 const elCap        = document.getElementById('cap');
 const elHeater     = document.getElementById('heater');
+const elProduction = document.getElementById('production');
 const elHouseLen       = document.getElementById('houseLength');
 const elHouseWid       = document.getElementById('houseWidth');
 const elHouseHgtWall   = document.getElementById('houseHeightWall');
@@ -143,8 +144,42 @@ function syncCap() {
 if (elNumFans)   elNumFans.addEventListener('input', syncCap);
 if (elFanCapM3h) elFanCapM3h.addEventListener('input', syncCap);
 
+// ── Направление производства ─────────────────────────────────────────────────
+// Справочник — с сервера (core/production_lines.py): там же вид птицы и готовность.
+// Неготовое направление видно, но выбрать его нельзя — пустой расчёт выглядел бы готовым
+let productionLines = { default: 'broiler_floor', lines: [] };
+
+function fillProductionOptions() {
+  if (!elProduction) return;
+  elProduction.innerHTML = '';
+  productionLines.lines.forEach(line => {
+    const opt = document.createElement('option');
+    opt.value = line.id;
+    const status = line.status === 'ready' ? '' : ` (${t('line_status_' + line.status)})`;
+    opt.textContent = t('line_' + line.id) + status;
+    opt.disabled = line.status !== 'ready';
+    elProduction.appendChild(opt);
+  });
+  elProduction.value = ProductionLines.lineOf(tabs[active], productionLines, profileSummaries);
+}
+
+// Профили нужны только чтобы узнать направление старого корпуса по виду его профиля
+let profileSummaries = [];
+
+async function loadProductionLines() {
+  try {
+    const [rl, rp] = await Promise.all([fetch('./settings/production-lines'), fetch('./profiles')]);
+    if (rl.ok) productionLines = await rl.json();
+    if (rp.ok) profileSummaries = await rp.json();
+  } catch (e) { /* сеть: список пуст, корпус сохранит прежнее направление */ }
+  fillProductionOptions();
+}
+
 function fillForm() {
   const tab = tabs[active];
+  if (elProduction && productionLines.lines.length) {
+    elProduction.value = ProductionLines.lineOf(tab, productionLines, profileSummaries);
+  }
   elHouse.value = tab.id;
   elBirds.value = tab.birds;
   elCap.value = tab.cap ?? '';
@@ -182,6 +217,8 @@ function readFormToTab() {
   tab.birds    = read(elBirds, tab.birds);   // поле обязательное (required) — пустым сюда не доходит
   tab.cap      = read(elCap, null);          // пусто = «не знаю максимум»
   tab.heater_on = !!elHeater.checked;
+  // Список направлений не загрузился — прежнее направление корпуса не затираем пустым
+  if (elProduction && elProduction.value) tab.production = elProduction.value;
   // Размеры и вентиляторы: пустое поле = «не задано». Раньше пустое молча брало
   // прежнее значение, и ошибочно введённую длину нельзя было стереть
   tab.length_m        = read(elHouseLen,      null);
@@ -282,6 +319,7 @@ elSum.onclick = () => {
 
 renderTabs();
 fillForm();
+loadProductionLines();
 
 // Уход со страницы (ссылка на калькуляторы, закрытие вкладки): верные правки
 // сохраняем сами — запись в localStorage синхронная и успевает; неверные
@@ -296,6 +334,7 @@ window.addEventListener('beforeunload', e => {
 // Смена языка: data-i18n переводит i18n.js, а собранное здесь в JS — перерисовываем сами
 document.addEventListener('i18n:change', () => {
   renderTabs();
+  fillProductionOptions();
   syncCap();
   updateUaBadge(tabs[active].id);
 });

@@ -227,3 +227,71 @@ def test_every_language_renders_without_errors(page):
         page.click(f'.lang-btn[data-lang="{lang}"]')
     _profile_calculated(page)
     assert page.errors == []
+
+
+# ── Направление производства корпуса ─────────────────────────────────────────
+
+TURKEY_IDS = {"but6-toms", "but6-hens", "converter-toms", "converter-hens",
+              "converter-novo-toms", "converter-novo-hens"}
+
+
+def _house_page(browser, base_url, house: dict):
+    """Своя страница: общий page кладёт корпус при КАЖДОЙ загрузке и затёр бы то,
+    что сохранила главная. Здесь корпус пишется, только если хранилище пусто."""
+    ctx = browser.new_context(base_url=base_url)
+    ctx.route(re.compile(r"/feedback$"), lambda r: r.fulfill(status=200, body="{}"))
+    ctx.add_init_script(f"if (!localStorage.getItem('vent_mvp_tabs_v1')) "
+                        f"localStorage.setItem('vent_mvp_tabs_v1', {json.dumps(json.dumps([house]))})")
+    pg = ctx.new_page()
+    pg.errors = []
+    pg.on("pageerror", lambda e: pg.errors.append(f"pageerror: {e}"))
+    return ctx, pg
+
+
+def _growth_options(page) -> set[str]:
+    page.wait_for_function("document.querySelectorAll('#prof-growth-select option').length > 0")
+    return set(page.eval_on_selector_all("#prof-growth-select option", "els => els.map(e => e.value)"))
+
+
+def test_production_line_filters_growth_profiles(browser, base_url):
+    ctx, page = _house_page(browser, base_url, HOUSE)
+    try:
+        _open(page, "/")
+        page.wait_for_selector("#production option[value=turkey]", state="attached")
+        # Неготовые направления видны, но выбрать их нельзя
+        assert page.eval_on_selector("#production option[value=duck]", "o => o.disabled")
+        assert page.input_value("#production") == "broiler_floor"
+        page.select_option("#production", "turkey")
+        page.click("#sumBtn")
+
+        _open(page, "/calculators.html", "profile")
+        assert _growth_options(page) == TURKEY_IDS
+        assert page.input_value("#prof-growth-select") in TURKEY_IDS
+        assert page.errors == []
+    finally:
+        ctx.close()
+
+
+def test_house_saved_before_lines_keeps_its_turkey_profile(browser, base_url):
+    # Корпус до 2026-10-28: направления нет, но выбран профиль индейки — это корпус
+    # индейки. Иначе фильтр счёл бы профиль чужим и подставил бройлерный
+    ctx, page = _house_page(browser, base_url, {**HOUSE, "growth_profile_id": "converter-toms"})
+    try:
+        _open(page, "/calculators.html", "profile")
+        assert _growth_options(page) == TURKEY_IDS
+        page.wait_for_function("document.querySelector('#prof-growth-select').value === 'converter-toms'")
+        _open(page, "/")
+        page.wait_for_selector("#production option[value=turkey]", state="attached")
+        assert page.input_value("#production") == "turkey"
+    finally:
+        ctx.close()
+
+
+def test_broiler_house_lists_broiler_profiles_only(browser, base_url):
+    ctx, page = _house_page(browser, base_url, HOUSE)
+    try:
+        _open(page, "/calculators.html", "profile")
+        options = _growth_options(page)
+        assert "ross308" in options and not options & TURKEY_IDS
+    finally:
+        ctx.close()

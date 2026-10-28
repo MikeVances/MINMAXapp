@@ -147,3 +147,21 @@
     else if (!modal.contains(document.activeElement)) { e.preventDefault(); first.focus(); }
   });
 })();
+
+// ── Направление производства корпуса ─────────────────────────────────────────
+// Общее для главной (форма корпуса) и калькуляторов (список профилей роста).
+// Корпус, сохранённый до появления направлений (до 2026-10-28), поля production не
+// имеет. Если ему уже выбран профиль индейки — это корпус индейки: иначе калькулятор
+// отфильтровал бы его профиль как чужой и молча подставил бройлерный
+window.ProductionLines = {
+  lineOf(tab, catalog, profiles) {
+    if (tab && tab.production) return tab.production;
+    const prof = tab && (profiles || []).find(p => p.id === tab.growth_profile_id);
+    const bySpecies = prof && catalog.lines.find(l => l.species === prof.species && l.status === 'ready');
+    return bySpecies ? bySpecies.id : catalog.default;
+  },
+  speciesOf(lineId, catalog) {
+    const line = catalog.lines.find(l => l.id === lineId);
+    return line ? line.species : null;
+  },
+};
