@@ -60,7 +60,7 @@ def emitted(client) -> set:
 def test_probe_reaches_every_branch(emitted):
     # Проба доходит до измеряемого: метки из веток клеток, панелей, вентилятора,
     # слоёв, «сейчас» и профилей — иначе «всё нашлось» значило бы «мало спросили»
-    assert {"practice_cage_tunnel_2026", "aarnink_2018", "sanhe_pads", "uga_pad_velocity",
+    assert {"practice_cage_tunnel_2026", "aarnink_2018", "munters_celdek_7090_15", "uga_pad_velocity",
             "amca_210", "br443_2019_s3", "cobb_2021_9_7_age", "effective_temp_table",
             "practice_tunnel_rules_2026", "ross_2025_t2_5", "marcegaglia_dop_100p_2022"} <= emitted
 

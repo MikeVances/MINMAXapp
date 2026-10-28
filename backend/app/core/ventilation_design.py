@@ -32,6 +32,7 @@ from .construction import (
 from .errors import CalcError
 from .growth_profiles import load_profile
 from .leakage_calc import INLET_SPECIFIC_M3H_M2, RHO_AIR_KG_M3, _TIGHTNESS_THRESHOLDS
+from .evap_cooling_calc import pad_curve_source
 from .tunnel_design import HIGH_TUNNEL_PRESSURE_PA, Pads, Resistance, pad_area_m2, select_fans
 from . import turkey_norms
 from .psychro import dew_point_c, pressure_at_altitude_pa, site_pressure
@@ -667,7 +668,7 @@ def _tunnel_equipment(inp: DesignInput, section: float, q_design: float, warning
     if inp.pads is not None:
         pad_area = pad_area_m2(q_design, inp.pads)
         out["pad_area_m2"] = round(pad_area, 1)
-        source_ids |= {"uga_pad_velocity", "sanhe_pads"}
+        source_ids |= {"uga_pad_velocity", pad_curve_source(inp.pads.pad_type, inp.pads.thickness_mm)}
     measured = (q_design, inp.tunnel_static_pressure_pa) if inp.tunnel_static_pressure_pa else None
     resistance = Resistance(section, inp.pads, pad_area, measured)
     parts = resistance.parts(q_design)

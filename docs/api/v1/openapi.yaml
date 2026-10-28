@@ -619,7 +619,7 @@ components:
         pads:
           description: |
             Панели испарительного охлаждения на туннельном впуске. Есть — площадь
-            по проектной скорости UGA и их сопротивление по кривой SANHE входят
+            по проектной скорости UGA и их сопротивление по кривой производителя (7090 — Munters CELdek, 7060/5090 — SANHE) входят
             в давление туннеля; нет — впуск считается открытым торцом.
           type: object
           properties:
@@ -708,7 +708,7 @@ components:
             total: { type: number }
             section: { type: number, description: "Скоростной напор в свободном сечении ½ρv²" }
             inlet: { type: number }
-            pad: { type: number, description: "Панель по кривой производителя (SANHE)" }
+            pad: { type: number, description: "Панель по кривой производителя (7090 — Munters CELdek, 7060/5090 — SANHE)" }
             length_loss: { type: number, description: "Потери по длине корпуса; 0 — не оценены (см. assumptions)" }
             basis: { type: string, enum: [estimated, measured] }
         tunnel_fans:
