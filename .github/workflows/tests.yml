@@ -12,7 +12,10 @@ on:
 
 jobs:
   pytest:
-    runs-on: ubuntu-latest
+    # Образ закреплён: ubuntu-latest с 2026-10 — Ubuntu 26.04, а Playwright под неё
+    # Chromium не ставит («does not support chromium on ubuntu26.04») — CI падал
+    # на установке, не дойдя до тестов. Снять, когда Playwright добавит 26.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
