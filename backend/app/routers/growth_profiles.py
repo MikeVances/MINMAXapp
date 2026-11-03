@@ -42,13 +42,13 @@ router = APIRouter()
 # ref/page/table/column/basis/method/url — клиент собирает из неё подпись на своём языке
 SourceValue = Union[str, Dict[str, Union[str, int, float]]]
 
-# Пределы — под индюка: цикл до 22 недель (154 дня) и масса до ~25 кг. С бройлерными
-# (70 дней, 10 кг) встроенный профиль индейки не открывался — ответ падал в 500
+# Пределы — под родительское стадо (цикл до 65 недель = 455 дней) и индюка (масса до ~25 кг)
 class PointModel(BaseModel):
-    day: int = Field(..., ge=0, le=160)
+    day: int = Field(..., ge=0, le=460)
     body_weight_g: Optional[float] = Field(None, gt=0, le=40_000)
     min_temp_c: Optional[float] = Field(None, ge=0, le=45)
     rv_percent: Optional[float] = Field(None, ge=0, le=100)
+    egg_mass_g: Optional[float] = Field(None, ge=0, le=200)
 
 
 class DayModel(PointModel):
@@ -81,12 +81,13 @@ class ProfileIn(BaseModel):
     name: str = Field(..., min_length=1, max_length=80)
     breed: Optional[str] = Field(None, max_length=80)
     source: Dict[str, SourceValue] = Field(default_factory=dict)
-    points: List[PointModel] = Field(..., min_length=2, max_length=161)
-    # Копия кросса индейки остаётся индейкой: вид задаёт закон тепла, норма —
-    # нижнюю границу Qmin. Без этих полей копия молча считалась бы бройлером
-    species: Literal["broiler", "turkey"] = "broiler"
+    points: List[PointModel] = Field(..., min_length=2, max_length=500)
+    # Копия кросса индейки или родительского стада сохраняет вид и норму минвентиляции
+    species: Literal["broiler", "turkey", "broiler_breeder"] = "broiler"
     sex: Optional[Literal["male", "female"]] = None
-    min_vent_norm: Optional[Literal["aviagen_turkey_per_kg", "hybrid_turkey_per_week"]] = None
+    min_vent_norm: Optional[
+        Literal["aviagen_turkey_per_kg", "hybrid_turkey_per_week", "ross_ps_table25"]
+    ] = None
     # Пары (первый день, °C); без неё копия кросса Hybrid считала бы смешанное стадо по
     # таблице самцов
     mixed_temps: Optional[List[List[float]]] = Field(None, max_length=40)
@@ -109,9 +110,16 @@ def _full(p: GrowthProfile) -> ProfileOut:
     days = [
         DayModel(
             day=d.day, body_weight_g=d.body_weight_g, min_temp_c=d.min_temp_c,
-            rv_percent=d.rv_percent,
-            q_min_per_bird=(calc_q_min_per_bird(d.body_weight_g / 1000.0, safety, p.species)
-                            if d.body_weight_g else None),
+            rv_percent=d.rv_percent, egg_mass_g=d.egg_mass_g,
+            q_min_per_bird=(
+                calc_q_min_per_bird(
+                    d.body_weight_g / 1000.0,
+                    safety,
+                    p.species,
+                    (d.egg_mass_g or 0.0) / 1000.0,
+                )
+                if d.body_weight_g else None
+            ),
         )
         for d in p.daily().values()
     ]
@@ -160,9 +168,9 @@ def put_profile(profile_id: str, payload: ProfileIn):
     if sum(1 for pt in payload.points if pt.min_temp_c is not None) < 2:
         raise api_error(422, "profile_needs_two_temps")
 
-    # Нормы минвентиляции — руководства по индейке: у бройлера такая норма считала бы
-    # минимум по чужим данным
-    if payload.min_vent_norm and payload.species != "turkey":
+    # Нормы минвентиляции привязаны к виду птицы (индейка или родительское стадо)
+    expected_species = "broiler_breeder" if payload.min_vent_norm == "ross_ps_table25" else "turkey"
+    if payload.min_vent_norm and payload.species != expected_species:
         raise api_error(422, "profile_norm_turkey_only", norm=payload.min_vent_norm)
     # Ступень — пара (день, °C) по возрастанию дня: иначе ступени перепутаются молча
     steps = payload.mixed_temps or []

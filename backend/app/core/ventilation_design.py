@@ -34,7 +34,7 @@ from .growth_profiles import load_profile
 from .leakage_calc import INLET_SPECIFIC_M3H_M2, RHO_AIR_KG_M3, _TIGHTNESS_THRESHOLDS
 from .evap_cooling_calc import pad_curve_source
 from .tunnel_design import HIGH_TUNNEL_PRESSURE_PA, Pads, Resistance, pad_area_m2, select_fans
-from . import turkey_norms
+from . import breeder_norms, turkey_norms
 from .psychro import dew_point_c, pressure_at_altitude_pa, site_pressure
 
 
@@ -296,16 +296,22 @@ class TunnelTarget:
 
 
 def tunnel_target(g: HouseGeometry, housing: str, cage_rows: tuple[CageRow, ...],
-                  species: str = "broiler") -> TunnelTarget:
+                  species: str = "broiler", stage: Optional[str] = None) -> TunnelTarget:
     """
     Цель туннеля корпуса: пол — Cobb §9.7 (больший из двух критериев), клетки — практика,
-    индейка — скорость 2 м/с в сечении (Hybrid CMG с. 51, решение владельца).
+    индейка — скорость 2 м/с в сечении (Hybrid CMG с. 51), родительское стадо — 2.5 м/с
+    в ремонте и 3.0 м/с в продуктивном периоде (Cobb Breeder Guide 2021 с. 123).
     """
     if species == "turkey":
         section = g.width_m * _mean_height_m(g)
         v = turkey_norms.TUNNEL_SPEED_MS
         flow = v * section * 3600.0
         return TunnelTarget(section, (v, v), (flow, flow), turkey_norms.TUNNEL_SOURCE, "air_speed")
+    if species == "broiler_breeder":
+        section = g.width_m * _mean_height_m(g)
+        v = breeder_norms.TUNNEL_SPEED_MS.get(stage or breeder_norms.PRODUCTION, 3.0)
+        flow = v * section * 3600.0
+        return TunnelTarget(section, (v, v), (flow, flow), breeder_norms.TUNNEL_SOURCE, "air_speed")
     if housing == "cages":
         section = cage_free_section_m2(g, cage_rows)
         speed = CAGE_AISLE_SPEED_MS
@@ -327,13 +333,21 @@ def check_species(profile, housing: str, stage: Optional[str], last_day: int,
                   broiler_max_day: int = BROILER_LAST_DAY) -> None:
     """
     Вход, который у этого вида птицы не имеет смысла, — ошибка, а не тихое игнорирование:
-    клеток у индейки нет, тип корпуса у бройлера не определён, а без типа у индейки
-    не выбрать ни норму вентиляторов, ни предел плотности.
+    клеток у индейки и напольного родительского стада нет, тип корпуса у бройлера не
+    определён, а без этапа у индейки и родительского стада не выбрать ни скорость тоннеля,
+    ни предел плотности.
     """
     if profile.species == "turkey":
         if housing == "cages":
             raise CalcError("housing_not_for_species", species="turkey", housing=housing)
-        if stage is None:
+        if stage not in turkey_norms.STAGES:
+            raise CalcError("turkey_stage_required")
+        if last_day > 154:
+            raise CalcError("broiler_day_out_of_range", day=last_day, max_day=154)
+    elif profile.species == "broiler_breeder":
+        if housing == "cages":
+            raise CalcError("housing_not_for_species", species="broiler_breeder", housing=housing)
+        if stage not in breeder_norms.STAGES:
             raise CalcError("turkey_stage_required")
     else:
         if stage is not None:
@@ -344,40 +358,65 @@ def check_species(profile, housing: str, stage: Optional[str], last_day: int,
 
 def check_hens(profile, hens: Optional[FlockGroup], first_day: int, last_day: int) -> None:
     """
-    Смешанное стадо — индюки (основной профиль) и индюшки (hens) с одной нормой
+    Смешанное стадо — самцы (основной профиль) и самки (hens) с одной нормой
     минвентиляции: у разных производителей нормы разные, и «средняя птица» корпуса
-    считалась бы по чужой норме. Уставку даёт основной профиль (индюков), поэтому
-    свой профиль индюшек с той же нормой — допустим.
+    считалась бы по чужой норме. Уставку даёт основной профиль (самцов), поэтому
+    свой профиль самок с той же нормой — допустим.
     """
     if hens is None:
         return
     hens_profile = load_profile(hens.growth_profile_id)
-    if (profile.species != "turkey" or profile.sex != "male" or hens_profile.species != "turkey"
-            or hens_profile.sex != "female" or profile.min_vent_norm != hens_profile.min_vent_norm):
+    if (profile.species not in ("turkey", "broiler_breeder") or profile.sex != "male"
+            or hens_profile.species != profile.species or hens_profile.sex != "female"
+            or profile.min_vent_norm != hens_profile.min_vent_norm):
         raise CalcError("mixed_flock_mismatch", toms=profile.id, hens=hens_profile.id)
     if hens.last_day is not None and not first_day <= hens.last_day <= last_day:
         raise CalcError("hens_removal_out_of_range", day=hens.last_day, first_day=first_day,
                         last_day=last_day)
 
 
-def species_notes(profile, assumptions: list, source_ids: set) -> None:
+def species_notes(profile, assumptions: list, source_ids: set, stage: Optional[str] = None,
+                  has_explicit_hens: bool = False) -> None:
     """Допущения и источники, которые вносит вид птицы (у бройлера — ничего нового)."""
-    if profile.species != "turkey":
+    if profile.species == "turkey":
+        source_ids.add("cigr_2002_turkey")
+        assumptions.append(Note("turkey_sensible_from_broiler", source_id="cigr_2002_turkey"))
+        day0 = (profile.source or {}).get("weight_day0")
+        if isinstance(day0, dict) and profile.builtin:
+            source_ids.add("xin_1998_turkey")
+            assumptions.append(Note("turkey_day0_weight", {"weight_g": day0.get("value_g")},
+                                    source_id="xin_1998_turkey"))
+        if profile.min_vent_norm:
+            sid = turkey_norms.GUIDE_NORM_SOURCE[profile.min_vent_norm]
+            source_ids.add(sid)
+            assumptions.append(Note("qmin_includes_guide_norm", {"norm": profile.min_vent_norm}, source_id=sid))
+        # Пределы скорости по возрасту в ядре — Cobb (цыплята): у индейки своих нет
+        source_ids.add("cobb_2021_9_7_age")
+        assumptions.append(Note("turkey_tunnel_age_limits_from_broiler", source_id="cobb_2021_9_7_age"))
         return
-    source_ids.add("cigr_2002_turkey")
-    assumptions.append(Note("turkey_sensible_from_broiler", source_id="cigr_2002_turkey"))
-    day0 = (profile.source or {}).get("weight_day0")
-    if isinstance(day0, dict) and profile.builtin:
-        source_ids.add("xin_1998_turkey")
-        assumptions.append(Note("turkey_day0_weight", {"weight_g": day0.get("value_g")},
-                                source_id="xin_1998_turkey"))
-    if profile.min_vent_norm:
-        sid = turkey_norms.GUIDE_NORM_SOURCE[profile.min_vent_norm]
-        source_ids.add(sid)
-        assumptions.append(Note("qmin_includes_guide_norm", {"norm": profile.min_vent_norm}, source_id=sid))
-    # Пределы скорости по возрасту в ядре — Cobb (цыплята): у индейки своих нет
-    source_ids.add("cobb_2021_9_7_age")
-    assumptions.append(Note("turkey_tunnel_age_limits_from_broiler", source_id="cobb_2021_9_7_age"))
+
+    if profile.species == "broiler_breeder":
+        source_ids.add("cigr_2002_breeder")
+        assumptions.append(Note("breeder_sensible_from_broiler", source_id="cigr_2002_breeder"))
+        if stage == breeder_norms.REARING:
+            assumptions.append(Note("breeder_rearing_cigr_unadjusted", source_id="cigr_2002_breeder"))
+        if stage == breeder_norms.PRODUCTION and not has_explicit_hens:
+            males_info = breeder_norms.production_males(profile, 141)
+            if males_info is not None:
+                male_pid, male_share, m_src = males_info
+                source_ids.add(m_src)
+                assumptions.append(Note("breeder_males_auto_added", {
+                    "males_profile": male_pid, "male_share": male_share}, source_id=m_src))
+        day0 = (profile.source or {}).get("weight_day0")
+        if isinstance(day0, dict) and profile.builtin:
+            source_ids.add("ross_ps_2023_t4")
+            assumptions.append(Note("breeder_day0_weight", {"weight_g": day0.get("value_g")},
+                                    source_id="ross_ps_2023_t4"))
+        if profile.min_vent_norm:
+            sid = breeder_norms.GUIDE_NORM_SOURCE[profile.min_vent_norm]
+            source_ids.add(sid)
+            assumptions.append(Note("qmin_includes_guide_norm", {"norm": profile.min_vent_norm}, source_id=sid))
+        source_ids.add("cobb_2021_9_7_age")
 
 
 def turkey_density_note(profile, stage: str, days: list[tuple[int, float]], findings: list,
@@ -396,6 +435,20 @@ def turkey_density_note(profile, stage: str, days: list[tuple[int, float]], find
     over = [(d, h) for d, h in days if h > limit.head_per_m2]
     if over:
         findings.append(Note("turkey_density_high", {
+            "days": [d for d, _ in over], "head_per_m2": round(max(h for _, h in over), 2),
+            "limit_head_per_m2": limit.head_per_m2}, "warning", source_id=limit.source_id))
+
+
+def breeder_density_note(profile, stage: str, days: list[tuple[int, float]], findings: list,
+                         source_ids: set) -> None:
+    """Плотность родительского стада в головах на м² против предела руководства."""
+    limit = breeder_norms.density_limit(profile, stage)
+    if limit is None:
+        return
+    source_ids.add(limit.source_id)
+    over = [(d, h) for d, h in days if h > limit.head_per_m2]
+    if over:
+        findings.append(Note("breeder_density_high", {
             "days": [d for d, _ in over], "head_per_m2": round(max(h for _, h in over), 2),
             "limit_head_per_m2": limit.head_per_m2}, "warning", source_id=limit.source_id))
 
@@ -484,7 +537,8 @@ def _design(inp: DesignInput) -> DesignResult:
         raise CalcError("first_day_after_last", first_day=inp.first_day, last_day=inp.cycle_days)
     check_hens(profile, inp.hens, inp.first_day, inp.cycle_days)
     turkey = profile.species == "turkey"
-    species_notes(profile, assumptions, source_ids)
+    breeder = profile.species == "broiler_breeder"
+    species_notes(profile, assumptions, source_ids, stage=inp.stage, has_explicit_hens=inp.hens is not None)
 
     # ── Ограждения и утечки ──
     ua, env = build_envelope(g, inp.ua_w_per_k, inp.walls, inp.roof, inp.end_walls,
@@ -493,7 +547,7 @@ def _design(inp: DesignInput) -> DesignResult:
     q4_m3h = airtightness_q4(floor_m2, inp.airtightness, assumptions)
 
     # ── Туннель: сечение и цель скорости ──
-    target = tunnel_target(g, inp.housing, inp.cage_rows, profile.species)
+    target = tunnel_target(g, inp.housing, inp.cage_rows, profile.species, inp.stage)
     section, speed_range, tunnel_range = target.section_m2, target.speed_ms, target.flow_m3h
     tunnel_source = target.source_id
     if cages:
@@ -506,11 +560,11 @@ def _design(inp: DesignInput) -> DesignResult:
     rules = tunnel_rule_params(inp.tunnel_rules, assumptions, source_ids)
     winter_params = CalcParams(total_mortality_pct=inp.mortality_pct, cycle_days=inp.cycle_days,
                                v_tunnel_ms=speed_range[1], bird_speed_share=share,
-                               placement_day=inp.first_day, **rules)
+                               placement_day=inp.first_day, stage=inp.stage, **rules)
     # Клетки летом — явное тепло на уровне птицы (верхний край вилки): больше воздуха
     summer_params = CalcParams(total_mortality_pct=inp.mortality_pct, cycle_days=inp.cycle_days,
                                v_tunnel_ms=speed_range[1], bird_speed_share=share,
-                               placement_day=inp.first_day, **rules,
+                               placement_day=inp.first_day, stage=inp.stage, **rules,
                                bird_heat_model=animal_heat_per_bird if cages else house_heat_per_bird)
     winter_thermal = HouseThermal(ua_w_per_k=ua, heater=inp.heater)
     summer_thermal = HouseThermal(ua_w_per_k=ua)
@@ -563,9 +617,9 @@ def _design(inp: DesignInput) -> DesignResult:
             target_rh_pct=w.rv_percent,
             stocking_density_kg_m2=(round(w.stocking_density_kg_m2, 1)
                                     if w.stocking_density_kg_m2 is not None else None),
-            stocking_density_head_m2=(round(w.birds_alive / floor_m2, 2) if turkey else None),
+            stocking_density_head_m2=(round(w.birds_alive / floor_m2, 2) if (turkey or breeder) else None),
         ))
-        if turkey:
+        if turkey or breeder:
             head_density.append((d, w.birds_alive / floor_m2))
         if w.humidity_uncontrollable:
             humid_days.append(d)
@@ -587,6 +641,8 @@ def _design(inp: DesignInput) -> DesignResult:
     if turkey:
         turkey_density_note(profile, inp.stage, head_density, warnings, assumptions, source_ids,
                             mixed=inp.hens is not None)
+    elif breeder:
+        breeder_density_note(profile, inp.stage, head_density, warnings, source_ids)
     if humid_days:
         warnings.append(Note("humidity_uncontrollable", {"days": humid_days}, "critical"))
     if short_days:

@@ -144,6 +144,10 @@ PROFILE_METHOD = {
     "converter-hens": ("hybrid_turkey_by_age", "hybrid_turkey_cmg_p56"),
     "converter-novo-toms": ("hybrid_turkey_by_age", "hybrid_turkey_cmg_p56"),
     "converter-novo-hens": ("hybrid_turkey_by_age", "hybrid_turkey_cmg_p56"),
+    "ross308-ps-females": ("ross_ps_by_age", "ross_ps_2023_t4"),
+    "ross308-ps-males": ("ross_ps_by_age", "ross_ps_2023_t4"),
+    "cobb500ff-females": ("cobb_breeder_by_age", "cobb_breeder_2021_temp"),
+    "cobb-mx-males": ("cobb_breeder_by_age", "cobb_breeder_2021_temp"),
 }
 
 

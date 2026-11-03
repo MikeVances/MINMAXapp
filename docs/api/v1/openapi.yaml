@@ -581,25 +581,27 @@ components:
                 cycle_days:
                   type: integer
                   minimum: 21
-                  maximum: 154
+                  maximum: 455
                   description: |
                     Последний день в корпусе. Бройлер — до 63 (иначе 422
-                    broiler_day_out_of_range), индейка — до 154 (22 недели)
+                    broiler_day_out_of_range), индейка — до 154 (22 недели),
+                    родительское стадо — до 455 (65 недель)
                 first_day:
                   type: integer
                   minimum: 1
-                  maximum: 153
+                  maximum: 454
                   default: 1
                   description: |
-                    День посадки в этот корпус. Индейка на доращивании — день пересадки из
-                    брудера: дни считаются с него, падёж mortality_pct — за дни в корпусе
+                    День посадки в этот корпус. Индейка на доращивании или родительское стадо в
+                    продуктивном периоде — день пересадки: дни считаются с него, падёж
+                    mortality_pct — за дни в корпусе
                 stage:
                   type: string
-                  enum: [brooder, grow_out]
+                  enum: [brooder, grow_out, rearing, production]
                   description: |
-                    Только индейка, обязателен (иначе 422 turkey_stage_required); у бройлера —
-                    422 stage_turkey_only. От него — норма вентиляторов минвентиляции (Hybrid:
-                    18.3 / 27.5 м³/ч·м²) и предел плотности (Aviagen, гол/м²)
+                    Индейка (`brooder`, `grow_out`) или родительское стадо (`rearing`, `production`),
+                    обязателен (иначе 422 turkey_stage_required); у бройлера — 422 stage_turkey_only.
+                    Задаёт нормы вентиляции, проектную скорость тоннеля и предел плотности
                 hens:
                   type: object
                   additionalProperties: false
@@ -611,7 +613,7 @@ components:
                   properties:
                     growth_profile_id: { type: string, pattern: "^[a-z0-9][a-z0-9_-]{0,63}$", example: converter-hens }
                     birds: { type: integer, minimum: 1, maximum: 200000 }
-                    removal_day: { type: integer, minimum: 1, maximum: 154, description: "Последний день индюшек в корпусе; нет — до конца" }
+                    removal_day: { type: integer, minimum: 1, maximum: 455, description: "Последний день индюшек в корпусе; нет — до конца" }
         climate: { $ref: "#/components/schemas/Climate" }
         heaters:
           description: "Есть — проверить их достаточность; нет — только требуемая мощность"
@@ -787,9 +789,9 @@ components:
             birds: { type: integer, minimum: 1, maximum: 200000 }
             growth_profile_id: { type: string, pattern: "^[a-z0-9][a-z0-9_-]{0,63}$", example: ross308 }
             housing: { type: string, enum: [floor_litter, cages] }
-            age_days: { type: integer, minimum: 0, maximum: 154, description: "Бройлер — до 70 (иначе 422 broiler_day_out_of_range), индейка — до 154" }
+            age_days: { type: integer, minimum: 0, maximum: 455, description: "Бройлер — до 70 (иначе 422 broiler_day_out_of_range), индейка — до 154, родительское стадо — до 455" }
             target_rh_pct: { type: number, minimum: 40, maximum: 70, description: "Нет — RH профиля" }
-            stage: { type: string, enum: [brooder, grow_out], description: "Только индейка, обязателен: предел плотности Aviagen" }
+            stage: { type: string, enum: [brooder, grow_out, rearing, production], description: "Индейка (brooder, grow_out) и родительское стадо (rearing, production), обязателен" }
             hens:
               type: object
               additionalProperties: false
@@ -933,7 +935,7 @@ components:
         name: { type: string }
         breed: { type: string }
         builtin: { type: boolean }
-        species: { type: string, enum: [broiler, turkey] }
+        species: { type: string, enum: [broiler, turkey, broiler_breeder] }
         sex: { type: string, enum: [male, female], description: "Пол стада, для которого дана кривая массы" }
         first_day: { type: integer }
         last_day: { type: integer }
@@ -946,15 +948,15 @@ components:
         name: { type: string }
         breed: { type: string }
         builtin: { type: boolean }
-        species: { type: string, enum: [broiler, turkey] }
+        species: { type: string, enum: [broiler, turkey, broiler_breeder] }
         sex: { type: string, enum: [male, female] }
         min_vent_norm:
           type: string
-          enum: [aviagen_turkey_per_kg, hybrid_turkey_per_week]
+          enum: [aviagen_turkey_per_kg, hybrid_turkey_per_week, ross_ps_table25]
           description: "Норма минвентиляции производителя: входит в Qmin = max(CO₂, норма, влага)"
         sources:
           type: object
-          description: "Источник по колонкам: weight — масса, climate — температура и RH, weight_day0 — масса суточной птицы (индейка)"
+          description: "Источник по колонкам: weight — масса, climate — температура и RH, weight_day0 — масса суточной птицы, egg_mass — суточная яйцемасса Y₂"
           additionalProperties:
             type: object
             required: [citation]
@@ -972,6 +974,7 @@ components:
               weight_g: { type: [number, "null"] }
               temp_c: { type: [number, "null"], description: "Уставка при RH профиля" }
               rh_pct: { type: [number, "null"] }
+              egg_mass_g: { type: [number, "null"], description: "Суточная яйцемасса Y₂, г/сут (родительское стадо)" }
               interpolated: { type: boolean, description: "Значения достроены между опорными точками" }
 
     HousingSystem:

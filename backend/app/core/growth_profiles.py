@@ -54,7 +54,7 @@ PROFILE_ID_PATTERN = r"^[a-z0-9][a-z0-9_-]{0,63}$"
 
 DEFAULT_PROFILE_ID = "ross308"
 
-SPECIES = ("broiler", "turkey")
+SPECIES = ("broiler", "turkey", "broiler_breeder")
 SEXES = ("male", "female")
 
 
@@ -74,6 +74,8 @@ class GrowthPoint:
     body_weight_g: Optional[float] = None
     min_temp_c: Optional[float] = None
     rv_percent: Optional[float] = None
+    # Суточная яйцемасса Y₂, г/сут — для кур родительского стада (CIGR 2002 ур. 18)
+    egg_mass_g: Optional[float] = None
 
 
 @dataclass
@@ -152,6 +154,7 @@ def _interpolate_daily(points: List[GrowthPoint]) -> Dict[int, GrowthPoint]:
             body_weight_g=_lerp_field(ordered, "body_weight_g", d),
             min_temp_c=_lerp_field(ordered, "min_temp_c", d),
             rv_percent=_lerp_field(ordered, "rv_percent", d),
+            egg_mass_g=_lerp_field(ordered, "egg_mass_g", d),
         )
         for d in range(first, last + 1)
     }
@@ -180,6 +183,7 @@ def _from_file(path: Path, builtin: bool) -> GrowthProfile:
             body_weight_g=p.get("body_weight_g"),
             min_temp_c=p.get("min_temp_c"),
             rv_percent=p.get("rv_percent"),
+            egg_mass_g=p.get("egg_mass_g"),
         )
         for p in raw.get("points", [])
     ]
@@ -212,6 +216,7 @@ def _to_json(profile: GrowthProfile) -> dict:
                 "body_weight_g": p.body_weight_g,
                 "min_temp_c": p.min_temp_c,
                 "rv_percent": p.rv_percent,
+                **({"egg_mass_g": p.egg_mass_g} if p.egg_mass_g is not None else {}),
             }
             for p in sorted(profile.points, key=lambda p: p.day)
         ],

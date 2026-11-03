@@ -193,29 +193,42 @@ document.addEventListener('DOMContentLoaded', () => {
     showRH();
   }
 
-  // ── Этап индейки: подращивание и откорм ────────────────────────────────────
-  // Дни этапа по умолчанию: подращивание 1–35, откорм — с 36-го до конца профиля.
+  // ── Этап индейки и родительского стада ─────────────────────────────────────
+  // Дни этапа по умолчанию: у индейки 1–35 и 36..конец, у РС 1–140 и 141..конец профиля.
   // Выбор хранится во вкладке корпуса, как целевая RH
   const stageBox = document.getElementById('prof-turkey-stage');
   const stageSel = document.getElementById('prof-stage');
   const firstEl  = document.getElementById('prof-first-day');
   const lastEl   = document.getElementById('prof-last-day');
-  let turkeyLastDay = null;   // null — выбран не профиль индейки
+  let stageSpecies = null;
+  let turkeyLastDay = null;   // null — выбран профиль без этапов (бройлер)
 
-  function stageDefaults(stage) { return stage === 'brooder' ? [1, 35] : [36, turkeyLastDay]; }
+  function stageDefaults(stage) {
+    if (stage === 'brooder') return [1, 35];
+    if (stage === 'grow_out') return [36, turkeyLastDay];
+    if (stage === 'rearing') return [1, 140];
+    return [141, turkeyLastDay];
+  }
 
   function showStage() {
     stageBox.hidden = turkeyLastDay == null;
     if (turkeyLastDay == null) return;
+    const allowed = stageSpecies === 'broiler_breeder' ? ['rearing', 'production'] : ['brooder', 'grow_out'];
+    Array.from(stageSel.options).forEach(opt => {
+      opt.hidden = !allowed.includes(opt.value);
+      opt.disabled = !allowed.includes(opt.value);
+    });
     const tb = profileTabs[selIdx] || {};
-    stageSel.value = tb.turkey_stage || 'brooder';
+    stageSel.value = allowed.includes(tb.turkey_stage) ? tb.turkey_stage : allowed[0];
     const [f, l] = stageDefaults(stageSel.value);
     firstEl.value = tb.turkey_first_day ?? f;
     lastEl.value  = tb.turkey_last_day ?? l;
   }
 
   document.addEventListener('growthprofile:change', e => {
-    turkeyLastDay = e.detail.species === 'turkey' ? e.detail.last_day : null;
+    const sp = e.detail.species;
+    stageSpecies = (sp === 'turkey' || sp === 'broiler_breeder') ? sp : null;
+    turkeyLastDay = stageSpecies ? e.detail.last_day : null;
     showStage();
   });
   // Другой этап — его дни по умолчанию: дни подращивания на откорме не имеют смысла
@@ -305,7 +318,7 @@ document.addEventListener('DOMContentLoaded', () => {
       <div class="kv"><span>${t('sum_outdoor')}</span><span>${fmtNum(outsideT, 1)} °C / ${fmtNum(outsideRH ?? 60, 0)} %</span></div>
       <div class="kv"><span>${t('sum_house_birds')}</span><span>${d.house} / ${fmtNum(d.birds)}</span></div>
       <div class="kv"><span>${t('sum_sys_max')}</span><span>${d.user_max_m3h ?? '—'} ${t('unit_m3h_plain')}</span></div>`
-      + (d.species === 'turkey'
+      + ((d.species === 'turkey' || d.species === 'broiler_breeder')
         ? `<div class="kv"><span>${t('turkey_stage_lbl')}</span><span>${t('turkey_stage_' + d.stage)}, ${t('sum_turkey_days', { from: d.first_day, to: d.last_day })}</span></div>`
         : '');
 

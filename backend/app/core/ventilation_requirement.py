@@ -29,7 +29,7 @@ from .psychro import pressure_at_altitude_pa, site_pressure
 from .tunnel_speed_calc import EFFECTIVE_TEMP_MAX_C, _effective_temperature
 from .ventilation_design import (
     CAGE_BIRD_SPEED_SHARE, Airtightness, CageRow, Note, TunnelRules, _mean_height_m, tunnel_rule_params, _profile_citation, airtightness_q4,
-    build_envelope, cage_notes, check_hens, check_species, coldest_surface, condensation, setpoint_notes,
+    breeder_density_note, build_envelope, cage_notes, check_hens, check_species, coldest_surface, condensation, setpoint_notes,
     species_notes, tunnel_target, turkey_density_note,
 )
 
@@ -112,9 +112,10 @@ def _requirement(inp: RequirementInput) -> RequirementResult:
     check_species(profile, inp.housing, inp.stage, inp.age_days, broiler_max_day=REQUIREMENT_BROILER_MAX_DAY)
     check_hens(profile, inp.hens, age, age)
     turkey = profile.species == "turkey"
-    species_notes(profile, assumptions, source_ids)
+    breeder = profile.species == "broiler_breeder"
+    species_notes(profile, assumptions, source_ids, stage=inp.stage, has_explicit_hens=inp.hens is not None)
 
-    target = tunnel_target(g, inp.housing, inp.cage_rows, profile.species)
+    target = tunnel_target(g, inp.housing, inp.cage_rows, profile.species, inp.stage)
     source_ids.add(target.source_id)
     if cages:
         cage_notes(assumptions, source_ids)
@@ -132,7 +133,7 @@ def _requirement(inp: RequirementInput) -> RequirementResult:
     share = CAGE_BIRD_SPEED_SHARE if cages else 1.0
     rules = tunnel_rule_params(inp.tunnel_rules, assumptions, source_ids)
     params = CalcParams(total_mortality_pct=0.0, v_tunnel_ms=target.speed_ms[1],
-                        bird_speed_share=share, **rules)
+                        bird_speed_share=share, stage=inp.stage, **rules)
     common = dict(birds=inp.birds, age_days=age, outside_t=inp.outdoor_t_c,
                   outside_rh=inp.outdoor_rh_pct, growth_profile_id=inp.growth_profile_id,
                   target_rh=inp.target_rh_pct, tunnel_section_m2=target.section_m2,
@@ -159,7 +160,8 @@ def _requirement(inp: RequirementInput) -> RequirementResult:
     if cages:
         hot = compute_with(CalcInput(**common),
                            CalcParams(total_mortality_pct=0.0, v_tunnel_ms=target.speed_ms[1],
-                                      bird_speed_share=share, bird_heat_model=animal_heat_per_bird, **rules),
+                                      bird_speed_share=share, stage=inp.stage,
+                                      bird_heat_model=animal_heat_per_bird, **rules),
                            HouseThermal(ua_w_per_k=ua))
         qmax = max(hot.q_max_m3h, now.q_min_m3h)
 
@@ -192,6 +194,8 @@ def _requirement(inp: RequirementInput) -> RequirementResult:
     if turkey:
         turkey_density_note(profile, inp.stage, [(age, now.birds_alive / floor_m2)], findings, assumptions,
                             source_ids, mixed=inp.hens is not None)
+    elif breeder:
+        breeder_density_note(profile, inp.stage, [(age, now.birds_alive / floor_m2)], findings, source_ids)
     last_day = max(profile.daily()) if profile.points else 0
     if inp.age_days > last_day:
         findings.append(Note("cycle_beyond_profile", {"last_day": last_day}, "info"))
@@ -207,7 +211,7 @@ def _requirement(inp: RequirementInput) -> RequirementResult:
         target_rh_pct=now.rv_percent,
         stocking_density_kg_m2=(round(now.stocking_density_kg_m2, 1)
                                 if now.stocking_density_kg_m2 is not None else None),
-        stocking_density_head_m2=round(now.birds_alive / floor_m2, 2) if turkey else None,
+        stocking_density_head_m2=round(now.birds_alive / floor_m2, 2) if (turkey or breeder) else None,
     )
     if inp.has_envelope:
         result.heating_need_kw = round((now.heat_need_w or 0.0) / 1000.0, 1)
@@ -239,9 +243,9 @@ def _tunnel_now(inp: RequirementInput, age: int, target, now: CalcResult, qmax: 
                             "source_id": target.source_id},
         "free_section_m2": round(target.section_m2, 2),
     }
-    # Таблица ощущаемой температуры и предел 32 °C — бройлерные (Cobb §9.7): для
-    # индейки их нет, и ощущаемую температуру мы не выдаём, а не выдумываем
-    if species != "turkey":
+    # Таблица ощущаемой температуры и предел 30 °C — бройлерные (Cobb §9.7): для
+    # индейки и родительского стада их нет, и ощущаемую температуру мы не выдаём
+    if species not in ("turkey", "broiler_breeder"):
         out["effective_temp_limit_c"] = EFFECTIVE_TEMP_MAX_C
     if cages:
         out["bird_speed_ms"] = {"min": round(speed[0] * share, 2), "max": round(speed[1] * share, 2),
@@ -253,6 +257,8 @@ def _tunnel_now(inp: RequirementInput, age: int, target, now: CalcResult, qmax: 
 
     if now.tunnel_active and species == "turkey":
         assumptions.append(Note("effective_temp_not_for_turkey"))
+    elif now.tunnel_active and species == "broiler_breeder":
+        assumptions.append(Note("effective_temp_not_for_breeder"))
     elif now.tunnel_active:
         # Птица у вентиляторов дышит воздухом, нагретым по длине корпуса
         rise = air_temperature_rise_c(inp.birds, now.weight_used_g / 1000.0, inp.outdoor_t_c, qmax / 3600.0)

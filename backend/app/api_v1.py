@@ -277,7 +277,7 @@ class HensNowIn(_Strict):
 
 class HensIn(HensNowIn):
     # Последний день самок в корпусе (выборка); нет — до конца цикла
-    removal_day: Optional[int] = Field(None, ge=1, le=154)
+    removal_day: Optional[int] = Field(None, ge=1, le=455)
 
 
 class FlockIn(_Strict):
@@ -286,12 +286,12 @@ class FlockIn(_Strict):
     housing: Literal["floor_litter", "cages"]
     mortality_pct: float = Field(4.0, ge=0, le=100)
     target_rh_pct: Optional[float] = Field(None, ge=40, le=70)
-    # Последний день в корпусе. Верх — цикл индюка (22 нед); бройлеру ядро не даст
-    # больше 63 (broiler_day_out_of_range): предел зависит от вида птицы профиля
-    cycle_days: int = Field(..., ge=21, le=154)
-    # Индейка: день посадки в этот корпус (на доращивание — день пересадки) и тип корпуса
-    first_day: int = Field(1, ge=1, le=153)
-    stage: Optional[Literal["brooder", "grow_out"]] = None
+    # Последний день в корпусе. Верх — цикл родительского стада (65 нед = 455 дн);
+    # бройлеру и индейке ядро проверяет предел по виду птицы (broiler_day_out_of_range)
+    cycle_days: int = Field(..., ge=21, le=455)
+    # Индейка и родительское стадо: день посадки в этот корпус и этап содержания
+    first_day: int = Field(1, ge=1, le=454)
+    stage: Optional[Literal["brooder", "grow_out", "rearing", "production"]] = None
     hens: Optional[HensIn] = None
 
 
@@ -347,10 +347,10 @@ class FlockNowIn(_Strict):
     birds: int = Field(..., ge=1, le=200_000)
     growth_profile_id: str = Field(..., pattern=PROFILE_ID_PATTERN)
     housing: Literal["floor_litter", "cages"]
-    # Верх — цикл индюка; бройлеру ядро не даст больше 70 (broiler_day_out_of_range)
-    age_days: int = Field(..., ge=0, le=154)
+    # Верх — цикл родительского стада (455 дн); бройлеру и индейке ядро проверяет предел
+    age_days: int = Field(..., ge=0, le=455)
     target_rh_pct: Optional[float] = Field(None, ge=40, le=70)
-    stage: Optional[Literal["brooder", "grow_out"]] = None
+    stage: Optional[Literal["brooder", "grow_out", "rearing", "production"]] = None
     hens: Optional[HensNowIn] = None
 
 
@@ -449,8 +449,9 @@ def _check_cages(flock, house: HouseIn) -> None:
     """
     if flock.housing != "cages":
         return
-    if load_profile(flock.growth_profile_id).species == "turkey":
-        raise CalcError("housing_not_for_species", species="turkey", housing=flock.housing)
+    sp = load_profile(flock.growth_profile_id).species
+    if sp in ("turkey", "broiler_breeder"):
+        raise CalcError("housing_not_for_species", species=sp, housing=flock.housing)
     if not house.cage_rows:
         raise CalcError("cage_section_missing")
 
@@ -653,9 +654,17 @@ def get_growth_profile(profile_id: str = Path(..., pattern=PROFILE_ID_PATTERN)) 
     sources = {k: e for k, e in ((k, _source_entry(v)) for k, v in (p.source or {}).items()) if e}
     body: dict[str, Any] = {
         "id": p.id, "name": p.name, "builtin": p.builtin, "species": p.species, "sources": sources,
-        "days": [{"day": d.day, "weight_g": d.body_weight_g, "temp_c": d.min_temp_c,
-                  "rh_pct": d.rv_percent, "interpolated": d.day not in given}
-                 for d in p.daily().values()],
+        "days": [
+            {
+                "day": d.day,
+                "weight_g": d.body_weight_g,
+                "temp_c": d.min_temp_c,
+                "rh_pct": d.rv_percent,
+                **({"egg_mass_g": d.egg_mass_g} if d.egg_mass_g is not None else {}),
+                "interpolated": d.day not in given,
+            }
+            for d in p.daily().values()
+        ],
     }
     if p.breed:
         body["breed"] = p.breed

@@ -133,7 +133,7 @@
   // Сколько дней профиля показывать: у бройлера — цикл хозяйства из настроек, у
   // индейки — весь профиль (цикл до 22 недель, в настройках бройлерной фермы его нет)
   function shownLastDay() {
-    if (current.species === 'turkey') return current.last_day;
+    if (current.species === 'turkey' || current.species === 'broiler_breeder') return current.last_day;
     return Math.min(profileCfg.cycle_days || 42, current.last_day);
   }
 
@@ -237,8 +237,8 @@
   // basis/method/url), подпись к которой собирается на языке интерфейса; строка —
   // свободный текст пользователя или служебное copied_from.
   function sourceEntryHTML(key, v) {
-    // Индейка: масса суточной птицы — свой источник, смешанное стадо — своя таблица
-    const label = ['weight', 'climate', 'weight_day0', 'climate_mixed'].includes(key)
+    // Индейка и родительское стадо: масса суточной птицы, смешанное стадо, суточная яйцемасса
+    const label = ['weight', 'climate', 'weight_day0', 'climate_mixed', 'egg_mass'].includes(key)
       ? t('gp_src_' + key) : escapeHtml(key);
     if (v && typeof v === 'object') {
       const bits = [];
@@ -344,11 +344,21 @@
         body_weight_g: base.body_weight_g ?? null,
         min_temp_c:    base.min_temp_c ?? null,
         rv_percent:    base.rv_percent ?? null,
+        ...(base.egg_mass_g != null ? { egg_mass_g: base.egg_mass_g } : {}),
         ...editedDays[day],
       };
       points = points.filter(p => p.day !== day).concat([merged]);
     });
     return points.sort((a, b) => a.day - b.day);
+  }
+
+  function profileMetaFields() {
+    const out = {};
+    if (current.species) out.species = current.species;
+    if (current.sex) out.sex = current.sex;
+    if (current.min_vent_norm) out.min_vent_norm = current.min_vent_norm;
+    if (current.mixed_temps) out.mixed_temps = current.mixed_temps;
+    return out;
   }
 
   // ── API actions ──────────────────────────────────────────────────────────
@@ -366,7 +376,10 @@
     setStatus(t('status_saving'));
     try {
       const copySource = Object.assign({}, current.source || {}, { copied_from: current.id });
-      await putProfile(id, { name, breed: current.breed, source: copySource, points: pointsForSave() });
+      await putProfile(id, {
+        name, breed: current.breed, source: copySource, points: pointsForSave(),
+        ...profileMetaFields(),
+      });
       await loadProfilesList();
       await selectProfile(id);
       setStatus(t('status_saved_ok'), 3000);
@@ -384,6 +397,7 @@
         breed:  current.breed,
         source: current.source,
         points: pointsForSave(),
+        ...profileMetaFields(),
       });
       editedDays = {};
       await loadProfilesList();

@@ -10,7 +10,7 @@ from ..api_errors import api_error, from_calc_error
 from ..core.calc_core import compute, CalcInput, CalcResult
 from ..core.errors import CalcError
 from ..core.growth_profiles import ProfileNotFound, load_profile
-from ..core import turkey_norms
+from ..core import breeder_norms, turkey_norms
 from ..core.ventilation_design import check_species
 from ..core.survival import survival_fraction
 from ..core.tunnel_speed_calc import target_speed_range
@@ -154,12 +154,12 @@ class SummaryIn(BaseModel):
     # Сечение корпуса для туннельного расхода (ширина и средняя высота стена/конёк)
     house_width_m: float | None = Field(None, gt=0, le=200)
     house_height_m: float | None = Field(None, gt=0, le=30)
-    # Индейка: этап (подращивание / откорм) и его дни. Откорм начинается с дня
-    # пересадки: с него точки профиля и падёж корпуса. Не заданы дни — подращивание
-    # 1–35, откорм с 36-го до конца профиля. У бройлера этапов нет — цикл хозяйства
-    stage: Optional[Literal["brooder", "grow_out"]] = None
-    first_day: Optional[int] = Field(None, ge=1, le=153)
-    last_day: Optional[int] = Field(None, ge=2, le=154)
+    # Индейка (brooder / grow_out) и родительское стадо (rearing / production): этап и его дни.
+    # Второй этап начинается с дня пересадки: с него точки профиля и падёж корпуса.
+    # Не заданы дни — у индейки 1–35 и 36..конец, у РС 1–140 и 141..конец профиля.
+    stage: Optional[Literal["brooder", "grow_out", "rearing", "production"]] = None
+    first_day: Optional[int] = Field(None, ge=1, le=454)
+    last_day: Optional[int] = Field(None, ge=2, le=455)
 
 
 class SummaryRow(BaseModel):
@@ -212,11 +212,13 @@ def summary7(payload: SummaryIn):
     except ProfileNotFound as e:
         raise api_error(404, "profile_not_found", id=str(e))
     turkey = profile.species == "turkey"
+    breeder = profile.species == "broiler_breeder"
+    staged = turkey or breeder
     try:
-        # Те же проверки, что в API v1: индейке нужен этап, бройлеру он запрещён.
+        # Те же проверки, что в API v1: индейке и РС нужен этап, бройлеру он запрещён.
         # Предел дня бройлера здесь не нужен — дни берутся из настроек хозяйства
         check_species(profile, "floor_litter", payload.stage, 0)
-        if not turkey and (payload.first_day or payload.last_day):
+        if not staged and (payload.first_day or payload.last_day):
             raise CalcError("stage_turkey_only", stage="days")
         if turkey:
             first = payload.first_day or (1 if payload.stage == turkey_norms.BROODER else 36)
@@ -224,14 +226,21 @@ def summary7(payload: SummaryIn):
                                         else max(profile.daily()))
             if first >= last:
                 raise CalcError("first_day_after_last", first_day=first, last_day=last)
+        elif breeder:
+            first = payload.first_day or (1 if payload.stage == breeder_norms.REARING else 141)
+            last = payload.last_day or (breeder_norms.REARING_LAST_DAY if payload.stage == breeder_norms.REARING
+                                        else max(profile.daily()))
+            if first >= last:
+                raise CalcError("first_day_after_last", first_day=first, last_day=last)
     except ValueError as e:
         raise from_calc_error(e)
 
-    if turkey:
-        # Этап индейки — свой цикл: падёж от дня посадки в корпус, тоннель 2 м/с
-        # (Hybrid CMG с. 51) вместо скорости бройлерной фермы из настроек
+    if staged:
+        # Этап индейки или РС — свой цикл: падёж от дня посадки в корпус, проектная скорость тоннеля по этапу
         cycle = last
-        overrides = dict(cycle_days=last, placement_day=first, v_tunnel_ms=turkey_norms.TUNNEL_SPEED_MS)
+        v_tunnel = (turkey_norms.TUNNEL_SPEED_MS if turkey
+                    else breeder_norms.TUNNEL_SPEED_MS[payload.stage])
+        overrides = dict(cycle_days=last, placement_day=first, v_tunnel_ms=v_tunnel, stage=payload.stage)
         days = sorted({first, last} | {d for d in range(7 * math.ceil(first / 7), last, 7) if d > first})
         survival = lambda d: survival_fraction(d - first + 1, cfg.total_mortality_pct, last - first + 1)
     else:
@@ -263,8 +272,8 @@ def summary7(payload: SummaryIn):
         q_min_pct = None
         q_max_pct = None
         capacity_insufficient = False
-        # Эффективное число птиц на этот день (для последующих представлений на голову/кг)
-        birds_eff = payload.birds * survival(d)
+        # Эффективное число птиц на этот день (в продуктивном периоде РС включает и петухов)
+        birds_eff = cr.birds_alive if cr.birds_alive is not None else payload.birds * survival(d)
         if payload.user_max_m3h is not None:
             q_max_final = min(q_max_nominal, float(payload.user_max_m3h))
             # Qmin не обрезаем — см. комментарий в minmax(); q_min_pct может быть > 100 %
@@ -297,6 +306,8 @@ def summary7(payload: SummaryIn):
 
     if turkey:
         v_min_target = v_max_target = turkey_norms.TUNNEL_SPEED_MS
+    elif breeder:
+        v_min_target = v_max_target = breeder_norms.TUNNEL_SPEED_MS[payload.stage]
     else:
         v_min_target, v_max_target = target_speed_range(cycle)
     return SummaryOut(

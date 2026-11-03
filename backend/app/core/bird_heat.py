@@ -47,19 +47,28 @@ TOTAL_HEAT_COEFF_20C = 10.62
 
 BROILER = "broiler"
 TURKEY = "turkey"
+BROILER_BREEDER = "broiler_breeder"
+
+# CIGR 2002 §2.7.3 ур. 18 (напольное содержание кур и родительского стада):
+# Φ_tot(20 °C) = 6.8 · m^0.75 + 25 · Y₂, где Y₂ — суточная яйцемасса, кг/сут
+BREEDER_EGG_HEAT_W_PER_KG = 25.0
 
 # Полное тепло при 20 °C по виду птицы: (коэффициент, показатель степени массы).
-# Бройлер — CIGR 2002 ур. 11 (как и раньше); индейка — CIGR 2002 ур. 19
+# Бройлер — CIGR 2002 ур. 11; индейка — CIGR 2002 ур. 19; родительское стадо — ур. 18
 SPECIES_TOTAL_HEAT_20C = {
     BROILER: (TOTAL_HEAT_COEFF_20C, 0.75),
     TURKEY: (9.86, 0.77),
+    BROILER_BREEDER: (6.8, 0.75),
 }
 
 
-def total_heat_20c_w(weight_kg: float, species: str = BROILER) -> float:
+def total_heat_20c_w(weight_kg: float, species: str = BROILER, egg_mass_kg: float = 0.0) -> float:
     """Полное тепло одной птицы при 20 °C, Вт. Неизвестный вид — ошибка, а не бройлер."""
     coeff, exponent = SPECIES_TOTAL_HEAT_20C[species]
-    return coeff * max(weight_kg, 0.0) ** exponent
+    heat = coeff * max(weight_kg, 0.0) ** exponent
+    if species == BROILER_BREEDER and egg_mass_kg > 0.0:
+        heat += BREEDER_EGG_HEAT_W_PER_KG * egg_mass_kg
+    return heat
 
 # Теплота парообразования воды при температуре корпуса, Дж/г (~25 °C)
 LATENT_HEAT_J_PER_G = 2430.0
@@ -102,16 +111,20 @@ class HouseHeat:
 ANIMAL_LEVEL_SENSIBLE_FRACTION = 0.67
 
 
-def animal_heat_per_bird(weight_kg: float, t_inside_c: float, species: str = BROILER) -> HouseHeat:
+def animal_heat_per_bird(
+    weight_kg: float, t_inside_c: float, species: str = BROILER, egg_mass_kg: float = 0.0
+) -> HouseHeat:
     """Тепло одной птицы на уровне ПТИЦЫ: полное — как у корпуса, явное — 0.67 полного."""
-    total = total_heat_20c_w(weight_kg, species) * total_heat_factor(t_inside_c)
+    total = total_heat_20c_w(weight_kg, species, egg_mass_kg) * total_heat_factor(t_inside_c)
     sensible = ANIMAL_LEVEL_SENSIBLE_FRACTION * total
     return HouseHeat(total_w=total, sensible_w=sensible, latent_w=total - sensible)
 
 
-def house_heat_per_bird(weight_kg: float, t_inside_c: float, species: str = BROILER) -> HouseHeat:
+def house_heat_per_bird(
+    weight_kg: float, t_inside_c: float, species: str = BROILER, egg_mass_kg: float = 0.0
+) -> HouseHeat:
     """Явное и скрытое тепло одной птицы массой weight_kg при температуре корпуса T."""
-    q20 = total_heat_20c_w(weight_kg, species)
+    q20 = total_heat_20c_w(weight_kg, species, egg_mass_kg)
     total = q20 * total_heat_factor(t_inside_c)
     sensible = q20 * house_sensible_fraction(t_inside_c)
     return HouseHeat(total_w=total, sensible_w=sensible, latent_w=total - sensible)

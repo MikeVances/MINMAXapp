@@ -1,0 +1,583 @@
+{
+  "id": "ross308-ps-females",
+  "name": "Ross 308 PS — females",
+  "breed": "Ross 308 PS",
+  "species": "broiler_breeder",
+  "sex": "female",
+  "min_vent_norm": "ross_ps_table25",
+  "source": {
+    "weight": {
+      "ref": "Aviagen, Ross 308 Parent Stock Performance Objectives (2021), Female Body Weight (In-Season)",
+      "page": 4,
+      "basis": "female",
+      "url": "https://aviagen.com/assets/Tech_Center/Ross_PS/Ross308-ParentStock-PerformanceObjectives-2021-EN.pdf"
+    },
+    "egg_mass": {
+      "ref": "Aviagen, Ross 308 Parent Stock Performance Objectives (2021), Daily Egg Mass (g)",
+      "page": 10,
+      "url": "https://aviagen.com/assets/Tech_Center/Ross_PS/Ross308-ParentStock-PerformanceObjectives-2021-EN.pdf"
+    },
+    "climate": {
+      "ref": "Aviagen, Ross Parent Stock Management Handbook (2023)",
+      "table": "4",
+      "page": 25,
+      "column": "Whole-House Brooding Temp, lower bound",
+      "method": "ross_ps_by_age",
+      "source_id": "ross_ps_2023_t4",
+      "url": "https://aviagen.com/assets/Tech_Center/Ross_PS/RossPSHandBook2023.pdf"
+    }
+  },
+  "points": [
+    {
+      "day": 0,
+      "body_weight_g": 40.0,
+      "min_temp_c": 30.0,
+      "rv_percent": 70.0,
+      "egg_mass_g": 0.0
+    },
+    {
+      "day": 1,
+      "body_weight_g": null,
+      "min_temp_c": 30.0,
+      "rv_percent": 70.0
+    },
+    {
+      "day": 2,
+      "body_weight_g": null,
+      "min_temp_c": 30.0,
+      "rv_percent": 70.0
+    },
+    {
+      "day": 3,
+      "body_weight_g": null,
+      "min_temp_c": 28.0,
+      "rv_percent": 70.0
+    },
+    {
+      "day": 5,
+      "body_weight_g": null,
+      "min_temp_c": 28.0,
+      "rv_percent": 70.0
+    },
+    {
+      "day": 6,
+      "body_weight_g": null,
+      "min_temp_c": 27.0,
+      "rv_percent": 70.0
+    },
+    {
+      "day": 7,
+      "body_weight_g": 115.0,
+      "min_temp_c": 27.0,
+      "rv_percent": 70.0,
+      "egg_mass_g": 0.0
+    },
+    {
+      "day": 8,
+      "body_weight_g": null,
+      "min_temp_c": 27.0,
+      "rv_percent": 70.0
+    },
+    {
+      "day": 9,
+      "body_weight_g": null,
+      "min_temp_c": 26.0,
+      "rv_percent": 70.0
+    },
+    {
+      "day": 11,
+      "body_weight_g": null,
+      "min_temp_c": 26.0,
+      "rv_percent": 70.0
+    },
+    {
+      "day": 12,
+      "body_weight_g": null,
+      "min_temp_c": 25.0,
+      "rv_percent": 70.0
+    },
+    {
+      "day": 14,
+      "body_weight_g": 215.0,
+      "min_temp_c": 25.0,
+      "rv_percent": 70.0,
+      "egg_mass_g": 0.0
+    },
+    {
+      "day": 15,
+      "body_weight_g": null,
+      "min_temp_c": 24.0,
+      "rv_percent": 70.0
+    },
+    {
+      "day": 17,
+      "body_weight_g": null,
+      "min_temp_c": 24.0,
+      "rv_percent": 70.0
+    },
+    {
+      "day": 18,
+      "body_weight_g": null,
+      "min_temp_c": 23.0,
+      "rv_percent": 70.0
+    },
+    {
+      "day": 20,
+      "body_weight_g": null,
+      "min_temp_c": 23.0,
+      "rv_percent": 70.0
+    },
+    {
+      "day": 21,
+      "body_weight_g": 335.0,
+      "min_temp_c": 22.0,
+      "rv_percent": 70.0,
+      "egg_mass_g": 0.0
+    },
+    {
+      "day": 23,
+      "body_weight_g": null,
+      "min_temp_c": 22.0,
+      "rv_percent": 70.0
+    },
+    {
+      "day": 24,
+      "body_weight_g": null,
+      "min_temp_c": 21.0,
+      "rv_percent": 70.0
+    },
+    {
+      "day": 28,
+      "body_weight_g": 465.0,
+      "min_temp_c": 21.0,
+      "rv_percent": 70.0,
+      "egg_mass_g": 0.0
+    },
+    {
+      "day": 35,
+      "body_weight_g": 585.0,
+      "min_temp_c": 21.0,
+      "rv_percent": 70.0,
+      "egg_mass_g": 0.0
+    },
+    {
+      "day": 42,
+      "body_weight_g": 695.0,
+      "min_temp_c": 21.0,
+      "rv_percent": 70.0,
+      "egg_mass_g": 0.0
+    },
+    {
+      "day": 49,
+      "body_weight_g": 795.0,
+      "min_temp_c": 21.0,
+      "rv_percent": 70.0,
+      "egg_mass_g": 0.0
+    },
+    {
+      "day": 56,
+      "body_weight_g": 895.0,
+      "min_temp_c": 21.0,
+      "rv_percent": 70.0,
+      "egg_mass_g": 0.0
+    },
+    {
+      "day": 63,
+      "body_weight_g": 995.0,
+      "min_temp_c": 21.0,
+      "rv_percent": 70.0,
+      "egg_mass_g": 0.0
+    },
+    {
+      "day": 70,
+      "body_weight_g": 1095.0,
+      "min_temp_c": 21.0,
+      "rv_percent": 70.0,
+      "egg_mass_g": 0.0
+    },
+    {
+      "day": 77,
+      "body_weight_g": 1195.0,
+      "min_temp_c": 21.0,
+      "rv_percent": 70.0,
+      "egg_mass_g": 0.0
+    },
+    {
+      "day": 84,
+      "body_weight_g": 1295.0,
+      "min_temp_c": 21.0,
+      "rv_percent": 70.0,
+      "egg_mass_g": 0.0
+    },
+    {
+      "day": 91,
+      "body_weight_g": 1395.0,
+      "min_temp_c": 21.0,
+      "rv_percent": 70.0,
+      "egg_mass_g": 0.0
+    },
+    {
+      "day": 98,
+      "body_weight_g": 1495.0,
+      "min_temp_c": 21.0,
+      "rv_percent": 70.0,
+      "egg_mass_g": 0.0
+    },
+    {
+      "day": 105,
+      "body_weight_g": 1595.0,
+      "min_temp_c": 21.0,
+      "rv_percent": 70.0,
+      "egg_mass_g": 0.0
+    },
+    {
+      "day": 112,
+      "body_weight_g": 1705.0,
+      "min_temp_c": 21.0,
+      "rv_percent": 70.0,
+      "egg_mass_g": 0.0
+    },
+    {
+      "day": 119,
+      "body_weight_g": 1825.0,
+      "min_temp_c": 21.0,
+      "rv_percent": 70.0,
+      "egg_mass_g": 0.0
+    },
+    {
+      "day": 126,
+      "body_weight_g": 1950.0,
+      "min_temp_c": 21.0,
+      "rv_percent": 70.0,
+      "egg_mass_g": 0.0
+    },
+    {
+      "day": 133,
+      "body_weight_g": 2085.0,
+      "min_temp_c": 21.0,
+      "rv_percent": 70.0,
+      "egg_mass_g": 0.0
+    },
+    {
+      "day": 140,
+      "body_weight_g": 2230.0,
+      "min_temp_c": 21.0,
+      "rv_percent": 70.0,
+      "egg_mass_g": 0.0
+    },
+    {
+      "day": 141,
+      "body_weight_g": null,
+      "min_temp_c": 20.0,
+      "rv_percent": 70.0
+    },
+    {
+      "day": 147,
+      "body_weight_g": 2380.0,
+      "min_temp_c": 20.0,
+      "rv_percent": 70.0,
+      "egg_mass_g": 0.0
+    },
+    {
+      "day": 154,
+      "body_weight_g": 2530.0,
+      "min_temp_c": 20.0,
+      "rv_percent": 70.0,
+      "egg_mass_g": 0.0
+    },
+    {
+      "day": 161,
+      "body_weight_g": 2680.0,
+      "min_temp_c": 20.0,
+      "rv_percent": 70.0,
+      "egg_mass_g": 0.0
+    },
+    {
+      "day": 168,
+      "body_weight_g": 2830.0,
+      "min_temp_c": 20.0,
+      "rv_percent": 70.0,
+      "egg_mass_g": 0.0
+    },
+    {
+      "day": 175,
+      "body_weight_g": 2970.0,
+      "min_temp_c": 20.0,
+      "rv_percent": 70.0,
+      "egg_mass_g": 2.7
+    },
+    {
+      "day": 182,
+      "body_weight_g": 3090.0,
+      "min_temp_c": 20.0,
+      "rv_percent": 70.0,
+      "egg_mass_g": 12.2
+    },
+    {
+      "day": 189,
+      "body_weight_g": 3190.0,
+      "min_temp_c": 20.0,
+      "rv_percent": 70.0,
+      "egg_mass_g": 28.9
+    },
+    {
+      "day": 196,
+      "body_weight_g": 3290.0,
+      "min_temp_c": 20.0,
+      "rv_percent": 70.0,
+      "egg_mass_g": 41.8
+    },
+    {
+      "day": 203,
+      "body_weight_g": 3360.0,
+      "min_temp_c": 20.0,
+      "rv_percent": 70.0,
+      "egg_mass_g": 47.8
+    },
+    {
+      "day": 210,
+      "body_weight_g": 3410.0,
+      "min_temp_c": 20.0,
+      "rv_percent": 70.0,
+      "egg_mass_g": 50.6
+    },
+    {
+      "day": 217,
+      "body_weight_g": 3450.0,
+      "min_temp_c": 20.0,
+      "rv_percent": 70.0,
+      "egg_mass_g": 52.0
+    },
+    {
+      "day": 224,
+      "body_weight_g": 3490.0,
+      "min_temp_c": 20.0,
+      "rv_percent": 70.0,
+      "egg_mass_g": 52.4
+    },
+    {
+      "day": 231,
+      "body_weight_g": 3530.0,
+      "min_temp_c": 20.0,
+      "rv_percent": 70.0,
+      "egg_mass_g": 52.3
+    },
+    {
+      "day": 238,
+      "body_weight_g": 3570.0,
+      "min_temp_c": 20.0,
+      "rv_percent": 70.0,
+      "egg_mass_g": 52.2
+    },
+    {
+      "day": 245,
+      "body_weight_g": 3600.0,
+      "min_temp_c": 20.0,
+      "rv_percent": 70.0,
+      "egg_mass_g": 52.1
+    },
+    {
+      "day": 252,
+      "body_weight_g": 3630.0,
+      "min_temp_c": 20.0,
+      "rv_percent": 70.0,
+      "egg_mass_g": 51.9
+    },
+    {
+      "day": 259,
+      "body_weight_g": 3655.0,
+      "min_temp_c": 20.0,
+      "rv_percent": 70.0,
+      "egg_mass_g": 51.6
+    },
+    {
+      "day": 266,
+      "body_weight_g": 3680.0,
+      "min_temp_c": 20.0,
+      "rv_percent": 70.0,
+      "egg_mass_g": 51.3
+    },
+    {
+      "day": 273,
+      "body_weight_g": 3705.0,
+      "min_temp_c": 20.0,
+      "rv_percent": 70.0,
+      "egg_mass_g": 51.0
+    },
+    {
+      "day": 280,
+      "body_weight_g": 3725.0,
+      "min_temp_c": 20.0,
+      "rv_percent": 70.0,
+      "egg_mass_g": 50.6
+    },
+    {
+      "day": 287,
+      "body_weight_g": 3745.0,
+      "min_temp_c": 20.0,
+      "rv_percent": 70.0,
+      "egg_mass_g": 50.2
+    },
+    {
+      "day": 294,
+      "body_weight_g": 3765.0,
+      "min_temp_c": 20.0,
+      "rv_percent": 70.0,
+      "egg_mass_g": 49.8
+    },
+    {
+      "day": 301,
+      "body_weight_g": 3785.0,
+      "min_temp_c": 20.0,
+      "rv_percent": 70.0,
+      "egg_mass_g": 49.4
+    },
+    {
+      "day": 308,
+      "body_weight_g": 3805.0,
+      "min_temp_c": 20.0,
+      "rv_percent": 70.0,
+      "egg_mass_g": 49.0
+    },
+    {
+      "day": 315,
+      "body_weight_g": 3825.0,
+      "min_temp_c": 20.0,
+      "rv_percent": 70.0,
+      "egg_mass_g": 48.6
+    },
+    {
+      "day": 322,
+      "body_weight_g": 3845.0,
+      "min_temp_c": 20.0,
+      "rv_percent": 70.0,
+      "egg_mass_g": 48.2
+    },
+    {
+      "day": 329,
+      "body_weight_g": 3865.0,
+      "min_temp_c": 20.0,
+      "rv_percent": 70.0,
+      "egg_mass_g": 47.7
+    },
+    {
+      "day": 336,
+      "body_weight_g": 3885.0,
+      "min_temp_c": 20.0,
+      "rv_percent": 70.0,
+      "egg_mass_g": 47.2
+    },
+    {
+      "day": 343,
+      "body_weight_g": 3905.0,
+      "min_temp_c": 20.0,
+      "rv_percent": 70.0,
+      "egg_mass_g": 46.7
+    },
+    {
+      "day": 350,
+      "body_weight_g": 3925.0,
+      "min_temp_c": 20.0,
+      "rv_percent": 70.0,
+      "egg_mass_g": 46.3
+    },
+    {
+      "day": 357,
+      "body_weight_g": 3945.0,
+      "min_temp_c": 20.0,
+      "rv_percent": 70.0,
+      "egg_mass_g": 45.8
+    },
+    {
+      "day": 364,
+      "body_weight_g": 3960.0,
+      "min_temp_c": 20.0,
+      "rv_percent": 70.0,
+      "egg_mass_g": 45.3
+    },
+    {
+      "day": 371,
+      "body_weight_g": 3975.0,
+      "min_temp_c": 20.0,
+      "rv_percent": 70.0,
+      "egg_mass_g": 44.8
+    },
+    {
+      "day": 378,
+      "body_weight_g": 3985.0,
+      "min_temp_c": 20.0,
+      "rv_percent": 70.0,
+      "egg_mass_g": 44.3
+    },
+    {
+      "day": 385,
+      "body_weight_g": 3995.0,
+      "min_temp_c": 20.0,
+      "rv_percent": 70.0,
+      "egg_mass_g": 43.7
+    },
+    {
+      "day": 392,
+      "body_weight_g": 4005.0,
+      "min_temp_c": 20.0,
+      "rv_percent": 70.0,
+      "egg_mass_g": 43.1
+    },
+    {
+      "day": 399,
+      "body_weight_g": 4015.0,
+      "min_temp_c": 20.0,
+      "rv_percent": 70.0,
+      "egg_mass_g": 42.5
+    },
+    {
+      "day": 406,
+      "body_weight_g": 4025.0,
+      "min_temp_c": 20.0,
+      "rv_percent": 70.0,
+      "egg_mass_g": 41.8
+    },
+    {
+      "day": 413,
+      "body_weight_g": 4035.0,
+      "min_temp_c": 20.0,
+      "rv_percent": 70.0,
+      "egg_mass_g": 41.2
+    },
+    {
+      "day": 420,
+      "body_weight_g": 4045.0,
+      "min_temp_c": 20.0,
+      "rv_percent": 70.0,
+      "egg_mass_g": 40.5
+    },
+    {
+      "day": 427,
+      "body_weight_g": 4055.0,
+      "min_temp_c": 20.0,
+      "rv_percent": 70.0,
+      "egg_mass_g": 39.8
+    },
+    {
+      "day": 434,
+      "body_weight_g": 4065.0,
+      "min_temp_c": 20.0,
+      "rv_percent": 70.0,
+      "egg_mass_g": 39.1
+    },
+    {
+      "day": 441,
+      "body_weight_g": 4075.0,
+      "min_temp_c": 20.0,
+      "rv_percent": 70.0,
+      "egg_mass_g": 38.4
+    },
+    {
+      "day": 448,
+      "body_weight_g": 4085.0,
+      "min_temp_c": 20.0,
+      "rv_percent": 70.0,
+      "egg_mass_g": 37.5
+    }
+  ]
+}

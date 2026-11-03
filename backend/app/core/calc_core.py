@@ -12,6 +12,7 @@ from .psychro import humidity_ratio
 from .bird_heat import HouseHeat, house_heat_per_bird, house_sensible_fraction
 from .ventilation_calc import calc_q_min_per_bird
 from .turkey_norms import guide_min_vent_m3h
+from . import breeder_norms
 from .app_config import load_app_config
 from .building_thermal import (
     BuildingDimensions,
@@ -248,6 +249,8 @@ class CalcParams:
     # День посадки в ЭТОТ корпус: на доращивании индейки птица приходит из брудера,
     # и падёж корпуса распределяется от дня посадки до cycle_days, а не от дня 1
     placement_day: int = 1
+    # Этап содержания (индейка: brooder | grow_out; родительское стадо: rearing | production)
+    stage: Optional[str] = None
 
     @classmethod
     def from_app_config(cls, cfg) -> "CalcParams":
@@ -341,7 +344,7 @@ def compute_with(ci: CalcInput, params: CalcParams, thermal: HouseThermal) -> Ca
     # меняются согласованно. Живая птица 14-го дня — для плотности Cobb
     birds_day14 = ci.birds * survival_fraction(14, params.total_mortality_pct, params.cycle_days)
 
-    # Вторая группа (самки смешанного стада) — до дня выборки включительно
+    # Вторая группа (самки смешанного стада индейки или петухи в продуктивном корпусе РС)
     companion = None
     group = ci.companion
     if group is not None and (group.last_day is None or age <= group.last_day):
@@ -352,6 +355,15 @@ def compute_with(ci: CalcInput, params: CalcParams, thermal: HouseThermal) -> Ca
         c_birds = group.birds * survival_fraction(age - shift, params.total_mortality_pct,
                                                   params.cycle_days - shift)
         companion = (c_profile, c_point, c_birds)
+    elif group is None and params.stage == breeder_norms.PRODUCTION:
+        males_info = breeder_norms.production_males(profile, age)
+        if males_info is not None:
+            male_pid, male_share, _ = males_info
+            c_profile = load_profile(male_pid)
+            c_point = c_profile.point_for_day(age)
+            if c_point.body_weight_g is None:
+                raise CalcError("profile_day_missing", id=male_pid, day=age)
+            companion = (c_profile, c_point, birds_eff * male_share)
 
     # Пока в корпусе обе группы — уставка смешанного стада (своя таблица у Hybrid)
     setpoint = setpoint_for_day(profile, age, point, rv_percent, ci.stocking_floor_m2,
@@ -359,31 +371,34 @@ def compute_with(ci: CalcInput, params: CalcParams, thermal: HouseThermal) -> Ca
     t_target_inside = setpoint.temp_c
 
     # Тепло одной птицы на уровне корпуса при уставке — одна модель для Qmax, горелок и
-    # влаги. Закон полного тепла — по виду птицы профиля (бройлер, индейка)
+    # влаги. Закон полного тепла — по виду птицы профиля (бройлер, индейка, родительское стадо)
     species = profile.species
-    bird_heat = params.bird_heat_model(weight_kg, t_target_inside, species)
+    egg_mass_kg = (point.egg_mass_g or 0.0) / 1000.0
+    bird_heat = params.bird_heat_model(weight_kg, t_target_inside, species, egg_mass_kg)
 
     # --- Qmin: биологический минимум по CO₂ (CIGR 1984) из живой массы ---
     # Норма считается из веса профиля роста, а не хранится в нём: профиль — это
     # данные кросса (вес, температура, RH), а вентиляция — следствие физики.
     safety = params.safety_factor_qmin
-    per_bird_min = calc_q_min_per_bird(weight_kg, safety, species)
+    per_bird_min = calc_q_min_per_bird(weight_kg, safety, species, egg_mass_kg)
 
     # --- Смешанное стадо: дальше корпус видит «среднюю птицу» ---
     # Тепло, пар, CO₂ и масса — средние по живому поголовью обеих групп; всё ниже
     # умножает их на суммарное поголовье и получает сумму по группам. Нормы
     # производителей линейны по головам и массе (Aviagen — Σ n·w, Hybrid — Σ n),
     # поэтому норма «средней птицы» на всё поголовье тоже равна сумме — без потерь
+    main_birds, main_kg = birds_eff, weight_kg
     companion_alive = companion_weight_g = None
     if companion is not None:
         c_profile, c_point, c_birds = companion
         c_kg = max(c_point.body_weight_g / 1000.0, 0.0001)
+        c_egg_kg = (c_point.egg_mass_g or 0.0) / 1000.0
         groups = [(birds_eff, bird_heat),
-                  (c_birds, params.bird_heat_model(c_kg, t_target_inside, c_profile.species))]
+                  (c_birds, params.bird_heat_model(c_kg, t_target_inside, c_profile.species, c_egg_kg))]
         bird_heat = mix_heat(groups)
         n_total = birds_eff + c_birds
         per_bird_min = (birds_eff * per_bird_min
-                        + c_birds * calc_q_min_per_bird(c_kg, safety, c_profile.species)) / n_total
+                        + c_birds * calc_q_min_per_bird(c_kg, safety, c_profile.species, c_egg_kg)) / n_total
         weight_kg = (birds_eff * weight_kg + c_birds * c_kg) / n_total
         body_weight_g = weight_kg * 1000.0
         companion_alive, companion_weight_g = c_birds, c_point.body_weight_g
@@ -391,10 +406,16 @@ def compute_with(ci: CalcInput, params: CalcParams, thermal: HouseThermal) -> Ca
     q_min_co2 = birds_eff * per_bird_min
 
     # Норма производителя кросса (индейка: Aviagen — на кг, Hybrid — на голову по
-    # неделям) — ещё одна нижняя граница рядом с CO₂, а не замена ему: норма не знает
-    # ни горелок, ни влажности снаружи. Qmin = max(CO₂, норма, влага)
+    # неделям; родительское стадо Ross PS: табл. 25 по живой массе) — ещё одна нижняя
+    # граница рядом с CO₂, а не замена ему: Qmin = max(CO₂, норма, влага)
     q_min_guide: Optional[float] = None
-    if profile.min_vent_norm:
+    if profile.min_vent_norm == breeder_norms.ROSS_PS_TABLE25:
+        q_min_guide = breeder_norms.guide_min_vent_m3h(profile.min_vent_norm, main_birds, main_kg)
+        if companion is not None:
+            q_min_guide += breeder_norms.guide_min_vent_m3h(
+                profile.min_vent_norm, companion_alive, max(companion_weight_g / 1000.0, 0.0001)
+            )
+    elif profile.min_vent_norm:
         q_min_guide = guide_min_vent_m3h(profile.min_vent_norm, birds_eff, weight_kg, age,
                                          ci.stocking_floor_m2)
     q_min = max(q_min_co2, q_min_guide or 0.0)

@@ -38,21 +38,22 @@ COBB = "cobb_rh_density"
 HUBBARD = "hubbard_by_age"
 TURKEY_AVIAGEN = "aviagen_turkey_by_age"
 TURKEY_HYBRID = "hybrid_turkey_by_age"
+BREEDER_ROSS = "ross_ps_by_age"
+BREEDER_COBB = "cobb_breeder_by_age"
 
 # Код методики конкретного дня (уходит в ответ расчёта и в выбор источника)
 DAY_ROSS = "mitchell_by_weight"
 DAY_PROFILE = "custom_profile"
 DAY_HUBBARD = "hubbard_by_age"
-TURKEY_AVIAGEN = "aviagen_turkey_by_age"
-TURKEY_HYBRID = "hybrid_turkey_by_age"
 DAY_COBB_AGE = "cobb_by_age_rh"
 DAY_COBB_DENSITY = "cobb_by_density"
 DAY_COBB_FALLBACK = "cobb_fallback_ross"
 DAY_TURKEY_AVIAGEN = TURKEY_AVIAGEN
 DAY_TURKEY_HYBRID = TURKEY_HYBRID
-# Свой профиль индейки: температура пользователя без поправки по RH — поправка
-# Ross табл. 2.5 построена по массе бройлера (до ~3 кг), у индюка в 20 кг её нет
 DAY_TURKEY_PROFILE = "custom_turkey_profile"
+DAY_BREEDER_ROSS = BREEDER_ROSS
+DAY_BREEDER_COBB = BREEDER_COBB
+DAY_BREEDER_PROFILE = "custom_breeder_profile"
 
 # Метка справочника /sources для каждой методики дня
 SOURCE_BY_DAY_METHOD = {
@@ -66,6 +67,8 @@ SOURCE_BY_DAY_METHOD = {
     DAY_COBB_FALLBACK: "ross_2025_t2_5",
     DAY_TURKEY_AVIAGEN: "aviagen_turkey_cl23_t5",
     DAY_TURKEY_HYBRID: "hybrid_turkey_cmg_p56",
+    DAY_BREEDER_ROSS: "ross_ps_2023_t4",
+    DAY_BREEDER_COBB: "cobb_breeder_2021_temp",
 }
 
 
@@ -183,6 +186,11 @@ def setpoint_for_day(
         return Setpoint(base, method)
     if profile.species == "turkey":
         return Setpoint(base, DAY_TURKEY_PROFILE)
+
+    if method in (BREEDER_ROSS, BREEDER_COBB):
+        return Setpoint(base, method)
+    if profile.species == "broiler_breeder":
+        return Setpoint(base, DAY_BREEDER_PROFILE)
 
     if method == COBB:
         if age <= COBB_AGE_TABLE_LAST_DAY:

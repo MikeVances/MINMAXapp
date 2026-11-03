@@ -307,6 +307,146 @@ _SOURCES: tuple[Source, ...] = (
             "CL23_V4_Management-Guidelines-for-Growing-Commercial-Turkeys_EN.pdf",
     ),
 
+    # ── Родительское стадо бройлеров (напольное содержание) ─────────────────────
+    Source(
+        id="cigr_2002_breeder", kind="standard",
+        citation="CIGR Working Group (2002), §2.7.3 eq. 18 — laying hens & broiler breeders on floor "
+                 "total heat Φtot = 6.8·m^0.75 + 25·Y₂; eq. 26 — temperature correction",
+        title="Heat and moisture production at animal and house levels",
+        publisher="CIGR Working Group (Pedersen & Sällvik, eds.)", year=2002,
+        locator="§2.7.3, ур. 18, с. 11–12; табл. 2.2, с. 13; ур. 26, с. 18",
+        applies_to="тепло родительского стада бройлеров в балансе корпуса (обогрев, Qmax, влага, CO₂)",
+        statement="Полное тепло кур и родительского стада при 20 °C на полу: Φtot = 6.8·m^0.75 + 25·Y₂ Вт "
+                  "(m — живая масса, кг; Y₂ — суточная яйцемасса, кг/сут; у ремонтного молодняка и петухов "
+                  "Y₂ = 0). Поправка по температуре — ур. 26: (1000 + 20·(20 − t))/1000.",
+        how_used="Полное тепло — ур. 18 с поправкой ур. 26; доля явного тепла на уровне корпуса — "
+                 "бройлерная подстилочная (ур. 33 / Aarnink ур. 13), решение владельца 2026-11-03.",
+        limits="В ремонте при жёстком ограничении корма ур. 18 без поправки на уровень кормления "
+               "завышает теплопродукцию молодняка на ~15–35 % по сравнению с калориметрией кроссов "
+               "на ограниченном кормлении (Sakomura et al. 2004, Poultry Sci. 83:1085; Teofilo et al. "
+               "2022, Poultry Sci. 101:101908) — запас в сторону большего летнего воздухообмена, но "
+               "возможна недооценка зимнего обогрева. Справочно РД-АПК 1.10.05.04-13 (прил. А, табл. А.2) "
+               "даёт для мясных кур при 18 °C на ~7 % больше явного тепла за счёт меньшего списания на подстилку.",
+        url="https://www.cigr.org/sites/default/files/documets/CIGR_4TH_WORK_GR.pdf",
+    ),
+    Source(
+        id="ross_ps_2023_t4", kind="manufacturer",
+        citation="Aviagen, Ross Parent Stock Management Handbook (2023), Table 4 — brooding temperatures",
+        title="Ross Parent Stock Management Handbook", publisher="Aviagen", year=2023,
+        locator="табл. 4, с. 25; Ross 308 PS PO (2021), с. 6",
+        applies_to="уставка температуры и влажности по дням для Ross 308 PS",
+        statement="Обогрев всего корпуса (Whole-House Brooding Temp при RH 60–70 %): суточные — 30 °C, "
+                  "3 дн — 28, 6 — 27, 9 — 26, 12 — 25, 15 — 24, 18 — 23, 21 — 22, 24 — 21, 27 — 20 °C. "
+                  "В продуктивном периоде целевая температура корпуса 20–21 °C (PO 2021, с. 6).",
+        how_used="Ступени брудинга до 24-го дня — по табл. 4; далее нижняя граница диапазона по этапу "
+                 "(решение владельца 2026-11-03): в ремонте (24–140 дн) 21 °C, в продуктивном периоде "
+                 "(с 141-го дня) 20 °C. Поправки на RH нет; целевая RH — 70 % (верх диапазона табл. 4).",
+        limits="Колонки локального обогрева (Spot Brooding) не используются: расчёт ведётся по "
+               "температуре воздуха корпуса в зоне птицы.",
+        url="https://aviagen.com/assets/Tech_Center/Ross_PS/RossPSHandBook2023.pdf",
+    ),
+    Source(
+        id="cobb_breeder_2021_temp", kind="manufacturer",
+        citation="Cobb Breeder Management Guide (2021) — floor temperature and relative humidity",
+        title="Cobb Breeder Management Guide", publisher="Cobb-Vantress", year=2021,
+        locator="с. 26 (брудинг), с. 55 (продуктивный период), с. 116 (RH 45–65 %)",
+        applies_to="уставка температуры и влажности по дням для Cobb 500 FF и Cobb MX",
+        statement="Температура пола при 60 % RH: 0–3 сут — 31 °C, 4–7 — 30, 8–15 — 29, 16–18 — 28, "
+                  "19–21 — 26, 22–24 — 24, 25–27 — 22, с 28-го дня — 21–22 °C. Целевая RH — 45–65 %.",
+        how_used="Уставка дня — ступенью по возрасту, с 28-го дня — нижняя граница 21 °C (решение "
+                 "владельца 2026-11-03), без поправки на RH. Целевая RH — 65 % (верх диапазона).",
+        limits="Поправка на плотность посадки бройлерного руководства Cobb §5.2 к родительскому "
+               "стаду не применяется (плотность во много раз ниже бройлерной).",
+        url="https://www.cobbgenetics.com/assets/Cobb-Files/Cobb-Breeder-Management-Guide.pdf",
+    ),
+    Source(
+        id="ross_ps_2023_t25", kind="manufacturer",
+        citation="Aviagen, Ross Parent Stock Management Handbook (2023), Table 25 — minimum ventilation "
+                 "rates per bird by body weight",
+        title="Ross Parent Stock Management Handbook", publisher="Aviagen", year=2023,
+        locator="табл. 25, с. 113",
+        applies_to="минимальная вентиляция (Qmin) производителя для Ross 308 PS",
+        statement="Минимальный воздухообмен на одну птицу при температуре ниже −5 °C по живой массе "
+                  "(31 строка от 0.05 кг → 0.09 м³/ч·гол до 5.00 кг → 2.89 м³/ч·гол, пропорционально m^0.75).",
+        how_used="Линейная интерполяция по живой массе птицы (в совместном стаде — сумма по курам и "
+                 "петухам); Qmin = max(CO₂, норма табл. 25, влага).",
+        limits="Таблица дана как ориентир для холодной погоды (< −5 °C); в расчёте выступает нижней "
+               "границей наряду с физическим балансом CO₂ и влаги.",
+        url="https://aviagen.com/assets/Tech_Center/Ross_PS/RossPSHandBook2023.pdf",
+    ),
+    Source(
+        id="ross_ps_2023_t18", kind="manufacturer",
+        citation="Aviagen, Ross Parent Stock Management Handbook (2023), Table 18 — typical mating ratios",
+        title="Ross Parent Stock Management Handbook", publisher="Aviagen", year=2023,
+        locator="табл. 18, с. 66",
+        applies_to="доля петухов в продуктивном корпусе Ross 308 PS при совместном содержании",
+        statement="Число петухов на 100 кур по возрасту: 22–24 нед — 9.25–10.00, 24–30 нед — 8.50–9.50, "
+                  "30–35 нед — 8.00–8.50, 35–40 нед — 7.50–8.00, 40–50 нед — 7.00–7.50, 50 нед до "
+                  "выбраковки — 6.50–7.00.",
+        how_used="В продуктивном периоде (stage = production) к поголовью кур Ross 308 PS автоматически "
+                 "добавляются петухи (профиль ross308-ps-males) по верхней границе диапазона возраста "
+                 "(10.0 % → 7.0 %), если вторая группа не задана явно.",
+        limits="Принята верхняя граница вилки для кондиционных петухов — консервативно для тепла и вентиляции.",
+        url="https://aviagen.com/assets/Tech_Center/Ross_PS/RossPSHandBook2023.pdf",
+    ),
+    Source(
+        id="cobb_breeder_2021_males", kind="manufacturer",
+        citation="Cobb Breeder Management Guide (2021) — male to female ratio in production",
+        title="Cobb Breeder Management Guide", publisher="Cobb-Vantress", year=2021,
+        locator="с. 51",
+        applies_to="доля петухов в продуктивном корпусе Cobb 500 FF при совместном содержании",
+        statement="«8 to 9 % males in slatted houses and 9 to 10 % males in deep litter houses».",
+        how_used="В продуктивном периоде (stage = production) к поголовью кур Cobb 500 FF автоматически "
+                 "добавляются 10 % петухов (профиль cobb-mx-males, верхняя граница вилки), если вторая "
+                 "группа не задана явно.",
+        limits="Постоянная доля 10 % без ступенчатого выбраковывания (spiking компенсирует отход).",
+        url="https://www.cobbgenetics.com/assets/Cobb-Files/Cobb-Breeder-Management-Guide.pdf",
+    ),
+    Source(
+        id="cobb_breeder_2021_tunnel", kind="manufacturer",
+        citation="Cobb Breeder Management Guide (2021) & Ross PS Handbook (2023) — tunnel air speed",
+        title="Cobb Breeder Management Guide", publisher="Cobb-Vantress", year=2021,
+        locator="Cobb с. 123; Ross PS Handbook 2023 с. 172",
+        applies_to="проектная скорость воздуха в тоннеле для родительского стада",
+        statement="Cobb с. 123: ремонтные птичники (pullet houses) — 2.0–2.5 м/с, продуктивные корпуса "
+                  "(breeder houses in production) — 2.5–3.0 м/с; Ross PS с. 172: проектная скорость "
+                  "в продуктивном корпусе 3.0 м/с (600 фут/мин).",
+        how_used="Цель тоннеля родительского стада — верхняя граница по этапу: 2.5 м/с в ремонте "
+                 "(rearing) и 3.0 м/с в продуктивном периоде (production).",
+        limits="Пределы скорости у молодой птицы до 21-го дня — общие по таблице Cobb (с. 123 / §9.7).",
+        url="https://www.cobbgenetics.com/assets/Cobb-Files/Cobb-Breeder-Management-Guide.pdf",
+    ),
+    Source(
+        id="ross_ps_2023_density", kind="manufacturer",
+        citation="Aviagen, Ross Parent Stock Management Handbook (2023), Tables 7 & 14 — stocking density",
+        title="Ross Parent Stock Management Handbook", publisher="Aviagen", year=2023,
+        locator="табл. 7, с. 30 (ремонт); табл. 14, с. 49 (продуктивный период)",
+        applies_to="предупреждение о плотности посадки родительского стада Ross 308 PS",
+        statement="Ремонт (15–140 сут, табл. 7): петушки 3–4 гол/м², курочки 4–8 гол/м². "
+                  "Продуктивный период (140 сут — выбраковка, табл. 14): самцы и самки совместно "
+                  "4.5–5.5 гол/м².",
+        how_used="Предупреждение, если живое поголовье на м² пола превышает верхнюю границу: ремонт "
+                 "8.0 (курочки) или 4.0 (петушки), продуктивный период — 5.5 гол/м² (включая петухов).",
+        limits="Приведены ориентиры для умеренного климата; в жарком климате руководство рекомендует "
+               "нижнюю границу диапазона.",
+        url="https://aviagen.com/assets/Tech_Center/Ross_PS/RossPSHandBook2023.pdf",
+    ),
+    Source(
+        id="cobb_breeder_2021_density", kind="manufacturer",
+        citation="Cobb Breeder Management Guide (2021) & Cobb MX Male Supplement (2026) — stocking density",
+        title="Cobb Breeder Management Guide", publisher="Cobb-Vantress", year=2021,
+        locator="Guide с. 20 (ремонт), с. 49 (продуктивный период); MX Male Supplement 2026 с. 2",
+        applies_to="предупреждение о плотности посадки родительского стада Cobb 500 FF и Cobb MX",
+        statement="Ремонт: курочки 7–10 гол/м² в закрытом птичнике (с. 20), петушки 3.1–3.6 гол/м² "
+                  "(MX Supplement с. 2; Guide с. 20 — 3.5 гол/м²). Продуктивный период (с. 49): "
+                  "5–7 гол/м².",
+        how_used="Предупреждение, если живое поголовье на м² пола превышает верхнюю границу: ремонт "
+                 "10.0 (курочки) или 3.6 (петушки), продуктивный период — 7.0 гол/м² (включая петухов).",
+        limits="В открытых корпусах и жарком климате допустимая плотность ниже (5–7 гол/м² в ремонте, "
+               "5–6 в продуктивном периоде).",
+        url="https://www.cobbgenetics.com/assets/Cobb-Files/Cobb-Breeder-Management-Guide.pdf",
+    ),
+
     # ── Вентиляция: нормы оборудования ─────────────────────────────────────────
     Source(
         id="cobb_2021_9_1", kind="manufacturer",
