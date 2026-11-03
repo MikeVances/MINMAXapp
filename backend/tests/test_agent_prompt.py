@@ -65,3 +65,20 @@ def test_prompt_has_no_sample_results():
     # подключился, — в промте не должно быть готовых результатов в м³/ч или кВт
     body = PROMPT.split("---", 1)[1]
     assert not re.search(r"\d[\d\s]{2,}\s*(м³/ч|кВт)", body)
+
+
+def test_prompt_covers_breeder_and_tunnel_modes():
+    # Родительское стадо и режимы расчёта туннеля должны быть явно описаны в промте
+    for token in (
+        "broiler_breeder",
+        "rearing",
+        "production",
+        "breeder_males_auto_added",
+        "cigr_2002_breeder",
+        '"speed"',
+        '"exchange"',
+        '"max_both"',
+        "exchange_time_s",
+        "exchange_rate_vol_h",
+    ):
+        assert token in PROMPT, f"в system-prompt.md нет описания {token!r}"

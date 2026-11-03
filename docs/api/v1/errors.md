@@ -26,10 +26,10 @@
 | 422 | <a id="cage_section_implausible"></a>`cage_section_implausible` | Батареи выше стены, в сумме шире корпуса или оставляют свободным меньше 15 % сечения | `free_pct`, `min_pct` |
 | 422 | <a id="fan_curve_invalid"></a>`fan_curve_invalid` | Точки характеристики не по возрастанию давления или расход не убывает | `index` |
 | 422 | <a id="envelope_implausible"></a>`envelope_implausible` | U оболочки вне 0.1–8 Вт/(м²·К) — ошибка в слоях или в UA | `u`, `min`, `max` |
-| 422 | <a id="turkey_stage_required"></a>`turkey_stage_required` | Профиль индейки без `flock.stage`: тип корпуса (брудер / доращивание) выбирает норму вентиляторов и предел плотности | — |
-| 422 | <a id="stage_turkey_only"></a>`stage_turkey_only` | `flock.stage` у профиля бройлера — тип корпуса бывает только у индейки | `stage` |
-| 422 | <a id="housing_not_for_species"></a>`housing_not_for_species` | Способ содержания не считается для вида птицы профиля (индейка в клетках) | `species`, `housing` |
-| 422 | <a id="broiler_day_out_of_range"></a>`broiler_day_out_of_range` | День за пределом бройлерного цикла: проект — до 63, сценарий «сейчас» — до 70 (поля допускают 154 для индейки) | `day`, `max_day` |
+| 422 | <a id="turkey_stage_required"></a>`turkey_stage_required` | Профиль индейки или родительского стада без `flock.stage` (или с этапом другого вида): у индейки `brooder` / `grow_out`, у родительского стада `rearing` / `production` | — |
+| 422 | <a id="stage_turkey_only"></a>`stage_turkey_only` | `flock.stage` задан у профиля бройлера — этап корпуса бывает только у индейки и родительского стада | `stage` |
+| 422 | <a id="housing_not_for_species"></a>`housing_not_for_species` | Способ содержания не считается для вида птицы профиля (индейка и родительское стадо в клетках — только `floor_litter`) | `species`, `housing` |
+| 422 | <a id="broiler_day_out_of_range"></a>`broiler_day_out_of_range` | День за пределом цикла вида: бройлер — проект до 63, «сейчас» до 70; индейка — до 154; родительское стадо — до 448 | `day`, `max_day` |
 | 422 | <a id="first_day_after_last"></a>`first_day_after_last` | `flock.first_day` не раньше `cycle_days` | `first_day`, `last_day` |
 | 422 | <a id="mixed_flock_mismatch"></a>`mixed_flock_mismatch` | `flock.hens` — не индюшки или с другой нормой минвентиляции, чем у индюков основного профиля (нормы производителей разные; уставку даёт профиль индюков) | `toms`, `hens` |
 | 422 | <a id="hens_removal_out_of_range"></a>`hens_removal_out_of_range` | День выборки индюшек вне дней корпуса | `day`, `first_day`, `last_day` |
