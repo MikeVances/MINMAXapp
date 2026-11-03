@@ -671,4 +671,18 @@
     hint_ev_fans25:      'Second point de la courbe des ventilateurs (0.10" CE). Le débit est alors calculé au point de fonctionnement avec la résistance du panneau.',
     ev_basis_operating:  'débit au point de fonctionnement avec résistance du panneau : {q} m³/h',
     ev_basis_rated_note: 'débit catalogue à 0 Pa — surestimé ; indiquez le débit à 25 Pa',
+
+    // ── Tunnel calculation mode (air speed / air exchange rate) ──
+    label_tunnel_mode:     'Calcul du tunnel',
+    tunnel_mode_speed:     'Par vitesse d’air (m/s)',
+    tunnel_mode_exchange:  'Par renouvellement d’air (s ⇄ vol/h)',
+    tunnel_mode_max_both:  'Max des deux (vitesse + renouvellement Cobb)',
+    label_tunnel_speed_ms: 'Vitesse cible du tunnel, m/s',
+    label_tunnel_exch_s:   'Temps de renouvellement, s',
+    label_tunnel_ach:      'Taux de renouvellement, vol/h',
+    unit_ach:              'vol/h',
+    sum_tunnel_speed:      'par vitesse d’air {v} m/s',
+    sum_tunnel_exchange:   'par renouvellement {s} s ({ach} vol/h, v = {v} m/s)',
+    sum_tunnel_max_speed:  'max des deux → vitesse {v} m/s ({s} s / {ach} vol/h respecté)',
+    sum_tunnel_max_exch:   'max des deux → renouvellement {s} s ({ach} vol/h, v = {v} m/s)',
 };

@@ -671,4 +671,18 @@
     hint_ev_fans25:      'Zweiter Kennlinienpunkt der Lüfter (0.10" WS). Damit wird der Volumenstrom im Betriebspunkt mit Pad-Widerstand berechnet.',
     ev_basis_operating:  'Volumenstrom im Betriebspunkt mit Pad-Widerstand: {q} m³/h',
     ev_basis_rated_note: 'Volumenstrom nach Datenblatt bei 0 Pa — überschätzt; Leistung bei 25 Pa angeben',
+
+    // ── Tunnel calculation mode (air speed / air exchange rate) ──
+    label_tunnel_mode:     'Tunnelberechnung',
+    tunnel_mode_speed:     'Nach Luftgeschwindigkeit (m/s)',
+    tunnel_mode_exchange:  'Nach Luftwechsel (s ⇄ W/h)',
+    tunnel_mode_max_both:  'Maximum aus beiden (Geschw. + Luftwechsel Cobb)',
+    label_tunnel_speed_ms: 'Zielgeschwindigkeit Tunnel, m/s',
+    label_tunnel_exch_s:   'Luftwechselzeit, s',
+    label_tunnel_ach:      'Luftwechselrate, W/h',
+    unit_ach:              'W/h',
+    sum_tunnel_speed:      'nach Luftgeschwindigkeit {v} m/s',
+    sum_tunnel_exchange:   'nach Luftwechsel {s} s ({ach} W/h, v = {v} m/s)',
+    sum_tunnel_max_speed:  'Maximum → Geschwindigkeit {v} m/s ({s} s / {ach} W/h erfüllt)',
+    sum_tunnel_max_exch:   'Maximum → Luftwechsel {s} s ({ach} W/h, v = {v} m/s)',
 };

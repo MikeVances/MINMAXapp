@@ -32,9 +32,13 @@ class CalcIn(BaseModel):
     outside_rh: float = Field(60.0, ge=0, le=100, description="Outside relative humidity, %")
     heater_on: bool = Field(False, description="Heater correction enabled")
     user_max_m3h: float | None = Field(None, ge=0, description="System maximum capacity (m3/hour). Optional")
-    # Сечение корпуса для туннельного расхода (ширина и средняя высота стена/конёк)
+    # Сечение корпуса для туннельного расхода (ширина, средняя высота стена/конёк и длина)
     house_width_m: float | None = Field(None, gt=0, le=200)
     house_height_m: float | None = Field(None, gt=0, le=30)
+    house_length_m: float | None = Field(None, gt=0, le=500)
+    tunnel_mode: Literal["speed", "exchange", "max_both"] = "speed"
+    v_tunnel_ms: float | None = Field(None, ge=0.5, le=6.0)
+    tunnel_exchange_s: float = Field(45.0, ge=20.0, le=180.0)
 
 
 class CalcOut(BaseModel):
@@ -61,6 +65,8 @@ class CalcOut(BaseModel):
     tunnel_requirement_m3h: float | None = None
     # Нужен туннельный расход, а размеров нет: Qmax не посчитан (равен Qmin)
     house_geometry_missing: bool = False
+    tunnel_mode: str = "speed"
+    tunnel_basis: str = "speed"
 
 
 @router.post("/minmax", response_model=CalcOut)
@@ -73,11 +79,15 @@ def minmax(payload: CalcIn):
         heater_on=payload.heater_on,
         house_width_m=payload.house_width_m,
         house_height_m=payload.house_height_m,
+        house_length_m=payload.house_length_m,
         growth_profile_id=payload.growth_profile_id,
         target_rh=payload.target_rh,
         house_id=payload.house,
     )
-    cr = _compute_or_http_error(ci)
+    overrides: dict = dict(tunnel_mode=payload.tunnel_mode, tunnel_exchange_s=payload.tunnel_exchange_s)
+    if payload.v_tunnel_ms is not None:
+        overrides["v_tunnel_ms"] = payload.v_tunnel_ms
+    cr = _compute_or_http_error(ci, **overrides)
 
     q_min = round(cr.q_min_m3h, 3)
     q_max_nominal = round(cr.q_max_m3h, 3)
@@ -126,6 +136,8 @@ def minmax(payload: CalcIn):
         heater_insufficient=cr.heater_insufficient,
         heater_note=cr.heater_note,
         calibration_ignored=cr.calibration_ignored,
+        tunnel_mode=payload.tunnel_mode,
+        tunnel_basis=cr.tunnel_basis,
     )
 
 
@@ -151,9 +163,14 @@ class SummaryIn(BaseModel):
     outside_rh: float = Field(60.0, ge=0, le=100, description="Outside relative humidity, %")
     user_max_m3h: float | None = Field(None, ge=0)
     heater_on: bool = Field(False)
-    # Сечение корпуса для туннельного расхода (ширина и средняя высота стена/конёк)
+    # Сечение корпуса для туннельного расхода (ширина, средняя высота стена/конёк и длина)
     house_width_m: float | None = Field(None, gt=0, le=200)
     house_height_m: float | None = Field(None, gt=0, le=30)
+    house_length_m: float | None = Field(None, gt=0, le=500)
+    # Способ расчёта туннельного режима: по скорости, по времени воздухообмена или по большему из двух
+    tunnel_mode: Literal["speed", "exchange", "max_both"] = "speed"
+    v_tunnel_ms: float | None = Field(None, ge=0.5, le=6.0)
+    tunnel_exchange_s: float = Field(45.0, ge=20.0, le=180.0)
     # Индейка (brooder / grow_out) и родительское стадо (rearing / production): этап и его дни.
     # Второй этап начинается с дня пересадки: с него точки профиля и падёж корпуса.
     # Не заданы дни — у индейки 1–35 и 36..конец, у РС 1–140 и 141..конец профиля.
@@ -200,6 +217,10 @@ class SummaryOut(BaseModel):
     stage: Optional[str] = None
     first_day: int = 1
     last_day: int = 0
+    tunnel_mode: str = "speed"
+    tunnel_basis: str = "speed"
+    v_tunnel_ms: float = 2.5
+    tunnel_exchange_target_s: float = 45.0
 
 
 @router.post("/summary7", response_model=SummaryOut)
@@ -238,15 +259,28 @@ def summary7(payload: SummaryIn):
     if staged:
         # Этап индейки или РС — свой цикл: падёж от дня посадки в корпус, проектная скорость тоннеля по этапу
         cycle = last
-        v_tunnel = (turkey_norms.TUNNEL_SPEED_MS if turkey
-                    else breeder_norms.TUNNEL_SPEED_MS[payload.stage])
-        overrides = dict(cycle_days=last, placement_day=first, v_tunnel_ms=v_tunnel, stage=payload.stage)
+        v_default = (turkey_norms.TUNNEL_SPEED_MS if turkey
+                     else breeder_norms.TUNNEL_SPEED_MS[payload.stage])
+        v_tunnel = payload.v_tunnel_ms if payload.v_tunnel_ms is not None else v_default
+        overrides = dict(
+            cycle_days=last,
+            placement_day=first,
+            v_tunnel_ms=v_tunnel,
+            stage=payload.stage,
+            tunnel_mode=payload.tunnel_mode,
+            tunnel_exchange_s=payload.tunnel_exchange_s,
+        )
         days = sorted({first, last} | {d for d in range(7 * math.ceil(first / 7), last, 7) if d > first})
         survival = lambda d: survival_fraction(d - first + 1, cfg.total_mortality_pct, last - first + 1)
     else:
         first = 1
         cycle = max(cfg.cycle_days, 7)
-        overrides = {}
+        v_tunnel = payload.v_tunnel_ms if payload.v_tunnel_ms is not None else float(getattr(cfg, "v_tunnel_ms", 2.5))
+        overrides = dict(
+            v_tunnel_ms=v_tunnel,
+            tunnel_mode=payload.tunnel_mode,
+            tunnel_exchange_s=payload.tunnel_exchange_s,
+        )
         # Еженедельные контрольные точки + последний день цикла
         days = sorted(set([1] + list(range(7, cycle, 7)) + [cycle]))
         survival = lambda d: survival_fraction(d, cfg.total_mortality_pct, cfg.cycle_days)
@@ -262,6 +296,7 @@ def summary7(payload: SummaryIn):
             house_width_m=payload.house_width_m,
             house_id=payload.house,
             house_height_m=payload.house_height_m,
+            house_length_m=payload.house_length_m,
             growth_profile_id=payload.growth_profile_id,
             target_rh=payload.target_rh,
         )
@@ -304,10 +339,10 @@ def summary7(payload: SummaryIn):
             )
         )
 
-    if turkey:
-        v_min_target = v_max_target = turkey_norms.TUNNEL_SPEED_MS
-    elif breeder:
-        v_min_target = v_max_target = breeder_norms.TUNNEL_SPEED_MS[payload.stage]
+    if cr.v_tunnel_design_ms is not None and (staged or payload.v_tunnel_ms is not None or payload.tunnel_mode != "speed"):
+        v_min_target = v_max_target = round(cr.v_tunnel_design_ms, 2)
+    elif staged:
+        v_min_target = v_max_target = v_tunnel
     else:
         v_min_target, v_max_target = target_speed_range(cycle)
     return SummaryOut(
@@ -323,4 +358,8 @@ def summary7(payload: SummaryIn):
         stage=payload.stage,
         first_day=first,
         last_day=cycle,
+        tunnel_mode=payload.tunnel_mode,
+        tunnel_basis=cr.tunnel_basis,
+        v_tunnel_ms=v_tunnel,
+        tunnel_exchange_target_s=payload.tunnel_exchange_s,
     )

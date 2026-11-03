@@ -106,8 +106,11 @@ class Airtightness:
 
 @dataclass(frozen=True)
 class TunnelRules:
-    min_day: int
-    min_outdoor_c: float
+    min_day: Optional[int] = None
+    min_outdoor_c: Optional[float] = None
+    mode: Optional[str] = None              # "speed" | "exchange" | "max_both"
+    target_speed_ms: Optional[float] = None
+    exchange_time_s: Optional[float] = None
 
 
 def tunnel_rule_params(rules: Optional[TunnelRules], assumptions: list, source_ids: set) -> dict:
@@ -115,7 +118,7 @@ def tunnel_rule_params(rules: Optional[TunnelRules], assumptions: list, source_i
     Пороги туннеля для CalcParams. Не заданы в запросе — практика по умолчанию,
     и ответ говорит об этом допущением со ссылкой на источник.
     """
-    if rules is not None:
+    if rules is not None and rules.min_day is not None and rules.min_outdoor_c is not None:
         return dict(tunnel_min_day=rules.min_day, tunnel_min_temp_c=rules.min_outdoor_c)
     defaults = CalcParams()
     assumptions.append(Note("tunnel_rules_default", {
@@ -296,12 +299,54 @@ class TunnelTarget:
 
 
 def tunnel_target(g: HouseGeometry, housing: str, cage_rows: tuple[CageRow, ...],
-                  species: str = "broiler", stage: Optional[str] = None) -> TunnelTarget:
+                  species: str = "broiler", stage: Optional[str] = None,
+                  rules: Optional[TunnelRules] = None) -> TunnelTarget:
     """
     Цель туннеля корпуса: пол — Cobb §9.7 (больший из двух критериев), клетки — практика,
     индейка — скорость 2 м/с в сечении (Hybrid CMG с. 51), родительское стадо — 2.5 м/с
     в ремонте и 3.0 м/с в продуктивном периоде (Cobb Breeder Guide 2021 с. 123).
+    Если в запросе явно задан способ расчёта туннеля (rules.mode / target_speed_ms /
+    exchange_time_s), цель считается по выбранному способу.
     """
+    custom_mode = None
+    if rules is not None:
+        if rules.mode is not None:
+            custom_mode = rules.mode
+        elif rules.target_speed_ms is not None and rules.exchange_time_s is not None:
+            custom_mode = "max_both"
+        elif rules.target_speed_ms is not None:
+            custom_mode = "speed"
+        elif rules.exchange_time_s is not None:
+            custom_mode = "exchange"
+
+    if custom_mode is not None:
+        section = cage_free_section_m2(g, cage_rows) if housing == "cages" else g.width_m * _mean_height_m(g)
+        if species == "turkey":
+            v_def, src_speed = turkey_norms.TUNNEL_SPEED_MS, turkey_norms.TUNNEL_SOURCE
+        elif species == "broiler_breeder":
+            v_def = breeder_norms.TUNNEL_SPEED_MS.get(stage or breeder_norms.PRODUCTION, 3.0)
+            src_speed = breeder_norms.TUNNEL_SOURCE
+        elif housing == "cages":
+            v_def, src_speed = CAGE_AISLE_SPEED_MS[1], "practice_cage_tunnel_2026"
+        else:
+            v_def, src_speed = 2.5, "cobb_2021_9_7"
+        src_exch = breeder_norms.TUNNEL_SOURCE if species == "broiler_breeder" else "cobb_2021_9_7"
+        v_speed = rules.target_speed_ms if (rules and rules.target_speed_ms is not None) else v_def
+        t_exch = rules.exchange_time_s if (rules and rules.exchange_time_s is not None) else 45.0
+        v_exch = g.length_m / t_exch
+
+        if custom_mode == "speed":
+            v, basis, src = v_speed, "air_speed", src_speed
+        elif custom_mode == "exchange":
+            v, basis, src = v_exch, "air_exchange", src_exch
+        else:  # "max_both"
+            if v_exch > v_speed:
+                v, basis, src = v_exch, "air_exchange", src_exch
+            else:
+                v, basis, src = v_speed, "air_speed", src_speed
+        flow = v * section * 3600.0
+        return TunnelTarget(section, (v, v), (flow, flow), src, basis)
+
     if species == "turkey":
         section = g.width_m * _mean_height_m(g)
         v = turkey_norms.TUNNEL_SPEED_MS
@@ -547,7 +592,7 @@ def _design(inp: DesignInput) -> DesignResult:
     q4_m3h = airtightness_q4(floor_m2, inp.airtightness, assumptions)
 
     # ── Туннель: сечение и цель скорости ──
-    target = tunnel_target(g, inp.housing, inp.cage_rows, profile.species, inp.stage)
+    target = tunnel_target(g, inp.housing, inp.cage_rows, profile.species, inp.stage, inp.tunnel_rules)
     section, speed_range, tunnel_range = target.section_m2, target.speed_ms, target.flow_m3h
     tunnel_source = target.source_id
     if cages:

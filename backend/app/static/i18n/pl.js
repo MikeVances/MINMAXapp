@@ -671,4 +671,18 @@
     hint_ev_fans25:      'Drugi punkt charakterystyki wentylatorów (0.10" sł. wody). Z nim przepływ liczony jest w punkcie pracy z oporem panelu.',
     ev_basis_operating:  'przepływ w punkcie pracy z oporem panelu: {q} m³/h',
     ev_basis_rated_note: 'przepływ wg katalogu przy 0 Pa — zawyżony; podaj wydajność przy 25 Pa',
+
+    // ── Tunnel calculation mode (air speed / air exchange rate) ──
+    label_tunnel_mode:     'Obliczanie tunelu',
+    tunnel_mode_speed:     'Wg prędkości powietrza (m/s)',
+    tunnel_mode_exchange:  'Wg wymiany powietrza (s ⇄ wym./h)',
+    tunnel_mode_max_both:  'Większa z dwóch (prędkość + wymiana Cobb)',
+    label_tunnel_speed_ms: 'Docelowa prędkość tunelu, m/s',
+    label_tunnel_exch_s:   'Czas wymiany objętości, s',
+    label_tunnel_ach:      'Krotność wymiany, wym./h',
+    unit_ach:              'wym./h',
+    sum_tunnel_speed:      'wg prędkości powietrza {v} m/s',
+    sum_tunnel_exchange:   'wg wymiany {s} s ({ach} wym./h, v = {v} m/s)',
+    sum_tunnel_max_speed:  'większa z dwóch → prędkość {v} m/s ({s} s / {ach} wym./h spełnione)',
+    sum_tunnel_max_exch:   'większa z dwóch → wymiana {s} s ({ach} wym./h, v = {v} m/s)',
 };

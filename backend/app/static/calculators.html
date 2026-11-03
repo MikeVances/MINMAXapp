@@ -112,6 +112,30 @@
         </label>
       </div>
 
+      <!-- Способ расчёта туннельного расхода: по скорости воздуха, по времени/кратности воздухообмена или по большему из двух -->
+      <div class="field-row mb-14">
+        <label>
+          <span data-i18n="label_tunnel_mode">Tunnel calculation</span>
+          <select id="prof-tunnel-mode">
+            <option value="speed"    data-i18n="tunnel_mode_speed">By air speed (m/s)</option>
+            <option value="exchange" data-i18n="tunnel_mode_exchange">By air exchange (s ⇄ vol/h)</option>
+            <option value="max_both" data-i18n="tunnel_mode_max_both">Max of both (speed + exchange check)</option>
+          </select>
+        </label>
+        <label id="prof-tunnel-speed-wrap">
+          <span data-i18n="label_tunnel_speed_ms">Target tunnel speed, m/s</span>
+          <input id="prof-tunnel-speed" type="text" data-num inputmode="decimal" data-min="0.5" data-max="6.0" value="2.5">
+        </label>
+        <label id="prof-tunnel-exch-s-wrap" hidden>
+          <span data-i18n="label_tunnel_exch_s">Air exchange time, s</span>
+          <input id="prof-tunnel-exch-s" type="text" data-num inputmode="decimal" data-min="20" data-max="180" value="45">
+        </label>
+        <label id="prof-tunnel-ach-wrap" hidden>
+          <span data-i18n="label_tunnel_ach">Air exchange rate, vol/h</span>
+          <input id="prof-tunnel-ach" type="text" data-num inputmode="decimal" data-min="20" data-max="180" value="80">
+        </label>
+      </div>
+
       <button id="prof-calc-btn" class="btn" data-i18n="btn_calc_profile">Calculate profile</button>
       <!-- Без корпуса считать не по чему: кнопка неактивна, а здесь сказано почему -->
       <p id="prof-no-house" class="hint mt-8 mb-0" hidden>

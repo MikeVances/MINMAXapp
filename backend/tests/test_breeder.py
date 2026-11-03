@@ -341,3 +341,117 @@ def test_custom_copy_of_breeder_preserves_species_and_egg_mass(client):
         assert (mine["qmin_m3h"], mine["qmin_basis"]) == (theirs["qmin_m3h"], theirs["qmin_basis"])
     finally:
         client.delete("/profiles/my-breeders")
+
+
+# ─── Выбор способа расчёта туннеля (скорость / кратность / оба) ──────────────
+
+def test_summary7_tunnel_modes_speed_exchange_and_max_both(client):
+    # Корпус 120 × 15 × 3.75 м (сечение S = 56.25 м², объём V = 6750 м³), снаружи +30 °C (туннельный режим)
+    base = {
+        "house": "H1",
+        "birds": 30000,
+        "outside_t": 30.0,
+        "outside_rh": 60.0,
+        "house_width_m": 15.0,
+        "house_height_m": 3.75,
+        "house_length_m": 120.0,
+        "growth_profile_id": "test-breed",
+    }
+    section_m2 = 15.0 * 3.75
+    vol_m3 = 120.0 * section_m2
+
+    # 1) По скорости воздуха 2.5 м/с → Q_tunnel = 2.5 × 56.25 × 3600 = 506 250 м³/ч
+    by_speed = client.post(
+        "/calc/summary7",
+        json={**base, "tunnel_mode": "speed", "v_tunnel_ms": 2.5},
+    ).json()
+    assert by_speed["tunnel_mode"] == "speed"
+    assert by_speed["tunnel_basis"] == "speed"
+    assert by_speed["rows"][-1]["q_max_m3h"] == pytest.approx(2.5 * section_m2 * 3600.0, rel=1e-4)
+
+    # 2) По времени воздухообмена 45 с (80 об/ч) → Q_tunnel = V × 3600 / 45 = 540 000 м³/ч (v = 120/45 = 2.67 м/с)
+    by_exch = client.post(
+        "/calc/summary7",
+        json={**base, "tunnel_mode": "exchange", "tunnel_exchange_s": 45.0},
+    ).json()
+    assert by_exch["tunnel_mode"] == "exchange"
+    assert by_exch["tunnel_basis"] == "exchange"
+    assert by_exch["rows"][-1]["q_max_m3h"] == pytest.approx(vol_m3 * 3600.0 / 45.0, rel=1e-4)
+    assert by_exch["tunnel_target_v_max_ms"] == pytest.approx(round(120.0 / 45.0, 2))
+
+    # 3) По большему из двух: при L = 120 м, v = 2.5 м/с и t_exch = 45 с побеждает воздухообмен (2.67 > 2.5 м/с)
+    max_exch_wins = client.post(
+        "/calc/summary7",
+        json={**base, "tunnel_mode": "max_both", "v_tunnel_ms": 2.5, "tunnel_exchange_s": 45.0},
+    ).json()
+    assert max_exch_wins["tunnel_basis"] == "exchange"
+    assert max_exch_wins["rows"][-1]["q_max_m3h"] == pytest.approx(vol_m3 * 3600.0 / 45.0, rel=1e-4)
+
+    # При L = 90 м (v_exch = 90/45 = 2.0 м/с) и v = 2.5 м/с побеждает скорость
+    max_speed_wins = client.post(
+        "/calc/summary7",
+        json={**base, "house_length_m": 90.0, "tunnel_mode": "max_both", "v_tunnel_ms": 2.5, "tunnel_exchange_s": 45.0},
+    ).json()
+    assert max_speed_wins["tunnel_basis"] == "speed"
+    assert max_speed_wins["rows"][-1]["q_max_m3h"] == pytest.approx(2.5 * section_m2 * 3600.0, rel=1e-4)
+
+    # 4) Без длины корпуса расчёт по воздухообмену честно сообщает house_geometry_missing
+    no_len = client.post(
+        "/calc/summary7",
+        json={k: v for k, v in {**base, "tunnel_mode": "exchange"}.items() if k != "house_length_m"},
+    ).json()
+    assert no_len["rows"][-1]["house_geometry_missing"] is True
+
+
+def test_api_v1_tunnel_rules_mode_speed_exchange_and_max_both(client):
+    # HOUSE: 120 × 15 м, стена 3.0 м, конёк 4.5 м → сечение S = 56.25 м², объём V = 6750 м³
+    section_m2 = 15.0 * 3.75
+    vol_m3 = 120.0 * section_m2
+
+    # 1) /api/v1/ventilation-designs: расчёт по кратности 80 об/ч (= 45 с)
+    d_exch = _post(
+        client,
+        "/api/v1/ventilation-designs",
+        {**DESIGN_REARING, "tunnel_rules": {"mode": "exchange", "exchange_rate_vol_h": 80.0}},
+    )
+    assert d_exch["equipment"]["tunnel_fans_basis"] == "air_exchange"
+    assert d_exch["equipment"]["tunnel_fans_m3h"]["max"] == round(vol_m3 * 80.0)
+    assert d_exch["equipment"]["tunnel_air_speed_ms"]["max"] == round(120.0 / 45.0, 2)
+
+    # 2) /api/v1/ventilation-designs: по большему из двух (скорость 2.5 м/с vs смена за 45 с = 2.67 м/с)
+    d_max = _post(
+        client,
+        "/api/v1/ventilation-designs",
+        {**DESIGN_REARING, "tunnel_rules": {"mode": "max_both", "target_speed_ms": 2.5, "exchange_time_s": 45.0}},
+    )
+    assert d_max["equipment"]["tunnel_fans_basis"] == "air_exchange"
+    assert d_max["equipment"]["tunnel_fans_m3h"]["max"] == round(vol_m3 * 3600.0 / 45.0)
+
+    # При целевой скорости 3.2 м/с и смене за 45 с (2.67 м/с) побеждает скорость
+    d_speed_wins = _post(
+        client,
+        "/api/v1/ventilation-designs",
+        {**DESIGN_REARING, "tunnel_rules": {"mode": "max_both", "target_speed_ms": 3.2, "exchange_time_s": 45.0}},
+    )
+    assert d_speed_wins["equipment"]["tunnel_fans_basis"] == "air_speed"
+    assert d_speed_wins["equipment"]["tunnel_fans_m3h"]["max"] == round(3.2 * section_m2 * 3600.0)
+
+    # 3) /api/v1/ventilation-requirements: в жару (+32 °C) Qmax определяется выбранным режимом туннеля
+    hot_req = _with(REQ_REARING, conditions={"outdoor_t_c": 32.0, "outdoor_rh_pct": 50.0})
+    r_exch = _post(
+        client,
+        "/api/v1/ventilation-requirements",
+        {**hot_req, "tunnel_rules": {"mode": "exchange", "exchange_time_s": 45.0}},
+    )
+    assert r_exch["tunnel"]["active"] is True
+    assert r_exch["tunnel"]["basis"] == "air_exchange"
+    assert r_exch["qmax_m3h"] == round(vol_m3 * 3600.0 / 45.0)
+
+    # Взаимоисключающие поля exchange_time_s и exchange_rate_vol_h отклоняются с 422
+    bad = client.post(
+        "/api/v1/ventilation-requirements",
+        json={**hot_req, "tunnel_rules": {"mode": "exchange", "exchange_time_s": 45.0, "exchange_rate_vol_h": 80.0}},
+    )
+    assert bad.status_code == 422 and bad.json()["code"] == "validation_failed"
+
+

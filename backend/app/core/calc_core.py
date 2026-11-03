@@ -146,9 +146,11 @@ class CalcInput:
     heater_on: bool = False
     outside_rh: float = 60.0  # % относительная влажность снаружи
     # Сечение корпуса для туннельного расхода: ширина и СРЕДНЯЯ высота (стена+конёк)/2.
+    # Длина нужна при расчёте туннеля по кратности/времени воздухообмена (V = L × S).
     # Не заданы → туннельный Qmax не считается (house_geometry_missing)
     house_width_m: Optional[float] = None
     house_height_m: Optional[float] = None
+    house_length_m: Optional[float] = None
     # Профиль роста из библиотеки (кросс); None → default_growth_profile из настроек
     growth_profile_id: Optional[str] = None
     # Целевая RH в корпусе, % (40–70). None → RH из профиля роста.
@@ -222,6 +224,9 @@ class CalcResult:
     # стадо однополое или самок уже выбрали). weight_used_g — средняя по корпусу
     companion_alive: Optional[float] = None
     companion_weight_g: Optional[float] = None
+    # Способ, определивший проектный туннельный расход ("speed" | "exchange"), и расчётная скорость, м/с
+    tunnel_basis: str = "speed"
+    v_tunnel_design_ms: Optional[float] = None
 
 
 @dataclass(frozen=True)
@@ -235,6 +240,12 @@ class CalcParams:
     cycle_days: int = 42
     default_growth_profile: str = "ross308"
     v_tunnel_ms: float = 2.5
+    # Способ расчёта туннельного расхода:
+    #   "speed"    — по скорости воздуха в сечении (v × S × 3600)
+    #   "exchange" — по времени смены объёма корпуса (V × 3600 / t_exch = (L / t_exch) × S × 3600)
+    #   "max_both" — по большему из двух (скорость + проверка кратности Cobb)
+    tunnel_mode: str = "speed"
+    tunnel_exchange_s: float = 45.0
     safety_factor_qmin: float = 1.5
     # Практика птицеводов (владелец, 2026-10-19): туннель с 21-го дня, снаружи ≥ 24 °C
     tunnel_min_day: int = 21
@@ -430,6 +441,24 @@ def compute_with(ci: CalcInput, params: CalcParams, thermal: HouseThermal) -> Ca
     tunnel_min_temp = params.tunnel_min_temp_c
     v_tunnel        = params.v_tunnel_ms
 
+    # Проектная скорость взрослой птицы (м/с) с учётом выбранного способа расчёта туннеля:
+    # V_корп = L × S_сеч, поэтому время смены объёма t_exch [с] эквивалентно
+    # скорости в сечении v_exch = L / t_exch [м/с].
+    tunnel_basis = "speed"
+    v_design: Optional[float] = v_tunnel
+    if params.tunnel_mode in ("exchange", "max_both"):
+        if ci.house_length_m and ci.house_length_m > 0:
+            v_exch = ci.house_length_m / max(params.tunnel_exchange_s, 1.0)
+            if params.tunnel_mode == "exchange":
+                v_design = v_exch
+                tunnel_basis = "exchange"
+            elif v_exch > v_tunnel:
+                v_design = v_exch
+                tunnel_basis = "exchange"
+        else:
+            # Для расчёта по кратности/времени воздухообмена нужна длина корпуса
+            v_design = None
+
     # Проектный туннельный расход корпуса (полная скорость) — для мощности и UI
     tunnel_requirement: Optional[float] = None
     # Туннельный расход с учётом возраста: молодой птице полную скорость не дают
@@ -437,10 +466,10 @@ def compute_with(ci: CalcInput, params: CalcParams, thermal: HouseThermal) -> Ca
     section_m2: Optional[float] = ci.tunnel_section_m2
     if section_m2 is None and ci.house_width_m and ci.house_height_m:
         section_m2 = ci.house_width_m * ci.house_height_m
-    if section_m2:
-        tunnel_requirement  = v_tunnel * section_m2 * 3600.0
+    if section_m2 and v_design is not None:
+        tunnel_requirement  = v_design * section_m2 * 3600.0
         share = params.bird_speed_share
-        v_for_age = min(v_tunnel, tunnel_speed_limit_ms(age, v_tunnel * share) / share)
+        v_for_age = min(v_design, tunnel_speed_limit_ms(age, v_design * share) / share)
         tunnel_flow_for_age = v_for_age * section_m2 * 3600.0
 
     # --- Тепловой баланс всего птичника ---
@@ -678,4 +707,6 @@ def compute_with(ci: CalcInput, params: CalcParams, thermal: HouseThermal) -> Ca
         qmin_guide_m3h=q_min_guide,
         companion_alive=companion_alive,
         companion_weight_g=companion_weight_g,
+        tunnel_basis=tunnel_basis,
+        v_tunnel_design_ms=v_design,
     )

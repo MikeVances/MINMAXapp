@@ -115,7 +115,7 @@ def _requirement(inp: RequirementInput) -> RequirementResult:
     breeder = profile.species == "broiler_breeder"
     species_notes(profile, assumptions, source_ids, stage=inp.stage, has_explicit_hens=inp.hens is not None)
 
-    target = tunnel_target(g, inp.housing, inp.cage_rows, profile.species, inp.stage)
+    target = tunnel_target(g, inp.housing, inp.cage_rows, profile.species, inp.stage, inp.tunnel_rules)
     source_ids.add(target.source_id)
     if cages:
         cage_notes(assumptions, source_ids)
@@ -241,6 +241,7 @@ def _tunnel_now(inp: RequirementInput, age: int, target, now: CalcResult, qmax: 
         "active": now.tunnel_active,
         "target_speed_ms": {"min": round(speed[0], 2), "max": round(speed[1], 2),
                             "source_id": target.source_id},
+        "basis": target.basis,
         "free_section_m2": round(target.section_m2, 2),
     }
     # Таблица ощущаемой температуры и предел 30 °C — бройлерные (Cobb §9.7): для

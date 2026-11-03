@@ -672,4 +672,18 @@
     hint_ev_fans25:      'Second point of the fan rating (0.10" w.c.). With it, airflow is computed at the operating point including the pad resistance.',
     ev_basis_operating:  'airflow at the operating point with pad resistance: {q} m³/h',
     ev_basis_rated_note: 'airflow from the 0 Pa rating — overstated; enter capacity at 25 Pa',
+
+    // ── Tunnel calculation mode (air speed / air exchange rate) ──
+    label_tunnel_mode:     'Tunnel calculation',
+    tunnel_mode_speed:     'By air speed (m/s)',
+    tunnel_mode_exchange:  'By air exchange (s ⇄ vol/h)',
+    tunnel_mode_max_both:  'Max of both (speed + Cobb exchange check)',
+    label_tunnel_speed_ms: 'Target tunnel speed, m/s',
+    label_tunnel_exch_s:   'Air exchange time, s',
+    label_tunnel_ach:      'Air exchange rate, vol/h',
+    unit_ach:              'vol/h',
+    sum_tunnel_speed:      'by air speed {v} m/s',
+    sum_tunnel_exchange:   'by air exchange {s} s ({ach} vol/h, v = {v} m/s)',
+    sum_tunnel_max_speed:  'max of both → speed {v} m/s ({s} s / {ach} vol/h satisfied)',
+    sum_tunnel_max_exch:   'max of both → air exchange {s} s ({ach} vol/h, v = {v} m/s)',
 };

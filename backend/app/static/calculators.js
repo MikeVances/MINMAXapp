@@ -188,10 +188,57 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Целевая RH — своя у каждого корпуса
     const rhEl = document.getElementById('prof-target-rh');
-    const showRH = () => { const tb = profileTabs[selIdx]; rhEl.value = (tb && tb.target_rh != null) ? tb.target_rh : 60; };
-    selEl.addEventListener('change', () => { selIdx = parseInt(selEl.value, 10) || 0; showRH(); showStage(); });
+    const showRH = () => {
+      const tb = profileTabs[selIdx];
+      rhEl.value = (tb && tb.target_rh != null) ? tb.target_rh : 60;
+      if (tb && tb.tunnel_mode) tunModeEl.value = tb.tunnel_mode;
+      if (tb && tb.v_tunnel_ms != null) tunSpeedEl.value = tb.v_tunnel_ms;
+      else tunSpeedEl.value = defaultTunnelSpeed();
+      if (tb && tb.tunnel_exchange_s != null) {
+        tunExchEl.value = tb.tunnel_exchange_s;
+        tunAchEl.value = String(Math.round((3600 / tb.tunnel_exchange_s) * 10) / 10);
+      }
+      syncTunnelModeUI();
+    };
+    selEl.addEventListener('change', () => { selIdx = parseInt(selEl.value, 10) || 0; showStage(); showRH(); });
     showRH();
   }
+
+  // ── Способ расчёта туннеля (скорость / кратность воздухообмена / оба) ──────
+  const tunModeEl  = document.getElementById('prof-tunnel-mode');
+  const tunSpeedEl = document.getElementById('prof-tunnel-speed');
+  const tunExchEl  = document.getElementById('prof-tunnel-exch-s');
+  const tunAchEl   = document.getElementById('prof-tunnel-ach');
+  const wrapSpeed  = document.getElementById('prof-tunnel-speed-wrap');
+  const wrapExch   = document.getElementById('prof-tunnel-exch-s-wrap');
+  const wrapAch    = document.getElementById('prof-tunnel-ach-wrap');
+
+  function defaultTunnelSpeed() {
+    if (stageSpecies === 'turkey') return 2.0;
+    if (stageSpecies === 'broiler_breeder') return stageSel.value === 'production' ? 3.0 : 2.5;
+    return 2.5;
+  }
+
+  function syncTunnelModeUI() {
+    const m = tunModeEl.value;
+    wrapSpeed.hidden = (m === 'exchange');
+    wrapExch.hidden  = (m === 'speed');
+    wrapAch.hidden   = (m === 'speed');
+  }
+
+  tunModeEl.addEventListener('change', syncTunnelModeUI);
+  tunExchEl.addEventListener('input', () => {
+    const s = NumField.value('prof-tunnel-exch-s');
+    if (s != null && s > 0) {
+      tunAchEl.value = String(Math.round((3600 / s) * 10) / 10);
+    }
+  });
+  tunAchEl.addEventListener('input', () => {
+    const ach = NumField.value('prof-tunnel-ach');
+    if (ach != null && ach > 0) {
+      tunExchEl.value = String(Math.round((3600 / ach) * 10) / 10);
+    }
+  });
 
   // ── Этап индейки и родительского стада ─────────────────────────────────────
   // Дни этапа по умолчанию: у индейки 1–35 и 36..конец, у РС 1–140 и 141..конец профиля.
@@ -230,11 +277,14 @@ document.addEventListener('DOMContentLoaded', () => {
     stageSpecies = (sp === 'turkey' || sp === 'broiler_breeder') ? sp : null;
     turkeyLastDay = stageSpecies ? e.detail.last_day : null;
     showStage();
+    const tb = profileTabs[selIdx] || {};
+    if (tb.v_tunnel_ms == null) tunSpeedEl.value = defaultTunnelSpeed();
   });
-  // Другой этап — его дни по умолчанию: дни подращивания на откорме не имеют смысла
+  // Другой этап — его дни и норма скорости туннеля по умолчанию
   stageSel.addEventListener('change', () => {
     const [f, l] = stageDefaults(stageSel.value);
     firstEl.value = f; lastEl.value = l;
+    tunSpeedEl.value = defaultTunnelSpeed();
   });
 
   async function calcProfile() {
@@ -245,13 +295,22 @@ document.addEventListener('DOMContentLoaded', () => {
     // или опечатка превращались в значение по умолчанию). Пустое поле — по умолчанию,
     // 0 остаётся нулём. Целевая RH вне 40–70 % тоже ошибка: таблица ощущаемой
     // температуры там не определена; пустая — сервер возьмёт RH профиля.
-    if (!NumField.validate(['prof-outside-t', 'prof-outside-rh', 'prof-target-rh'])) return;
+    const tunMode = tunModeEl.value;
+    const fieldsToCheck = ['prof-outside-t', 'prof-outside-rh', 'prof-target-rh'];
+    if (tunMode !== 'exchange') fieldsToCheck.push('prof-tunnel-speed');
+    if (tunMode !== 'speed') fieldsToCheck.push('prof-tunnel-exch-s', 'prof-tunnel-ach');
+    if (!NumField.validate(fieldsToCheck)) return;
     const turkey = turkeyLastDay != null;
     if (turkey && !NumField.validate(['prof-first-day', 'prof-last-day'])) return;
     const outsideT  = NumField.value('prof-outside-t')  ?? 15;
     const outsideRH = NumField.value('prof-outside-rh') ?? 60;
     const targetRH  = NumField.value('prof-target-rh');
+    const vTunnelMs = tunMode !== 'exchange' ? (NumField.value('prof-tunnel-speed') ?? defaultTunnelSpeed()) : defaultTunnelSpeed();
+    const tunExchS  = tunMode !== 'speed' ? (NumField.value('prof-tunnel-exch-s') ?? 45) : 45;
     tab.target_rh  = targetRH;
+    tab.tunnel_mode = tunMode;
+    tab.v_tunnel_ms = vTunnelMs;
+    tab.tunnel_exchange_s = tunExchS;
     const stage = turkey ? {
       stage: stageSel.value,
       first_day: NumField.value('prof-first-day'),
@@ -261,6 +320,9 @@ document.addEventListener('DOMContentLoaded', () => {
       const tabs = JSON.parse(localStorage.getItem(STORE_KEY) || '[]');
       if (tabs[selIdx]) {
         tabs[selIdx].target_rh = targetRH;
+        tabs[selIdx].tunnel_mode = tunMode;
+        tabs[selIdx].v_tunnel_ms = vTunnelMs;
+        tabs[selIdx].tunnel_exchange_s = tunExchS;
         if (turkey) {
           tab.turkey_stage = tabs[selIdx].turkey_stage = stage.stage;
           tab.turkey_first_day = tabs[selIdx].turkey_first_day = stage.first_day;
@@ -275,16 +337,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const hAvg = houseSectionHeight(tab);
 
     const payload = {
-      house:        tab.id,
-      birds:        tab.birds,
+      house:          tab.id,
+      birds:          tab.birds,
       house_width_m:  Number(tab.width_m) || null,
       house_height_m: hAvg || null,
+      house_length_m: Number(tab.length_m) || null,
       growth_profile_id: document.getElementById('prof-growth-select').value || null,
-      target_rh:    targetRH,
-      user_max_m3h: (tab.cap == null || tab.cap === '') ? null : Number(tab.cap),
-      heater_on:    !!tab.heater_on,
-      outside_t:    outsideT,
-      outside_rh:   outsideRH,
+      target_rh:      targetRH,
+      user_max_m3h:   (tab.cap == null || tab.cap === '') ? null : Number(tab.cap),
+      heater_on:      !!tab.heater_on,
+      outside_t:      outsideT,
+      outside_rh:     outsideRH,
+      tunnel_mode:    tunMode,
+      v_tunnel_ms:    vTunnelMs,
+      tunnel_exchange_s: tunExchS,
       ...stage,
     };
 
@@ -314,10 +380,30 @@ document.addEventListener('DOMContentLoaded', () => {
     const V_house = (S_floor && H_eff) ? S_floor * H_eff : null;
     const S_cross = (W && H_eff) ? W * H_eff : null;
 
+    const exchTargetS = d.tunnel_exchange_target_s || 45;
+    const achTarget = 3600 / exchTargetS;
+    let tunSummary = '';
+    if (d.tunnel_mode === 'exchange') {
+      tunSummary = t('sum_tunnel_exchange', {
+        s: fmtNum(exchTargetS, 0),
+        ach: fmtNum(achTarget, 1),
+        v: fmtNum(d.tunnel_target_v_max_ms, 2),
+      });
+    } else if (d.tunnel_mode === 'max_both') {
+      tunSummary = t(d.tunnel_basis === 'exchange' ? 'sum_tunnel_max_exch' : 'sum_tunnel_max_speed', {
+        v: fmtNum(d.tunnel_target_v_max_ms, 2),
+        s: fmtNum(exchTargetS, 0),
+        ach: fmtNum(achTarget, 1),
+      });
+    } else {
+      tunSummary = t('sum_tunnel_speed', { v: fmtNum(d.v_tunnel_ms ?? 2.5, 2) });
+    }
+
     const head = `
       <div class="kv"><span>${t('sum_outdoor')}</span><span>${fmtNum(outsideT, 1)} °C / ${fmtNum(outsideRH ?? 60, 0)} %</span></div>
       <div class="kv"><span>${t('sum_house_birds')}</span><span>${d.house} / ${fmtNum(d.birds)}</span></div>
-      <div class="kv"><span>${t('sum_sys_max')}</span><span>${d.user_max_m3h ?? '—'} ${t('unit_m3h_plain')}</span></div>`
+      <div class="kv"><span>${t('sum_sys_max')}</span><span>${d.user_max_m3h ?? '—'} ${t('unit_m3h_plain')}</span></div>
+      <div class="kv"><span>${t('label_tunnel_mode')}</span><span>${tunSummary}</span></div>`
       + ((d.species === 'turkey' || d.species === 'broiler_breeder')
         ? `<div class="kv"><span>${t('turkey_stage_lbl')}</span><span>${t('turkey_stage_' + d.stage)}, ${t('sum_turkey_days', { from: d.first_day, to: d.last_day })}</span></div>`
         : '');
@@ -403,6 +489,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const q_sys  = d.user_max_m3h ?? (r42 ? r42.q_max_nominal_m3h : null);
       const qMaxM2 = q_sys && S_floor ? q_sys / S_floor : null;
       const T_exch = (V_house && q_sys && q_sys > 0) ? Math.round(V_house / q_sys * 3600) : null;
+      const ach_sys = (V_house && q_sys && q_sys > 0) ? (q_sys / V_house) : null;
       const v_tun  = (S_cross && q_sys && q_sys > 0) ? q_sys / 3600 / S_cross : null;
 
       const hasSysCap = !!d.user_max_m3h;
@@ -438,7 +525,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ${qMinM2 != null ? `<div class="kv"><span>${t('phys_min_vent_check')}</span><span>${fmtNum(qMinM2, 1)} ${t('unit_m3h_m2')}</span></div>` : ''}
             ${minCapM2 != null ? `<div class="kv"><span>${t('phys_min_fans_check')}</span><span class="${cls_mincap}">${fmtNum(minCapM2, 1)} ${t('unit_m3h_m2')} <span class="muted">[${t('phys_min_fans_norm')}]</span></span></div>` : ''}
             ${qMaxM2 != null ? `<div class="kv"><span>${t('phys_max_vent_check')}</span><span class="${cls_qmax}">${fmtNum(qMaxM2, 1)} ${t('unit_m3h_m2')} <span class="muted">[165–200]</span></span></div>` : ''}
-            ${T_exch  != null ? `<div class="kv"><span>${t('phys_exchange_time')}</span><span class="${cls_texch}">${T_exch} ${t('unit_sec')} <span class="muted">[40–50]</span></span></div>` : ''}
+            ${T_exch  != null ? `<div class="kv"><span>${t('phys_exchange_time')}</span><span class="${cls_texch}">${T_exch} ${t('unit_sec')} (${fmtNum(ach_sys, 1)} ${t('unit_ach')}) <span class="muted">[40–50] [72–90 ${t('unit_ach')}]</span></span></div>` : ''}
             ${v_tun   != null ? `<div class="kv"><span>${t('phys_airspeed_tunnel')}</span><span class="${cls_vtun}">${fmtNum(v_tun, 2)} ${t('unit_ms')} ${vTarget ? `<span class="muted">[${vTarget}]</span>` : ''}</span></div>` : ''}
           </div>
           <p class="muted fs-10 mt-8 mb-0">${t('phys_cobb_source')}${hasSysCap ? '' : ' · ' + t('phys_needs_sys_cap')}</p>

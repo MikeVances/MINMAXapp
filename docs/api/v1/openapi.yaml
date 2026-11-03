@@ -549,14 +549,20 @@ components:
     TunnelRules:
       type: object
       description: |
-        Когда туннель допустим. Нет — практика птицеводов: с 21-го дня и при наружной
-        T не ниже 24 °C (допущение `tunnel_rules_default`, источник
-        `practice_tunnel_rules_2026`).
-      required: [min_day, min_outdoor_c]
+        Параметры туннельного режима: пороги включения (`min_day` и `min_outdoor_c`
+        вместе; не заданы — с 21-го дня и при наружной T ≥ 24 °C, допущение
+        `tunnel_rules_default`) и/или способ расчёта целевой мощности туннеля
+        (`mode`: `speed` — по скорости воздуха в сечении `target_speed_ms`,
+        `exchange` — по времени смены объёма `exchange_time_s` или кратности
+        `exchange_rate_vol_h`, `max_both` — по большему из двух).
       additionalProperties: false
       properties:
         min_day: { type: integer, minimum: 1, maximum: 42 }
         min_outdoor_c: { type: number, minimum: 0, maximum: 35 }
+        mode: { type: string, enum: [speed, exchange, max_both] }
+        target_speed_ms: { type: number, minimum: 0.5, maximum: 6.0, description: "Целевая скорость воздуха в сечении туннеля, м/с" }
+        exchange_time_s: { type: number, minimum: 20, maximum: 180, description: "Время полной смены объёма корпуса, с (взаимоисключающе с exchange_rate_vol_h)" }
+        exchange_rate_vol_h: { type: number, minimum: 20, maximum: 180, description: "Кратность воздухообмена корпуса, об/ч (= 3600 / exchange_time_s)" }
 
     Heaters:
       type: object
@@ -839,6 +845,10 @@ components:
                 Пол — скорость в сечении (Cobb §9.7, как у проекта); клетки — в проходах,
                 4–5 м/с. Не выше предела Cobb §9.7 по возрасту для скорости у птицы.
               allOf: [{ $ref: "#/components/schemas/Range" }]
+            basis:
+              type: string
+              enum: [floor_capacity, air_exchange, aisle_speed, air_speed]
+              description: "Правило, определившее целевую мощность туннеля (см. Equipment.tunnel_fans_basis)"
             free_section_m2: { type: number, description: "Сечение корпуса минус клеточные ряды" }
             bird_speed_ms:
               description: "Только клетки: оценка скорости у птицы ≈ 0.5 скорости в проходах; по ней — ощущаемая T"

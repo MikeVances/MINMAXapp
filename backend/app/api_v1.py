@@ -321,11 +321,35 @@ class FanCurveIn(_Strict):
 
 
 class TunnelRulesIn(_Strict):
-    min_day: int = Field(..., ge=1, le=42)
-    min_outdoor_c: float = Field(..., ge=0, le=35)
+    min_day: Optional[int] = Field(None, ge=1, le=42)
+    min_outdoor_c: Optional[float] = Field(None, ge=0, le=35)
+    mode: Optional[Literal["speed", "exchange", "max_both"]] = None
+    target_speed_ms: Optional[float] = Field(None, ge=0.5, le=6.0)
+    exchange_time_s: Optional[float] = Field(None, ge=20, le=180)
+    exchange_rate_vol_h: Optional[float] = Field(None, ge=20, le=180)
+
+    @model_validator(mode="after")
+    def _check_rules(self):
+        if (self.min_day is None) != (self.min_outdoor_c is None):
+            raise ValueError("min_day and min_outdoor_c must be provided together")
+        if self.exchange_time_s is not None and self.exchange_rate_vol_h is not None:
+            raise ValueError("provide either exchange_time_s or exchange_rate_vol_h, not both")
+        if all(v is None for v in (self.min_day, self.mode, self.target_speed_ms,
+                                   self.exchange_time_s, self.exchange_rate_vol_h)):
+            raise ValueError("at least one tunnel rule parameter is required")
+        return self
 
     def to_core(self) -> vd.TunnelRules:
-        return vd.TunnelRules(self.min_day, self.min_outdoor_c)
+        exch_s = self.exchange_time_s
+        if exch_s is None and self.exchange_rate_vol_h is not None:
+            exch_s = 3600.0 / self.exchange_rate_vol_h
+        return vd.TunnelRules(
+            min_day=self.min_day,
+            min_outdoor_c=self.min_outdoor_c,
+            mode=self.mode,
+            target_speed_ms=self.target_speed_ms,
+            exchange_time_s=exch_s,
+        )
 
 
 class DesignRequest(_Strict):
