@@ -1,9 +1,19 @@
-# 🐔 MINMAXapp — Broiler House Ventilation Calculator
+# 🐔 MINMAXapp — Poultry House Ventilation Calculator
 
 Open-source web tool for poultry farm engineers and technologists.  
-Calculates ventilation parameters, heat balance, and cooling requirements for broiler houses — directly in the browser, no installation needed.
+Calculates ventilation parameters, heat balance, and cooling requirements for poultry houses — directly in the browser or via the stateless engineering API (`/api/v1`).
 
 > Built for practical use on real farms. Physics-based, not rule-of-thumb.
+
+---
+
+## Supported Production Lines
+
+- **Broilers on floor (`broiler_floor`)** — Ross 308, Ross 708, Cobb 500, Arbor Acres, Hubbard
+- **Broilers in cages (`broiler_cages`)** — free cross-section reduced by battery rows (`cage_rows`), age-dependent air speed limits, sensible heat range (Aarnink 2018 vs. CIGR 2002)
+- **Turkeys on floor (`turkey_floor`)** — Aviagen B.U.T. 6 & Hybrid Converter (males and females, CIGR 2002 eq. 17)
+- **Broiler Breeders on floor (`breeders_floor`)** — Ross 308 & Cobb 500 parent stock (hens and males, days 1–448, rearing vs. production stage CIGR eq. 18, single-sex or mixed flock `hens` + `birds`)
+- **Layer Pullets & Laying Hens in cages (`layers_cages`)** — Lohmann LSL-Classic, Lohmann Brown-Classic, Hy-Line Brown, Hy-Line W-36 (days 1–500: pullet rearing days 1–119 via CIGR eq. 17 + laying phase days 120–500 with `egg_mass_g` via CIGR eq. 34, Dr. H. Xin minimum ventilation norm)
 
 ---
 
@@ -15,16 +25,19 @@ Enter flock age and outside temperature — get target airflow ranges for the cu
 ### Farm Audit (Heat Balance)
 Step-by-step analysis of the thermal envelope:
 
-1. **Building dimensions** — volume, wall/roof area
-2. **Heater configuration** — gas or electric, total installed capacity
-3. **UA calibration** — measure the building's actual heat loss coefficient from a temperature-drop test in an empty house
+1. **Building dimensions** — volume, wall/roof area, layered construction UA (BR 443 / ISO 6946)
+2. **Heater configuration** — open-flame gas, indirect gas, or electric, total installed capacity
+3. **UA calibration** — measure the building's actual heat loss coefficient from a cooling-curve test in an empty house
 4. **Heater cycle analysis** — required heating power vs. installed capacity at any outside temperature, bird age and stocking density
 
 ### Evaporative Cooling (Pad & Fan)
-Pad outlet temperature, airflow at the fan operating point with pad resistance, water use and recommended pad area; sufficiency is judged at the fan end.
+Pad outlet temperature, airflow at the fan operating point with pad resistance (Munters CELdek 7090-15 and SANHE 5090/6090 curves), water use and recommended pad area; sufficiency is judged at the fan end.
 
 ### Tunnel Ventilation
-Air speed, wind cooling and THVI at the fan end, tunnel temperature limit. Flags when pad cooling becomes necessary.
+Supports three sizing modes: by air speed (`speed`), by air-exchange time in seconds / ACH (`exchange`), or the stricter of both (`max`). Computes air speed, wind cooling and THVI at the fan end, tunnel temperature limit, and flags when pad cooling becomes necessary.
+
+### Public Engineering API (`/api/v1`)
+Stateless REST API (`docs/api/v1/openapi.yaml`, `docs/api/v1/README.md`) for engineering calculations (`POST /api/v1/ventilation-designs`, `POST /api/v1/ventilation-requirements`), reference catalogs (`/growth-profiles`, `/construction-materials`, `/sources`, `/housing-systems`), and ERA5 design climate (`/climate-designs`). Includes an AI calculation-agent system prompt (`docs/api/v1/agent/system-prompt.md`) with `request_id` audit logging (`data/api_audit.jsonl`).
 
 ---
 
@@ -160,13 +173,17 @@ theme reaches dynamic status colours too. A test fails if inline styles creep ba
 
 ## Data Sources
 
+Every source ID cited in calculation responses is documented in `/api/v1/sources`:
+
 | Source | Used for |
 |--------|---------|
-| Ross 308 Broiler Performance Objectives, 2022 | Temperature curves, live weight targets |
-| Cobb Broiler Management Guide | Ventilation profiles |
-| Aviagen Essential Ventilation Management, 2019 | Min/max airflow methodology |
-| CIGR Report Vol. II — Climatization of Animal Houses | Bird heat production formula |
-| EN 13779 / ASHRAE | Air properties, psychrometrics |
+| Ross Broiler Handbook 2025 & Performance Objectives 2022 | Apparent-temperature table 2.5, broiler & parent stock weight/setpoint curves |
+| Cobb Broiler & Breeder Management Guides (2021–2024) | Density-based setpoints, tunnel velocity targets, parent stock curves |
+| Aviagen Turkeys (B.U.T. 6) & Hybrid Converter | Turkey growth profiles and tunnel air speed norms |
+| Lohmann (LSL-Classic, Brown-Classic) & Hy-Line (Brown, W-36) | Layer pullet rearing & laying phase profiles (days 1–500), Dr. H. Xin min-vent norm |
+| CIGR 4th Report (Pedersen & Sällvik, 2002) & Aarnink et al. (2018) | House-level heat, moisture, and CO₂ production (eq. 17, 18, 34; cage sensible range) |
+| Munters CELdek 7090-15 & SANHE Pad Datasheets, UGA Extension | Evaporative cooling efficiency and pressure-drop curves |
+| ASHRAE Handbook — Fundamentals (2017) & ERA5 (Open-Meteo) | Moist-air psychrometrics, standard atmosphere, 99.6 % / 0.4 % design climate |
 
 ---
 

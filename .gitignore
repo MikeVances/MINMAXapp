@@ -171,3 +171,6 @@ data/*.jsonl*
 /refs/
 /ux_audit/
 /audit_screenshots/
+
+# Локальный клон репозитория PigMaxApp внутри рабочего пространства
+/PigMaxApp/
