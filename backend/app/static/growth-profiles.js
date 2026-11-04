@@ -26,8 +26,14 @@
     const yTicks = [];
     for (let y = Math.ceil(yLo / niceStep) * niceStep; y <= yHi + niceStep * 0.01; y += niceStep) yTicks.push(y);
 
-    const xTicks  = allX.filter(x => x === 1 || x % 7 === 0);
-    const xLabels = allX.filter(x => x === 1 || x % 14 === 0 || x === xMax);
+    const span = xMax - xMin;
+    const tickStep  = span > 180 ? 28 : (span > 70 ? 14 : 7);
+    const labelStep = span > 180 ? 70 : (span > 70 ? 28 : 14);
+    const xTicks  = allX.filter(x => x === 1 || x % tickStep === 0);
+    const xLabels = allX.filter(x => x === 1 || x % labelStep === 0 || x === xMax);
+    if (xLabels.length >= 2 && (xLabels[xLabels.length - 1] - xLabels[xLabels.length - 2]) < labelStep * 0.45) {
+      xLabels.splice(xLabels.length - 2, 1);
+    }
 
     // role=img + название: диктор называет график целиком, а не читает подписи осей
     // по одной; значения доступны в таблице профиля под графиками
@@ -64,9 +70,12 @@
     // Anchor dots (editable points) — rendered on top
     for (const s of series) {
       if (!s.anchors) continue;
+      const dense = s.anchors.length > 25;
+      const dotR = dense ? '2.2' : '3.5';
+      const dotSw = dense ? '1' : '1.5';
       for (const a of s.anchors) {
         if (a.y == null) continue;
-        o += `<circle cx="${tx(a.x).toFixed(1)}" cy="${ty(a.y).toFixed(1)}" r="3.5" fill="${s.color}" stroke="var(--bg)" stroke-width="1.5"/>`;
+        o += `<circle cx="${tx(a.x).toFixed(1)}" cy="${ty(a.y).toFixed(1)}" r="${dotR}" fill="${s.color}" stroke="var(--bg)" stroke-width="${dotSw}"/>`;
       }
     }
 
@@ -115,7 +124,15 @@
   }
   function profilesForHouse() {
     const species = ProductionLines.speciesOf(houseLine(), linesCatalog);
-    return species ? profilesList.filter(p => (p.species || 'broiler') === species) : profilesList;
+    const list = species ? profilesList.filter(p => (p.species || 'broiler') === species) : profilesList;
+    if (species === 'broiler_breeder') {
+      const order = ['ross308-ps-females', 'cobb500-ff-females', 'ross308-ps-males', 'cobb-mx-males'];
+      return [...list].sort((a, b) => {
+        const ia = order.indexOf(a.id), ib = order.indexOf(b.id);
+        return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+      });
+    }
+    return list;
   }
 
   function profileForHouse() {
@@ -133,7 +150,7 @@
   // Сколько дней профиля показывать: у бройлера — цикл хозяйства из настроек, у
   // индейки — весь профиль (цикл до 22 недель, в настройках бройлерной фермы его нет)
   function shownLastDay() {
-    if (current.species === 'turkey' || current.species === 'broiler_breeder') return current.last_day;
+    if (current.species === 'turkey' || current.species === 'broiler_breeder' || current.species === 'layer') return current.last_day;
     return Math.min(profileCfg.cycle_days || 42, current.last_day);
   }
 
@@ -458,9 +475,10 @@
     if (houseSel) houseSelShown = houseSel.value;   // корпус, к которому относится показанный профиль
     rememberForHouse(id);
     renderAll();
-    // Расчёт профиля показывает этапы индейки только у её профилей — сообщаем вид
+    // Расчёт профиля показывает этапы для индейки, РС и несушки и способ содержания — сообщаем вид и содержание
+    const housing = ProductionLines.housingOf(houseLine(), linesCatalog);
     document.dispatchEvent(new CustomEvent('growthprofile:change', {
-      detail: { species: current.species || 'broiler', last_day: current.last_day } }));
+      detail: { species: current.species || 'broiler', last_day: current.last_day, housing } }));
   }
 
   function renderAll() {

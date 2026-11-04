@@ -70,6 +70,10 @@ const elHouseLen       = document.getElementById('houseLength');
 const elHouseWid       = document.getElementById('houseWidth');
 const elHouseHgtWall   = document.getElementById('houseHeightWall');
 const elHouseHgtRidge  = document.getElementById('houseHeightRidge');
+const elCageGroup      = document.getElementById('cageDimsGroup');
+const elCageCount      = document.getElementById('cageRowsCount');
+const elCageWidth      = document.getElementById('cageRowWidth');
+const elCageHeight     = document.getElementById('cageRowHeight');
 const elNumFans        = document.getElementById('numFans');
 const elFanCapM3h      = document.getElementById('fanCapM3h');
 const elNumMinFans     = document.getElementById('numMinFans');
@@ -79,7 +83,8 @@ const elForm       = document.getElementById('calcContent');
 
 // Числовые поля формы корпуса — их проверяет «Сохранить» и автосохранение
 const NUMBER_IDS = ['birds', 'cap', 'houseLength', 'houseWidth', 'houseHeightWall',
-                    'houseHeightRidge', 'numFans', 'fanCapM3h', 'numMinFans', 'minFanCapM3h'];
+                    'houseHeightRidge', 'cageRowsCount', 'cageRowWidth', 'cageRowHeight',
+                    'numFans', 'fanCapM3h', 'numMinFans', 'minFanCapM3h'];
 
 // Форма изменена и ещё не записана во вкладку. Раньше переключение вкладки
 // молча перезаписывало ввод (20 000 голов возвращались в 35 000), а калькуляторы
@@ -149,6 +154,16 @@ if (elFanCapM3h) elFanCapM3h.addEventListener('input', syncCap);
 // Неготовое направление видно, но выбрать его нельзя — пустой расчёт выглядел бы готовым
 let productionLines = { default: 'broiler_floor', lines: [] };
 
+function syncCageFieldsVisibility() {
+  if (!elCageGroup || !elProduction) return;
+  const lineId = elProduction.value || (tabs[active] && tabs[active].production) || productionLines.default;
+  const isCages = ProductionLines.housingOf(lineId, productionLines) === 'cages'
+    || lineId === 'broiler_cages' || lineId === 'layers_cages';
+  elCageGroup.hidden = !isCages;
+}
+
+if (elProduction) elProduction.addEventListener('change', syncCageFieldsVisibility);
+
 function fillProductionOptions() {
   if (!elProduction) return;
   elProduction.innerHTML = '';
@@ -161,6 +176,7 @@ function fillProductionOptions() {
     elProduction.appendChild(opt);
   });
   elProduction.value = ProductionLines.lineOf(tabs[active], productionLines, profileSummaries);
+  syncCageFieldsVisibility();
 }
 
 // Профили нужны только чтобы узнать направление старого корпуса по виду его профиля
@@ -188,10 +204,14 @@ function fillForm() {
   if (elHouseWid)      elHouseWid.value      = tab.width_m       ?? '';
   if (elHouseHgtWall)  elHouseHgtWall.value  = tab.height_wall_m ?? '';
   if (elHouseHgtRidge) elHouseHgtRidge.value = tab.height_ridge_m ?? '';
+  if (elCageCount)     elCageCount.value     = tab.cage_rows_count ?? '';
+  if (elCageWidth)     elCageWidth.value     = tab.cage_row_width_m ?? '';
+  if (elCageHeight)    elCageHeight.value    = tab.cage_row_height_m ?? '';
   if (elNumFans)       elNumFans.value       = tab.num_fans        ?? '';
   if (elFanCapM3h)     elFanCapM3h.value     = tab.fan_cap_m3h    ?? '';
   if (elNumMinFans)    elNumMinFans.value    = tab.num_min_fans    ?? '';
   if (elMinFanCapM3h)  elMinFanCapM3h.value  = tab.min_fan_cap_m3h ?? '';
+  syncCageFieldsVisibility();
   // Если заданы параметры вентиляторов — авто-вычислить cap и показать подсказку
   syncCap();
   // Показать UA badge если корпус откалиброван
@@ -225,6 +245,9 @@ function readFormToTab() {
   tab.width_m         = read(elHouseWid,      null);
   tab.height_wall_m   = read(elHouseHgtWall,  null);
   tab.height_ridge_m  = read(elHouseHgtRidge, null);
+  tab.cage_rows_count  = read(elCageCount,    null);
+  tab.cage_row_width_m = read(elCageWidth,    null);
+  tab.cage_row_height_m = read(elCageHeight,  null);
   tab.num_fans        = read(elNumFans,       null);
   tab.fan_cap_m3h     = read(elFanCapM3h,     null);
   tab.num_min_fans    = read(elNumMinFans,    null);

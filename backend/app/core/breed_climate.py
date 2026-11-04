@@ -40,6 +40,8 @@ TURKEY_AVIAGEN = "aviagen_turkey_by_age"
 TURKEY_HYBRID = "hybrid_turkey_by_age"
 BREEDER_ROSS = "ross_ps_by_age"
 BREEDER_COBB = "cobb_breeder_by_age"
+LAYER_LOHMANN = "lohmann_cage_by_age"
+LAYER_HYLINE = "hyline_cage_by_age"
 
 # Код методики конкретного дня (уходит в ответ расчёта и в выбор источника)
 DAY_ROSS = "mitchell_by_weight"
@@ -54,6 +56,9 @@ DAY_TURKEY_PROFILE = "custom_turkey_profile"
 DAY_BREEDER_ROSS = BREEDER_ROSS
 DAY_BREEDER_COBB = BREEDER_COBB
 DAY_BREEDER_PROFILE = "custom_breeder_profile"
+DAY_LAYER_LOHMANN = LAYER_LOHMANN
+DAY_LAYER_HYLINE = LAYER_HYLINE
+DAY_LAYER_PROFILE = "custom_layer_profile"
 
 # Метка справочника /sources для каждой методики дня
 SOURCE_BY_DAY_METHOD = {
@@ -69,6 +74,8 @@ SOURCE_BY_DAY_METHOD = {
     DAY_TURKEY_HYBRID: "hybrid_turkey_cmg_p56",
     DAY_BREEDER_ROSS: "ross_ps_2023_t4",
     DAY_BREEDER_COBB: "cobb_breeder_2021_temp",
+    DAY_LAYER_LOHMANN: "lohmann_cage_2019",
+    DAY_LAYER_HYLINE: "hyline_cage_2025",
 }
 
 
@@ -191,6 +198,11 @@ def setpoint_for_day(
         return Setpoint(base, method)
     if profile.species == "broiler_breeder":
         return Setpoint(base, DAY_BREEDER_PROFILE)
+
+    if method in (LAYER_LOHMANN, LAYER_HYLINE):
+        return Setpoint(base, method)
+    if profile.species == "layer":
+        return Setpoint(base, DAY_LAYER_PROFILE)
 
     if method == COBB:
         if age <= COBB_AGE_TABLE_LAST_DAY:

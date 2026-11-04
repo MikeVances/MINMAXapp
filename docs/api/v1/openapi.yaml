@@ -587,25 +587,25 @@ components:
                 cycle_days:
                   type: integer
                   minimum: 21
-                  maximum: 455
+                  maximum: 700
                   description: |
                     Последний день в корпусе. Бройлер — до 63 (иначе 422
                     broiler_day_out_of_range), индейка — до 154 (22 недели),
-                    родительское стадо — до 455 (65 недель)
+                    родительское стадо — до 455 (65 недель), несушка — до 700 (100 недель)
                 first_day:
                   type: integer
                   minimum: 1
-                  maximum: 454
+                  maximum: 699
                   default: 1
                   description: |
-                    День посадки в этот корпус. Индейка на доращивании или родительское стадо в
+                    День посадки в этот корпус. Индейка на доращивании или родительское стадо / несушка в
                     продуктивном периоде — день пересадки: дни считаются с него, падёж
                     mortality_pct — за дни в корпусе
                 stage:
                   type: string
                   enum: [brooder, grow_out, rearing, production]
                   description: |
-                    Индейка (`brooder`, `grow_out`) или родительское стадо (`rearing`, `production`),
+                    Индейка (`brooder`, `grow_out`), родительское стадо или несушка (`rearing`, `production`),
                     обязателен (иначе 422 turkey_stage_required); у бройлера — 422 stage_turkey_only.
                     Задаёт нормы вентиляции, проектную скорость тоннеля и предел плотности
                 hens:
@@ -795,9 +795,9 @@ components:
             birds: { type: integer, minimum: 1, maximum: 200000 }
             growth_profile_id: { type: string, pattern: "^[a-z0-9][a-z0-9_-]{0,63}$", example: ross308 }
             housing: { type: string, enum: [floor_litter, cages] }
-            age_days: { type: integer, minimum: 0, maximum: 455, description: "Бройлер — до 70 (иначе 422 broiler_day_out_of_range), индейка — до 154, родительское стадо — до 455" }
+            age_days: { type: integer, minimum: 0, maximum: 700, description: "Бройлер — до 70 (иначе 422 broiler_day_out_of_range), индейка — до 154, родительское стадо — до 455, несушка — до 700" }
             target_rh_pct: { type: number, minimum: 40, maximum: 70, description: "Нет — RH профиля" }
-            stage: { type: string, enum: [brooder, grow_out, rearing, production], description: "Индейка (brooder, grow_out) и родительское стадо (rearing, production), обязателен" }
+            stage: { type: string, enum: [brooder, grow_out, rearing, production], description: "Индейка (brooder, grow_out), родительское стадо и несушка (rearing, production), обязателен" }
             hens:
               type: object
               additionalProperties: false
@@ -945,7 +945,7 @@ components:
         name: { type: string }
         breed: { type: string }
         builtin: { type: boolean }
-        species: { type: string, enum: [broiler, turkey, broiler_breeder] }
+        species: { type: string, enum: [broiler, turkey, broiler_breeder, layer] }
         sex: { type: string, enum: [male, female], description: "Пол стада, для которого дана кривая массы" }
         first_day: { type: integer }
         last_day: { type: integer }
@@ -958,11 +958,11 @@ components:
         name: { type: string }
         breed: { type: string }
         builtin: { type: boolean }
-        species: { type: string, enum: [broiler, turkey, broiler_breeder] }
+        species: { type: string, enum: [broiler, turkey, broiler_breeder, layer] }
         sex: { type: string, enum: [male, female] }
         min_vent_norm:
           type: string
-          enum: [aviagen_turkey_per_kg, hybrid_turkey_per_week, ross_ps_table25]
+          enum: [aviagen_turkey_per_kg, hybrid_turkey_per_week, ross_ps_table25, hyline_2018_xin, hendrix_cage_07]
           description: "Норма минвентиляции производителя: входит в Qmin = max(CO₂, норма, влага)"
         sources:
           type: object

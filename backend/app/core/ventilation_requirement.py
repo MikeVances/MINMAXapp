@@ -118,7 +118,7 @@ def _requirement(inp: RequirementInput) -> RequirementResult:
     target = tunnel_target(g, inp.housing, inp.cage_rows, profile.species, inp.stage, inp.tunnel_rules)
     source_ids.add(target.source_id)
     if cages:
-        cage_notes(assumptions, source_ids)
+        cage_notes(assumptions, source_ids, profile.species)
 
     ua: Optional[float] = None
     env = None
@@ -154,10 +154,11 @@ def _requirement(inp: RequirementInput) -> RequirementResult:
     now: CalcResult = compute_with(CalcInput(heater_on=heater_on, **common), params,
                                    HouseThermal(ua_w_per_k=ua, heater=inp.heater))
 
-    # Клетки: Qmax — по явному теплу уровня птицы (верхний край вилки), Qmin и
-    # тепло — уровня корпуса (как подстилка), см. README «Клетки»
+    # Клетки бройлера: Qmax — по явному теплу уровня птицы (верхний край вилки), Qmin и
+    # тепло — уровня корпуса (как подстилка), см. README «Клетки». У несушек в клетках
+    # CIGR 2002 §3.3.2 ур. 34 напрямую задаёт явное тепло клеточного зала
     qmax = now.q_max_m3h
-    if cages:
+    if cages and profile.species == "broiler":
         hot = compute_with(CalcInput(**common),
                            CalcParams(total_mortality_pct=0.0, v_tunnel_ms=target.speed_ms[1],
                                       bird_speed_share=share, stage=inp.stage,
@@ -245,8 +246,8 @@ def _tunnel_now(inp: RequirementInput, age: int, target, now: CalcResult, qmax: 
         "free_section_m2": round(target.section_m2, 2),
     }
     # Таблица ощущаемой температуры и предел 30 °C — бройлерные (Cobb §9.7): для
-    # индейки и родительского стада их нет, и ощущаемую температуру мы не выдаём
-    if species not in ("turkey", "broiler_breeder"):
+    # индейки, родительского стада и несушек их нет, и ощущаемую температуру мы не выдаём
+    if species not in ("turkey", "broiler_breeder", "layer"):
         out["effective_temp_limit_c"] = EFFECTIVE_TEMP_MAX_C
     if cages:
         out["bird_speed_ms"] = {"min": round(speed[0] * share, 2), "max": round(speed[1] * share, 2),
@@ -260,6 +261,8 @@ def _tunnel_now(inp: RequirementInput, age: int, target, now: CalcResult, qmax: 
         assumptions.append(Note("effective_temp_not_for_turkey"))
     elif now.tunnel_active and species == "broiler_breeder":
         assumptions.append(Note("effective_temp_not_for_breeder"))
+    elif now.tunnel_active and species == "layer":
+        assumptions.append(Note("effective_temp_not_for_layer"))
     elif now.tunnel_active:
         # Птица у вентиляторов дышит воздухом, нагретым по длине корпуса
         rise = air_temperature_rise_c(inp.birds, now.weight_used_g / 1000.0, inp.outdoor_t_c, qmax / 3600.0)

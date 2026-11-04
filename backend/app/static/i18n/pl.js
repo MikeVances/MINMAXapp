@@ -134,10 +134,10 @@
     phys_floor_area:     'Powierzchnia podłogi',
     phys_volume:         'Kubatura kurnika',
     phys_cross_section:  'Przekrój poprzeczny (tunel)',
-    phys_min_vent_check: 'Biologiczne Qmin/m² (dzień 1)',
+    phys_min_vent_check: 'Biologiczne Qmin/m² (dzień {day})',
     phys_min_fans_check: 'Wentylatory wentylacji minimalnej/m²',
     phys_min_fans_norm:  '≥18 klimat gorący · 37–46 zimny',
-    phys_max_vent_check: 'Wydajność syst./m² (dzień 42, tunel)',
+    phys_max_vent_check: 'Wydajność syst./m² (dzień {day}, tunel)',
     phys_exchange_time:  'Wymiana powietrza przy maks. wydajności',
     phys_airspeed_tunnel:'Prędkość powietrza w tunelu przy maks. wydajności',
     phys_airspeed_target:'cel {min}–{max} m/s w dniu {day}',
@@ -620,6 +620,8 @@
     turkey_first_day_lbl:              'Od dnia (wstawienie)',
     turkey_last_day_lbl:               'Do dnia',
     sum_turkey_days:                   'dni {from}–{to}',
+    sum_breeder_males_tag:             '♀ (+ 10→7 % ♂ auto)',
+    breeder_males_auto_note:           'W okresie produkcyjnym do stada kur automatycznie doliczane są koguty wg normy mieszańca (10 → 7 % z wiekiem); masa i wymiana powietrza dotyczą połączonego stada.',
     gp_src_copied_from:               'skopiowano z {id}',
 
     // ── Water supply note (pad cooling), house naming ──
@@ -685,4 +687,14 @@
     sum_tunnel_exchange:   'wg wymiany {s} s ({ach} wym./h, v = {v} m/s)',
     sum_tunnel_max_speed:  'większa z dwóch → prędkość {v} m/s ({s} s / {ach} wym./h spełnione)',
     sum_tunnel_max_exch:   'większa z dwóch → wymiana {s} s ({ach} wym./h, v = {v} m/s)',
+
+    // ── Cage batteries and commercial layers in cages ──
+    label_cage_dims_grp:   'Baterie klatkowe (wolny przekrój tunelu)',
+    label_cage_rows_count: 'Rzędów baterii, szt.',
+    label_cage_row_width:  'Szerokość rzędu, m',
+    label_cage_row_height: 'Wysokość rzędu, m',
+    layer_stage_rearing:    'Odchów odchówek (1–17 tydz., dni 1–119)',
+    layer_stage_production: 'Stado dorosłe — nieśność (18–72 tydz., dni 120–504)',
+    gp_src_method_lohmann_cage_by_age: 'wg wieku (poradnik klatkowy Lohmann)',
+    gp_src_method_hyline_cage_by_age:  'wg wieku (poradnik Hy-Line)',
 };

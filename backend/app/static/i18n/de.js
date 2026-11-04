@@ -134,10 +134,10 @@
     phys_floor_area:     'Grundfläche',
     phys_volume:         'Stallvolumen',
     phys_cross_section:  'Querschnitt (Tunnel)',
-    phys_min_vent_check: 'Biologisches Q_min/m² (Tag 1)',
+    phys_min_vent_check: 'Biologisches Q_min/m² (Tag {day})',
     phys_min_fans_check: 'Mindestlüftungs-Ventilatoren/m²',
     phys_min_fans_norm:  '≥18 heißes Klima · 37–46 kaltes',
-    phys_max_vent_check: 'Systemkapazität/m² (Tag 42 Tunnel)',
+    phys_max_vent_check: 'Systemkapazität/m² (Tag {day} Tunnel)',
     phys_exchange_time:  'Luftwechsel bei Systemmax.',
     phys_airspeed_tunnel:'Tunnelluftgeschwindigkeit bei Systemmax.',
     phys_airspeed_target:'Ziel {min}–{max} m/s am Tag {day}',
@@ -620,6 +620,8 @@
     turkey_first_day_lbl:              'Ab Tag (Einstallung)',
     turkey_last_day_lbl:               'Bis Tag',
     sum_turkey_days:                   'Tage {from}–{to}',
+    sum_breeder_males_tag:             '♀ (+ 10→7 % ♂ auto)',
+    breeder_males_auto_note:           'In der Produktionsphase werden Hähne gemäß Zuchtleitfaden automatisch zur Hennenherde addiert (10 → 7 % nach Alter); Gewicht und Luftwechsel gelten für die Gesamtherde.',
     gp_src_copied_from:               'kopiert aus {id}',
 
     // ── Water supply note (pad cooling), house naming ──
@@ -685,4 +687,14 @@
     sum_tunnel_exchange:   'nach Luftwechsel {s} s ({ach} W/h, v = {v} m/s)',
     sum_tunnel_max_speed:  'Maximum → Geschwindigkeit {v} m/s ({s} s / {ach} W/h erfüllt)',
     sum_tunnel_max_exch:   'Maximum → Luftwechsel {s} s ({ach} W/h, v = {v} m/s)',
+
+    // ── Cage batteries and commercial layers in cages ──
+    label_cage_dims_grp:   'Käfigbatterien (für freien Tunnelquerschnitt)',
+    label_cage_rows_count: 'Batteriereihen, Anz.',
+    label_cage_row_width:  'Reihenbreite, m',
+    label_cage_row_height: 'Reihenhöhe, m',
+    layer_stage_rearing:    'Junghennenaufzucht (1.–17. Wo., Tag 1–119)',
+    layer_stage_production: 'Adulte Herde — Legeperiode (18.–72. Wo., Tag 120–504)',
+    gp_src_method_lohmann_cage_by_age: 'nach Alter (Lohmann Käfig-Leitfaden)',
+    gp_src_method_hyline_cage_by_age:  'nach Alter (Hy-Line Leitfaden)',
 };

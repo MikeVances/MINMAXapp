@@ -12,7 +12,7 @@ from .psychro import humidity_ratio
 from .bird_heat import HouseHeat, house_heat_per_bird, house_sensible_fraction
 from .ventilation_calc import calc_q_min_per_bird
 from .turkey_norms import guide_min_vent_m3h
-from . import breeder_norms
+from . import breeder_norms, layer_norms
 from .app_config import load_app_config
 from .building_thermal import (
     BuildingDimensions,
@@ -308,9 +308,8 @@ def compute(ci: CalcInput, **overrides) -> CalcResult:
     цикл, день посадки и скорость тоннеля, которых в настройках бройлерной фермы нет.
     """
     thermal = _stored_thermal(ci.house_id)
-    # Пол для плотности посадки Cobb — из сохранённых размеров корпуса: клеток в
-    # интерфейсе нет, а без площади у Cobb после 14-го дня остались бы значения Ross
-    if ci.stocking_floor_m2 is None and thermal.building is not None:
+    # Пол для плотности посадки Cobb — из сохранённых размеров корпуса (только при напольном содержании)
+    if ci.stocking_floor_m2 is None and thermal.building is not None and overrides.get("bird_speed_share", 1.0) == 1.0:
         ci = replace(ci, stocking_floor_m2=thermal.building.floor_area_m2)
     return compute_with(ci, replace(CalcParams.from_app_config(load_app_config()), **overrides), thermal)
 
@@ -366,7 +365,7 @@ def compute_with(ci: CalcInput, params: CalcParams, thermal: HouseThermal) -> Ca
         c_birds = group.birds * survival_fraction(age - shift, params.total_mortality_pct,
                                                   params.cycle_days - shift)
         companion = (c_profile, c_point, c_birds)
-    elif group is None and params.stage == breeder_norms.PRODUCTION:
+    elif group is None and params.stage == breeder_norms.PRODUCTION and profile.species == "broiler_breeder":
         males_info = breeder_norms.production_males(profile, age)
         if males_info is not None:
             male_pid, male_share, _ = males_info
@@ -426,6 +425,8 @@ def compute_with(ci: CalcInput, params: CalcParams, thermal: HouseThermal) -> Ca
             q_min_guide += breeder_norms.guide_min_vent_m3h(
                 profile.min_vent_norm, companion_alive, max(companion_weight_g / 1000.0, 0.0001)
             )
+    elif profile.min_vent_norm in layer_norms.GUIDE_NORMS:
+        q_min_guide = layer_norms.guide_min_vent_m3h(profile.min_vent_norm, birds_eff, weight_kg, age)
     elif profile.min_vent_norm:
         q_min_guide = guide_min_vent_m3h(profile.min_vent_norm, birds_eff, weight_kg, age,
                                          ci.stocking_floor_m2)

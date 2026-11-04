@@ -36,10 +36,16 @@ def test_every_ready_line_has_builtin_profiles():
             assert line.species in builtin_species, line.id
 
 
-def test_ready_lines_are_floor_only():
-    # Вентиляционный профиль в интерфейсе считает без способа содержания (подстилка).
-    # Клетки готовы только в API v1 — пометить их ready значило бы молча считать
-    # клеточный корпус как напольный
-    for line in LINES:
-        if line.status == "ready":
-            assert line.housing == "floor_litter", line.id
+def test_ready_and_planned_lines():
+    # Готовы: бройлер (пол и клетки), индейка (пол), родители бройлеров (пол) и несушка (клетки).
+    # В плане остаются: родители несушек в клетках и утка на полу
+    ready_ids = {l.id for l in LINES if l.status == "ready"}
+    planned_ids = {l.id for l in LINES if l.status == "planned"}
+    assert ready_ids == {
+        "broiler_floor",
+        "broiler_cages",
+        "turkey",
+        "broiler_breeders_floor",
+        "layers_cages",
+    }
+    assert planned_ids == {"layer_breeders_cages", "duck"}

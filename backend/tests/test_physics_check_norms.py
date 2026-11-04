@@ -16,13 +16,15 @@ JS = (Path(__file__).resolve().parents[1] / "app" / "static" / "calculators.js")
 
 
 def _row(key: str) -> str:
-    m = re.search(rf"t\('{key}'\).*", JS)
+    m = re.search(rf"t\('{key}'[,)].*", JS)
     assert m, key
     return m.group(0)
 
 
 def test_biological_qmin_is_not_compared_with_the_fan_norm():
     assert "≥18" not in _row("phys_min_vent_check")
+    assert "r0 ? r0.day : 1" in _row("phys_min_vent_check")
+    assert "r42 ? r42.day : 42" in _row("phys_max_vent_check")
 
 
 def test_installed_min_vent_fans_are_checked_against_cobb():

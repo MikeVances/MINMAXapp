@@ -134,10 +134,10 @@
     phys_floor_area:     'Surface au sol',
     phys_volume:         'Volume du bâtiment',
     phys_cross_section:  'Section transversale (tunnel)',
-    phys_min_vent_check: 'Qmin biologique/m² (jour 1)',
+    phys_min_vent_check: 'Qmin biologique/m² (jour {day})',
     phys_min_fans_check: 'Ventilateurs de ventilation minimale/m²',
     phys_min_fans_norm:  '≥18 climat chaud · 37–46 froid',
-    phys_max_vent_check: 'Capacité système/m² (tunnel jour 42)',
+    phys_max_vent_check: 'Capacité système/m² (tunnel jour {day})',
     phys_exchange_time:  'Renouvellement d\'air à capacité max.',
     phys_airspeed_tunnel:'Vitesse d\'air tunnel à capacité max.',
     phys_airspeed_target:'cible {min}–{max} m/s au jour {day}',
@@ -620,6 +620,8 @@
     turkey_first_day_lbl:              'Du jour (mise en place)',
     turkey_last_day_lbl:               'Au jour',
     sum_turkey_days:                   'jours {from}–{to}',
+    sum_breeder_males_tag:             '♀ (+ 10→7 % ♂ auto)',
+    breeder_males_auto_note:           'En période de production, les coqs sont ajoutés automatiquement au troupeau de poules selon le guide de la souche (10 → 7 % selon l’âge) ; le poids et les débits reflètent le troupeau mixte.',
     gp_src_copied_from:               'copié depuis {id}',
 
     // ── Water supply note (pad cooling), house naming ──
@@ -685,4 +687,14 @@
     sum_tunnel_exchange:   'par renouvellement {s} s ({ach} vol/h, v = {v} m/s)',
     sum_tunnel_max_speed:  'max des deux → vitesse {v} m/s ({s} s / {ach} vol/h respecté)',
     sum_tunnel_max_exch:   'max des deux → renouvellement {s} s ({ach} vol/h, v = {v} m/s)',
+
+    // ── Cage batteries and commercial layers in cages ──
+    label_cage_dims_grp:   'Batteries de cages (section libre du tunnel)',
+    label_cage_rows_count: 'Rangées de batteries, nb',
+    label_cage_row_width:  'Largeur de rangée, m',
+    label_cage_row_height: 'Hauteur de rangée, m',
+    layer_stage_rearing:    'Élevage poulettes (sem. 1–17, j. 1–119)',
+    layer_stage_production: 'Troupeau adulte — ponte (sem. 18–72, j. 120–504)',
+    gp_src_method_lohmann_cage_by_age: 'selon l’âge (guide cages Lohmann)',
+    gp_src_method_hyline_cage_by_age:  'selon l’âge (guide Hy-Line)',
 };

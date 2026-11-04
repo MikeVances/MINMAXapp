@@ -36,8 +36,8 @@ LINES: tuple[ProductionLine, ...] = (
     ProductionLine("broiler_floor",          "broiler",         "floor_litter", "ready"),
     ProductionLine("turkey",                 "turkey",          "floor_litter", "ready"),
     ProductionLine("broiler_breeders_floor", "broiler_breeder", "floor_litter", "ready"),
-    ProductionLine("broiler_cages",          "broiler",         "cages",        "api"),
-    ProductionLine("layers_cages",           "layer",           "cages",        "planned"),
+    ProductionLine("broiler_cages",          "broiler",         "cages",        "ready"),
+    ProductionLine("layers_cages",           "layer",           "cages",        "ready"),
     ProductionLine("layer_breeders_cages",   "layer_breeder",   "cages",        "planned"),
     ProductionLine("duck",                   "duck",            "floor_litter", "planned"),
 )

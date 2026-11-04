@@ -286,11 +286,11 @@ class FlockIn(_Strict):
     housing: Literal["floor_litter", "cages"]
     mortality_pct: float = Field(4.0, ge=0, le=100)
     target_rh_pct: Optional[float] = Field(None, ge=40, le=70)
-    # Последний день в корпусе. Верх — цикл родительского стада (65 нед = 455 дн);
+    # Последний день в корпусе. Верх — цикл несушки (100 нед = 700 дн);
     # бройлеру и индейке ядро проверяет предел по виду птицы (broiler_day_out_of_range)
-    cycle_days: int = Field(..., ge=21, le=455)
-    # Индейка и родительское стадо: день посадки в этот корпус и этап содержания
-    first_day: int = Field(1, ge=1, le=454)
+    cycle_days: int = Field(..., ge=21, le=700)
+    # Индейка, родительское стадо и несушка: день посадки в этот корпус и этап содержания
+    first_day: int = Field(1, ge=1, le=699)
     stage: Optional[Literal["brooder", "grow_out", "rearing", "production"]] = None
     hens: Optional[HensIn] = None
 
@@ -371,8 +371,8 @@ class FlockNowIn(_Strict):
     birds: int = Field(..., ge=1, le=200_000)
     growth_profile_id: str = Field(..., pattern=PROFILE_ID_PATTERN)
     housing: Literal["floor_litter", "cages"]
-    # Верх — цикл родительского стада (455 дн); бройлеру и индейке ядро проверяет предел
-    age_days: int = Field(..., ge=0, le=455)
+    # Верх — цикл несушки (700 дн); бройлеру и индейке ядро проверяет предел
+    age_days: int = Field(..., ge=0, le=700)
     target_rh_pct: Optional[float] = Field(None, ge=40, le=70)
     stage: Optional[Literal["brooder", "grow_out", "rearing", "production"]] = None
     hens: Optional[HensNowIn] = None

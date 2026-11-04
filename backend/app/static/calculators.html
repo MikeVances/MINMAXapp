@@ -52,20 +52,20 @@
     <div class="card mb-16">
 
       <!-- House selector — reads from main-page localStorage data -->
-      <div class="mb-14 d-flex ai-center gap-10 wrap">
-        <label class="d-flex ai-center gap-8 m-0">
-          <span class="muted fs-12 ws-nowrap" data-i18n="prof_from_house">House:</span>
-          <select id="prof-house-select" class="minw-200"></select>
+      <div class="field-row mb-14">
+        <label>
+          <span data-i18n="prof_from_house">House:</span>
+          <select id="prof-house-select"></select>
         </label>
         <!-- Профиль роста (кросс) для выбранного корпуса — заполняет редактор профиля -->
-        <label class="d-flex ai-center gap-8 m-0">
-          <span class="muted fs-12 ws-nowrap" data-i18n="growth_profile_lbl">Growth profile:</span>
-          <select id="prof-growth-select" class="minw-200"></select>
+        <label>
+          <span data-i18n="growth_profile_lbl">Growth profile:</span>
+          <select id="prof-growth-select"></select>
         </label>
       </div>
 
       <!-- Индейка и родительское стадо: этапы содержания и дни этапа; у бройлера блока нет -->
-      <div id="prof-turkey-stage" class="field-row mb-14" hidden>
+      <div id="prof-turkey-stage" class="field-row-3 mb-14" hidden>
         <label>
           <span data-i18n="turkey_stage_lbl">Stage</span>
           <select id="prof-stage">
@@ -77,11 +77,11 @@
         </label>
         <label>
           <span data-i18n="turkey_first_day_lbl">From day (placement)</span>
-          <input id="prof-first-day" type="text" data-num data-int inputmode="numeric" data-min="1" data-max="454">
+          <input id="prof-first-day" type="text" data-num data-int inputmode="numeric" data-min="1" data-max="699">
         </label>
         <label>
           <span data-i18n="turkey_last_day_lbl">To day</span>
-          <input id="prof-last-day" type="text" data-num data-int inputmode="numeric" data-min="2" data-max="455">
+          <input id="prof-last-day" type="text" data-num data-int inputmode="numeric" data-min="2" data-max="700">
         </label>
       </div>
 
@@ -113,7 +113,7 @@
       </div>
 
       <!-- Способ расчёта туннельного расхода: по скорости воздуха, по времени/кратности воздухообмена или по большему из двух -->
-      <div class="field-row mb-14">
+      <div id="prof-tunnel-row" class="field-row mb-14">
         <label>
           <span data-i18n="label_tunnel_mode">Tunnel calculation</span>
           <select id="prof-tunnel-mode">

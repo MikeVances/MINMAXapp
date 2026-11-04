@@ -134,10 +134,10 @@
     phys_floor_area:     'Площадь пола',
     phys_volume:         'Объём птичника',
     phys_cross_section:  'Поперечное сечение (тоннель)',
-    phys_min_vent_check: 'Биол. Qmin/м² (день 1)',
+    phys_min_vent_check: 'Биол. Qmin/м² (день {day})',
     phys_min_fans_check: 'Вентиляторы минвентиляции/м²',
     phys_min_fans_norm:  '≥18 жаркий климат · 37–46 холодный',
-    phys_max_vent_check: 'Мощность системы/м² (тоннель д.42)',
+    phys_max_vent_check: 'Мощность системы/м² (тоннель д.{day})',
     phys_exchange_time:  'Воздухообмен при макс. мощности',
     phys_airspeed_tunnel:'Скорость тоннеля при макс. мощности',
     phys_airspeed_target:'цель {min}–{max} м/с на {day}-й день',
@@ -621,6 +621,8 @@
     turkey_first_day_lbl:              'С дня (посадка)',
     turkey_last_day_lbl:               'По день',
     sum_turkey_days:                   'дни {from}–{to}',
+    sum_breeder_males_tag:             '♀ (+ 10→7 % ♂ авто)',
+    breeder_males_auto_note:           'В продуктивном периоде к поголовью курочек автоматически добавлены петухи по норме кросса (10 → 7 % с возрастом); вес и воздухообмен рассчитаны на совместное стадо.',
     gp_src_copied_from:               'скопировано из {id}',
 
     // ── Water supply note (pad cooling), house naming ──
@@ -686,4 +688,14 @@
     sum_tunnel_exchange:   'по воздухообмену {s} с ({ach} об/ч, v = {v} м/с)',
     sum_tunnel_max_speed:  'по большему → скорость {v} м/с (кратность {s} с / {ach} об/ч выполнена)',
     sum_tunnel_max_exch:   'по большему → воздухообмен {s} с ({ach} об/ч, v = {v} м/с)',
+
+    // ── Клеточные батареи и товарная несушка в клетках ──
+    label_cage_dims_grp:   'Клеточные батареи (для свободного сечения туннеля)',
+    label_cage_rows_count: 'Рядов батарей, шт.',
+    label_cage_row_width:  'Ширина ряда, м',
+    label_cage_row_height: 'Высота ряда, м',
+    layer_stage_rearing:    'Ремонтный молодняк (1–17 нед., 1–119 дн.)',
+    layer_stage_production: 'Взрослое стадо — яйцекладка (18–72 нед., 120–504 дн.)',
+    gp_src_method_lohmann_cage_by_age: 'по возрасту (руководство Lohmann для клеток)',
+    gp_src_method_hyline_cage_by_age:  'по возрасту (руководство Hy-Line)',
 };

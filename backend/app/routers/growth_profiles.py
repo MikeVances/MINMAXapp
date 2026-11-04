@@ -42,9 +42,9 @@ router = APIRouter()
 # ref/page/table/column/basis/method/url — клиент собирает из неё подпись на своём языке
 SourceValue = Union[str, Dict[str, Union[str, int, float]]]
 
-# Пределы — под родительское стадо (цикл до 65 недель = 455 дней) и индюка (масса до ~25 кг)
+# Пределы — под несушек (цикл до 100 недель = 700 дней), родительское стадо (455 дней) и индюка (масса до ~25 кг)
 class PointModel(BaseModel):
-    day: int = Field(..., ge=0, le=460)
+    day: int = Field(..., ge=0, le=700)
     body_weight_g: Optional[float] = Field(None, gt=0, le=40_000)
     min_temp_c: Optional[float] = Field(None, ge=0, le=45)
     rv_percent: Optional[float] = Field(None, ge=0, le=100)
@@ -81,12 +81,18 @@ class ProfileIn(BaseModel):
     name: str = Field(..., min_length=1, max_length=80)
     breed: Optional[str] = Field(None, max_length=80)
     source: Dict[str, SourceValue] = Field(default_factory=dict)
-    points: List[PointModel] = Field(..., min_length=2, max_length=500)
-    # Копия кросса индейки или родительского стада сохраняет вид и норму минвентиляции
-    species: Literal["broiler", "turkey", "broiler_breeder"] = "broiler"
+    points: List[PointModel] = Field(..., min_length=2, max_length=705)
+    # Копия кросса индейки, родительского стада или несушки сохраняет вид и норму минвентиляции
+    species: Literal["broiler", "turkey", "broiler_breeder", "layer"] = "broiler"
     sex: Optional[Literal["male", "female"]] = None
     min_vent_norm: Optional[
-        Literal["aviagen_turkey_per_kg", "hybrid_turkey_per_week", "ross_ps_table25"]
+        Literal[
+            "aviagen_turkey_per_kg",
+            "hybrid_turkey_per_week",
+            "ross_ps_table25",
+            "hyline_2018_xin",
+            "hendrix_cage_07",
+        ]
     ] = None
     # Пары (первый день, °C); без неё копия кросса Hybrid считала бы смешанное стадо по
     # таблице самцов
@@ -168,8 +174,13 @@ def put_profile(profile_id: str, payload: ProfileIn):
     if sum(1 for pt in payload.points if pt.min_temp_c is not None) < 2:
         raise api_error(422, "profile_needs_two_temps")
 
-    # Нормы минвентиляции привязаны к виду птицы (индейка или родительское стадо)
-    expected_species = "broiler_breeder" if payload.min_vent_norm == "ross_ps_table25" else "turkey"
+    # Нормы минвентиляции привязаны к виду птицы (индейка, родительское стадо или несушка)
+    if payload.min_vent_norm == "ross_ps_table25":
+        expected_species = "broiler_breeder"
+    elif payload.min_vent_norm in ("hyline_2018_xin", "hendrix_cage_07"):
+        expected_species = "layer"
+    else:
+        expected_species = "turkey"
     if payload.min_vent_norm and payload.species != expected_species:
         raise api_error(422, "profile_norm_turkey_only", norm=payload.min_vent_norm)
     # Ступень — пара (день, °C) по возрастанию дня: иначе ступени перепутаются молча

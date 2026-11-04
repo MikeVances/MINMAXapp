@@ -169,3 +169,5 @@ data/*.jsonl*
 
 # Первоисточники (PDF руководств и статей) — локально, не в git
 /refs/
+/ux_audit/
+/audit_screenshots/

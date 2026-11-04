@@ -447,6 +447,91 @@ _SOURCES: tuple[Source, ...] = (
         url="https://www.cobbgenetics.com/assets/Cobb-Files/Cobb-Breeder-Management-Guide.pdf",
     ),
 
+    # ── Ремонтный молодняк и промышленные несушки в клетках (layer) ─────────────
+    Source(
+        id="cigr_2002_layer_cages", kind="standard",
+        citation="CIGR Working Group (2002), §2.7.2 eq. 17 & §3.3.2 eq. 34 — laying hens in cages "
+                 "total heat Φtot = 6.28·m^0.75 + 25·Y₂ and house-level sensible heat",
+        title="Heat and moisture production at animal and house levels",
+        publisher="CIGR Working Group (Pedersen & Sällvik, eds.)", year=2002,
+        locator="§2.7.2, ур. 17, с. 12; §2.10, ур. 26, с. 18; §3.3.2, ур. 34, рис. 3.7, с. 26–27",
+        applies_to="полное, явное и скрытое тепло молодняка и несушек в клетках (обогрев, Qmax, влага, CO₂)",
+        statement="Полное тепло кур-несушек в клетках при 20 °C: Φtot = 6.28·m^0.75 + 25·Y₂ Вт "
+                  "(m — живая масса, кг; Y₂ — суточная яйцемасса, кг/сут; у ремонтного молодняка Y₂ = 0). "
+                  "Поправка по температуре — ур. 26: [1000 + 20·(20 − t)]/1000. Явное тепло клеточного зала "
+                  "на 1 hpu (1000 Вт при 20 °C) по измерениям в Северной Европе (Pedersen et al., 1998) — "
+                  "ур. 34: Φs = 0.67·(1000 + 20·(20 − t)) − 9.8·10⁻⁸·t⁶ Вт.",
+        how_used="Для вида птицы layer полное тепло считается по ур. 17 с поправкой ур. 26, а доля явного "
+                 "тепла клеточного зала — напрямую по ур. 34 (зимой и летом без вилки подстилка/птица).",
+        limits="Уравнение 34 получено на клеточных корпусах с помётными лентами в умеренном климате "
+               "Северной Европы; при длительном хранении помёта под клетками доля скрытого тепла выше.",
+        url="https://www.cigr.org/sites/default/files/documets/CIGR_4TH_WORK_GR.pdf",
+    ),
+    Source(
+        id="lohmann_cage_2019", kind="manufacturer",
+        citation="Lohmann Tierzucht — Management Guide Cage Housing (LSL-Classic & Brown-Classic), "
+                 "Table 1 (temperatures & RH), Table 17 (body weight), Table 18 (egg mass)",
+        title="Management Guide Cage Housing: Lohmann LSL-Classic / Lohmann Brown-Classic",
+        publisher="Lohmann Tierzucht", year=2019,
+        locator="табл. 1–2, с. 10; табл. 17, с. 34–35; табл. 18, с. 38–39",
+        applies_to="профили роста, яйцемассы и температуры в клетках для Lohmann LSL-Classic и Brown-Classic",
+        statement="Температура на уровне птицы: 1–2 сут — 35–36 °C, 3–4 — 33–34, 5–7 — 31–32, 2-я нед. — 28–29, "
+                  "3-я нед. — 26–27, 4-я нед. — 22–24, с 5-й недели — 18–20 °C; относительная влажность "
+                  "60–70 %; CO₂ < 0.3 % (3000 ppm), NH₃ < 20 ppm.",
+        how_used="Уставка дня — середина рекомендованного диапазона температуры по возрасту и RH 65 %; "
+                 "живая масса (1–72 нед.) и суточная яйцемасса Y₂ (19–72 нед.) — по таблицам 17 и 18.",
+        limits="Отдельной таблицы минимального воздухообмена в м³/ч·гол руководство не задаёт — "
+               "ориентиром служат пределы газов (CO₂ < 3000 ppm) и влагобаланс.",
+        url="https://lohmann-breeders.com/",
+    ),
+    Source(
+        id="hyline_cage_2025", kind="manufacturer",
+        citation="Hy-Line International — Performance Standards Guide, Conventional Systems: "
+                 "Hy-Line Brown (2025) & Hy-Line W-36 (2020)",
+        title="Hy-Line Brown & W-36 Commercial Layers Performance Standards Guide (Conventional Systems)",
+        publisher="Hy-Line International", year=2025,
+        locator="с. 4 (Rearing 1–17 нед.), с. 5–6 (Production 18–100 нед.), с. 9 (Brooding Temp Cage)",
+        applies_to="профили роста, яйцемассы и температуры в клетках для Hy-Line Brown и Hy-Line W-36",
+        statement="Температура воздуха в клетках при брудинге: 0–3 сут — 33–36 °C (Brown) / 32–33 °C (W-36), "
+                  "4–7 — 30–32, 8–14 — 28–30, 15–21 — 26–28, 22–28 — 23–26, 29–35 — 21–23, с 36-го дня — "
+                  "21 °C (в продуктивном периоде 18–25 °C, оптимум ~20 °C); RH ~60 %.",
+        how_used="Живая масса и яйцемасса — середина нормативной вилки Low–High по неделям 1–72; "
+                 "уставка температуры — середина диапазона для клеток.",
+        limits="Таблицы даны для конвенциональных и колониальных клеток при нормальном кормлении.",
+        url="https://www.hyline.com/",
+    ),
+    Source(
+        id="hyline_2018_xin_vent", kind="manufacturer",
+        citation="Hy-Line Brown Commercial Layers Management Guide (2018), Air Movement Table "
+                 "(Dr. Hongwei Xin, Iowa State University)",
+        title="Hy-Line Brown Commercial Layers Management Guide",
+        publisher="Hy-Line International", year=2018,
+        locator="раздел Air Quality, с. 17",
+        applies_to="минимальная вентиляция (Qmin) производителя для Hy-Line Brown и Hy-Line W-36",
+        statement="Минимальный воздухообмен при наружной температуре −12…−23 °C (м³/ч на 1000 голов): "
+                  "1 нед. — 75, 3 нед. — 110, 6 нед. — 210, 12 нед. — 400, 18 нед. — 600, 19+ нед. — "
+                  "700–850. Общее правило подбора установленной мощности вентиляторов — 4 м³/ч на 1 кг живой массы.",
+        how_used="Линейная интерполяция зимнего минимума (0.075 → 0.700 м³/ч·гол) по возрасту птицы; "
+                 "Qmin = max(CO₂, норма руководства, влага).",
+        limits="При стандартном коэффициенте запаса CO₂ = 1.5 расчёт по CIGR (ур. 17) лежит немного выше "
+               "строки −12…−23 °C; норма руководства срабатывает как нижний порог при снижении запаса CO₂.",
+        url="https://www.hyline.com/",
+    ),
+    Source(
+        id="hendrix_cage_2018_vent", kind="manufacturer",
+        citation="Hendrix Genetics — Commercial Management Guide Cage Housing, §7.9 Ventilation — "
+                 "minimum air exchange rate 0.7 m³/h/kg",
+        title="Commercial Management Guide Cage Housing",
+        publisher="Hendrix Genetics", year=2018,
+        locator="§7.3, с. 42; §7.9 Ventilation, с. 47",
+        applies_to="минимальная вентиляция (Qmin) в расчёте на 1 кг живой массы для клеточных несушек",
+        statement="«The minimum air exchange rate is 0.7 m³ / hour / kg live bird»; требуемая мощность "
+                  "вентиляторов 4 м³/ч на 1 кг живой массы (с. 42), CO₂ ≤ 2500 ppm, NH₃ ≤ 20 ppm.",
+        how_used="При выборе нормы hendrix_cage_07 нижняя граница Qmin равна 0.7 м³/ч × живая масса (кг).",
+        limits="Удельный минимум 0.7 м³/ч·кг не учитывает нелинейность метаболизма (m^0.75) у суточного цыплёнка.",
+        url="https://www.hendrix-genetics.com/",
+    ),
+
     # ── Вентиляция: нормы оборудования ─────────────────────────────────────────
     Source(
         id="cobb_2021_9_1", kind="manufacturer",

@@ -38,7 +38,7 @@
     <!-- Content container -->
     <div id="contentContainer">
       <!-- Calc tab -->
-      <section id="calcContent" class="grid">
+      <section id="calcContent">
         <div class="card">
           <h2 data-i18n="input_h2">Input</h2>
           <label>
@@ -46,14 +46,16 @@
             <select id="production"></select>
           </label>
           <p class="muted fs-11 mt-4 mb-0 lh-1_5" data-i18n="production_hint">The line sets the bird species and housing.</p>
-          <label>
-            <span data-i18n="label_house_id">House ID</span>
-            <input id="house" type="text" data-i18n-placeholder="house_placeholder" placeholder="e.g. House A-1" />
-          </label>
-          <label>
-            <span data-i18n="label_bird_count">Bird count</span>
-            <input id="birds" type="text" data-num data-int inputmode="numeric" data-min="1" data-max="60000" required />
-          </label>
+          <div class="d-grid cols-2 gap-8">
+            <label>
+              <span data-i18n="label_house_id">House ID</span>
+              <input id="house" type="text" data-i18n-placeholder="house_placeholder" placeholder="e.g. House A-1" />
+            </label>
+            <label>
+              <span data-i18n="label_bird_count">Bird count</span>
+              <input id="birds" type="text" data-num data-int inputmode="numeric" data-min="1" data-max="200000" required />
+            </label>
+          </div>
 
           <!-- Heater checkbox with explanation -->
           <label class="inline ai-flex-start gap-8">
@@ -84,6 +86,24 @@
               <span data-i18n="label_height_ridge_idx">Ridge height, m</span>
               <input id="houseHeightRidge" type="text" data-num inputmode="decimal" data-min="1" data-max="20" placeholder="4.5" />
             </label>
+          </div>
+
+          <div id="cageDimsGroup" hidden>
+            <p class="muted fs-12 mt-12 mb-4" data-i18n="label_cage_dims_grp">Cage batteries (cross-section)</p>
+            <div class="field-row-3">
+              <label>
+                <span data-i18n="label_cage_rows_count">Rows, qty</span>
+                <input id="cageRowsCount" type="text" data-num data-int inputmode="numeric" data-min="1" data-max="20" placeholder="6" />
+              </label>
+              <label>
+                <span data-i18n="label_cage_row_width">Row width, m</span>
+                <input id="cageRowWidth" type="text" data-num inputmode="decimal" data-min="0.3" data-max="5" placeholder="1.4" />
+              </label>
+              <label>
+                <span data-i18n="label_cage_row_height">Row height, m</span>
+                <input id="cageRowHeight" type="text" data-num inputmode="decimal" data-min="0.5" data-max="10" placeholder="3.2" />
+              </label>
+            </div>
           </div>
 
           <div id="uaBadge" class="note-ok mt-8 py-6 px-12 fs-12" hidden></div>
@@ -130,11 +150,6 @@
 
     <footer>
       <small data-i18n="footer_text">Reference tool only. Verify all setpoints with your breed guide and technical advisor.</small>
-      <small class="muted d-block mt-4">
-        <span data-i18n="footer_see_also">Also see:</span>
-        <a href="https://github.com/MikeVances/PigMaxApp" target="_blank" class="c-muted">PigMaxApp</a>
-        — <span data-i18n="footer_related_pig">Pig house ventilation calculator</span>
-      </small>
     </footer>
   </main>
 

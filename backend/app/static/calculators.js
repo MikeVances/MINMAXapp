@@ -214,6 +214,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const wrapAch    = document.getElementById('prof-tunnel-ach-wrap');
 
   function defaultTunnelSpeed() {
+    if (houseHousing === 'cages') return 4.5;
     if (stageSpecies === 'turkey') return 2.0;
     if (stageSpecies === 'broiler_breeder') return stageSel.value === 'production' ? 3.0 : 2.5;
     return 2.5;
@@ -224,6 +225,11 @@ document.addEventListener('DOMContentLoaded', () => {
     wrapSpeed.hidden = (m === 'exchange');
     wrapExch.hidden  = (m === 'speed');
     wrapAch.hidden   = (m === 'speed');
+    const row = document.getElementById('prof-tunnel-row');
+    if (row) {
+      row.classList.toggle('field-row-3', m === 'exchange');
+      row.classList.toggle('field-row', m !== 'exchange');
+    }
   }
 
   tunModeEl.addEventListener('change', syncTunnelModeUI);
@@ -240,27 +246,45 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // ── Этап индейки и родительского стада ─────────────────────────────────────
-  // Дни этапа по умолчанию: у индейки 1–35 и 36..конец, у РС 1–140 и 141..конец профиля.
+  // ── Этап индейки, родительского стада и несушек ────────────────────────────
+  // Дни этапа по умолчанию: у индейки 1–35 и 36..конец, у РС 1–140 и 141..конец,
+  // у несушек в клетках 1–119 (ремонт 1–17 нед.) и 120..конец (яйцекладка 18–72 нед.).
   // Выбор хранится во вкладке корпуса, как целевая RH
   const stageBox = document.getElementById('prof-turkey-stage');
   const stageSel = document.getElementById('prof-stage');
   const firstEl  = document.getElementById('prof-first-day');
   const lastEl   = document.getElementById('prof-last-day');
   let stageSpecies = null;
+  let houseHousing = 'floor_litter';
   let turkeyLastDay = null;   // null — выбран профиль без этапов (бройлер)
 
   function stageDefaults(stage) {
     if (stage === 'brooder') return [1, 35];
     if (stage === 'grow_out') return [36, turkeyLastDay];
+    if (stageSpecies === 'layer') {
+      return stage === 'rearing' ? [1, 119] : [120, turkeyLastDay];
+    }
     if (stage === 'rearing') return [1, 140];
     return [141, turkeyLastDay];
+  }
+
+  function syncStageOptionLabels() {
+    Array.from(stageSel.options).forEach(opt => {
+      if (opt.value === 'rearing' || opt.value === 'production') {
+        const key = (stageSpecies === 'layer' ? 'layer_stage_' : 'turkey_stage_') + opt.value;
+        opt.setAttribute('data-i18n', key);
+        opt.textContent = t(key);
+      }
+    });
   }
 
   function showStage() {
     stageBox.hidden = turkeyLastDay == null;
     if (turkeyLastDay == null) return;
-    const allowed = stageSpecies === 'broiler_breeder' ? ['rearing', 'production'] : ['brooder', 'grow_out'];
+    const allowed = (stageSpecies === 'broiler_breeder' || stageSpecies === 'layer')
+      ? ['rearing', 'production']
+      : ['brooder', 'grow_out'];
+    syncStageOptionLabels();
     Array.from(stageSel.options).forEach(opt => {
       opt.hidden = !allowed.includes(opt.value);
       opt.disabled = !allowed.includes(opt.value);
@@ -269,12 +293,15 @@ document.addEventListener('DOMContentLoaded', () => {
     stageSel.value = allowed.includes(tb.turkey_stage) ? tb.turkey_stage : allowed[0];
     const [f, l] = stageDefaults(stageSel.value);
     firstEl.value = tb.turkey_first_day ?? f;
-    lastEl.value  = tb.turkey_last_day ?? l;
+    lastEl.value  = tb.turkey_last_day != null ? Math.min(tb.turkey_last_day, turkeyLastDay) : l;
   }
+
+  document.addEventListener('i18n:change', () => { if (turkeyLastDay != null) syncStageOptionLabels(); });
 
   document.addEventListener('growthprofile:change', e => {
     const sp = e.detail.species;
-    stageSpecies = (sp === 'turkey' || sp === 'broiler_breeder') ? sp : null;
+    houseHousing = e.detail.housing || (sp === 'layer' ? 'cages' : 'floor_litter');
+    stageSpecies = (sp === 'turkey' || sp === 'broiler_breeder' || sp === 'layer') ? sp : null;
     turkeyLastDay = stageSpecies ? e.detail.last_day : null;
     showStage();
     const tb = profileTabs[selIdx] || {};
@@ -339,6 +366,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const payload = {
       house:          tab.id,
       birds:          tab.birds,
+      housing:        houseHousing,
+      cage_rows_count: Number(tab.cage_rows_count) || null,
+      cage_row_width_m: Number(tab.cage_row_width_m) || null,
+      cage_row_height_m: Number(tab.cage_row_height_m) || null,
       house_width_m:  Number(tab.width_m) || null,
       house_height_m: hAvg || null,
       house_length_m: Number(tab.length_m) || null,
@@ -378,7 +409,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const S_floor = (L && W) ? L * W : null;
     const H_eff   = houseSectionHeight(tab);
     const V_house = (S_floor && H_eff) ? S_floor * H_eff : null;
-    const S_cross = (W && H_eff) ? W * H_eff : null;
+    const S_cross = (d.housing === 'cages' && d.tunnel_free_section_m2 != null)
+      ? d.tunnel_free_section_m2
+      : ((W && H_eff) ? W * H_eff : null);
 
     const exchTargetS = d.tunnel_exchange_target_s || 45;
     const achTarget = 3600 / exchTargetS;
@@ -399,13 +432,15 @@ document.addEventListener('DOMContentLoaded', () => {
       tunSummary = t('sum_tunnel_speed', { v: fmtNum(d.v_tunnel_ms ?? 2.5, 2) });
     }
 
+    const birdsDisplay = fmtNum(d.birds) + (d.males_auto_added ? ` ${t('sum_breeder_males_tag')}` : '');
+    const stageKeyPrefix = d.species === 'layer' ? 'layer_stage_' : 'turkey_stage_';
     const head = `
       <div class="kv"><span>${t('sum_outdoor')}</span><span>${fmtNum(outsideT, 1)} °C / ${fmtNum(outsideRH ?? 60, 0)} %</span></div>
-      <div class="kv"><span>${t('sum_house_birds')}</span><span>${d.house} / ${fmtNum(d.birds)}</span></div>
+      <div class="kv"><span>${t('sum_house_birds')}</span><span>${d.house} / ${birdsDisplay}</span></div>
       <div class="kv"><span>${t('sum_sys_max')}</span><span>${d.user_max_m3h ?? '—'} ${t('unit_m3h_plain')}</span></div>
       <div class="kv"><span>${t('label_tunnel_mode')}</span><span>${tunSummary}</span></div>`
-      + ((d.species === 'turkey' || d.species === 'broiler_breeder')
-        ? `<div class="kv"><span>${t('turkey_stage_lbl')}</span><span>${t('turkey_stage_' + d.stage)}, ${t('sum_turkey_days', { from: d.first_day, to: d.last_day })}</span></div>`
+      + ((d.species === 'turkey' || d.species === 'broiler_breeder' || d.species === 'layer')
+        ? `<div class="kv"><span>${t('turkey_stage_lbl')}</span><span>${t(stageKeyPrefix + d.stage)}, ${t('sum_turkey_days', { from: d.first_day, to: d.last_day })}</span></div>`
         : '');
 
     const headerByMode = {
@@ -479,6 +514,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const geomWarn = d.rows.some(r => r.house_geometry_missing)
       ? `<p class="warn fs-12 mt-8 mb-0">⚠ ${t('geometry_missing_note')}</p>`
       : '';
+    const malesNote = d.males_auto_added
+      ? `<p class="muted fs-12 mt-8 mb-0">ℹ ${t('breeder_males_auto_note')}</p>`
+      : '';
 
     // Физическая проверка (Cobb 2021 §9)
     let physBlock = '';
@@ -511,9 +549,13 @@ document.addEventListener('DOMContentLoaded', () => {
       const cls_qmax  = hasSysCap && qMaxM2 != null ? (qMaxM2 >= 165 ? 'ok' : qMaxM2 >= 0.8 * 165 ? '' : 'warn') : '';
       const cls_texch = hasSysCap && T_exch != null ? (T_exch <= 50 ? 'ok' : T_exch <= 60 ? '' : 'warn') : '';
       // Пороги — как у вердикта вкладки туннеля: ≥ v_min — норма, ≥ 0.8·v_min — мало, ниже — плохо
-      const cls_vtun  = hasSysCap && v_tun != null && vMin
-        ? (v_tun >= vMin ? 'ok' : v_tun >= 0.8 * vMin ? '' : 'warn') : '';
-      const vTarget   = vMin ? t('phys_airspeed_target', { min: vMin, max: vMax, day: d.tunnel_target_day }) : '';
+      const v_tun_r = v_tun != null ? Math.round(v_tun * 100) / 100 : null;
+      const cls_vtun  = hasSysCap && v_tun_r != null && vMin
+        ? (v_tun_r >= vMin ? 'ok' : v_tun_r >= 0.8 * vMin ? '' : 'warn') : '';
+      const vMinFmt   = vMin != null ? fmtNum(vMin, 2) : '';
+      const vMaxFmt   = vMax != null ? fmtNum(vMax, 2) : '';
+      const vTargetRaw = vMin ? t('phys_airspeed_target', { min: vMinFmt, max: vMaxFmt, day: d.tunnel_target_day }) : '';
+      const vTarget   = (vMin === vMax && vMinFmt) ? vTargetRaw.replace(`${vMinFmt}–${vMaxFmt}`, vMinFmt) : vTargetRaw;
 
       physBlock = `
         <div class="mt-14 pt-12 bt-1">
@@ -522,9 +564,9 @@ document.addEventListener('DOMContentLoaded', () => {
           ${V_house ? `<div class="kv"><span>${t('phys_volume')}</span><span>${fmtNum(V_house, 0)} ${t('unit_m3')}</span></div>` : ''}
           ${S_cross  ? `<div class="kv"><span>${t('phys_cross_section')}</span><span>${fmtNum(S_cross, 1)} ${t('unit_m2')}</span></div>` : ''}
           <div class="mt-6">
-            ${qMinM2 != null ? `<div class="kv"><span>${t('phys_min_vent_check')}</span><span>${fmtNum(qMinM2, 1)} ${t('unit_m3h_m2')}</span></div>` : ''}
+            ${qMinM2 != null ? `<div class="kv"><span>${t('phys_min_vent_check', { day: r0 ? r0.day : 1 })}</span><span>${fmtNum(qMinM2, 1)} ${t('unit_m3h_m2')}</span></div>` : ''}
             ${minCapM2 != null ? `<div class="kv"><span>${t('phys_min_fans_check')}</span><span class="${cls_mincap}">${fmtNum(minCapM2, 1)} ${t('unit_m3h_m2')} <span class="muted">[${t('phys_min_fans_norm')}]</span></span></div>` : ''}
-            ${qMaxM2 != null ? `<div class="kv"><span>${t('phys_max_vent_check')}</span><span class="${cls_qmax}">${fmtNum(qMaxM2, 1)} ${t('unit_m3h_m2')} <span class="muted">[165–200]</span></span></div>` : ''}
+            ${qMaxM2 != null ? `<div class="kv"><span>${t('phys_max_vent_check', { day: r42 ? r42.day : 42 })}</span><span class="${cls_qmax}">${fmtNum(qMaxM2, 1)} ${t('unit_m3h_m2')} <span class="muted">[165–200]</span></span></div>` : ''}
             ${T_exch  != null ? `<div class="kv"><span>${t('phys_exchange_time')}</span><span class="${cls_texch}">${T_exch} ${t('unit_sec')} (${fmtNum(ach_sys, 1)} ${t('unit_ach')}) <span class="muted">[40–50] [72–90 ${t('unit_ach')}]</span></span></div>` : ''}
             ${v_tun   != null ? `<div class="kv"><span>${t('phys_airspeed_tunnel')}</span><span class="${cls_vtun}">${fmtNum(v_tun, 2)} ${t('unit_ms')} ${vTarget ? `<span class="muted">[${vTarget}]</span>` : ''}</span></div>` : ''}
           </div>
@@ -549,6 +591,7 @@ document.addEventListener('DOMContentLoaded', () => {
       ${condWarn}
       ${calWarn}
       ${geomWarn}
+      ${malesNote}
       ${physBlock}
     </div>`;
     profSummary.hidden = false;

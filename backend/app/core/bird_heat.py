@@ -48,17 +48,19 @@ TOTAL_HEAT_COEFF_20C = 10.62
 BROILER = "broiler"
 TURKEY = "turkey"
 BROILER_BREEDER = "broiler_breeder"
+LAYER = "layer"
 
-# CIGR 2002 §2.7.3 ур. 18 (напольное содержание кур и родительского стада):
-# Φ_tot(20 °C) = 6.8 · m^0.75 + 25 · Y₂, где Y₂ — суточная яйцемасса, кг/сут
+# CIGR 2002 §2.7.2 ур. 17 (несушки в клетках) и §2.7.3 ур. 18 (напольное содержание кур и РС):
+# Φ_tot(20 °C) = coeff · m^0.75 + 25 · Y₂, где Y₂ — суточная яйцемасса, кг/сут
 BREEDER_EGG_HEAT_W_PER_KG = 25.0
 
 # Полное тепло при 20 °C по виду птицы: (коэффициент, показатель степени массы).
-# Бройлер — CIGR 2002 ур. 11; индейка — CIGR 2002 ур. 19; родительское стадо — ур. 18
+# Бройлер — CIGR 2002 ур. 11/16; индейка — ур. 19; родительское стадо — ур. 18; несушка в клетках — ур. 17
 SPECIES_TOTAL_HEAT_20C = {
     BROILER: (TOTAL_HEAT_COEFF_20C, 0.75),
     TURKEY: (9.86, 0.77),
     BROILER_BREEDER: (6.8, 0.75),
+    LAYER: (6.28, 0.75),
 }
 
 
@@ -66,7 +68,7 @@ def total_heat_20c_w(weight_kg: float, species: str = BROILER, egg_mass_kg: floa
     """Полное тепло одной птицы при 20 °C, Вт. Неизвестный вид — ошибка, а не бройлер."""
     coeff, exponent = SPECIES_TOTAL_HEAT_20C[species]
     heat = coeff * max(weight_kg, 0.0) ** exponent
-    if species == BROILER_BREEDER and egg_mass_kg > 0.0:
+    if species in (BROILER_BREEDER, LAYER) and egg_mass_kg > 0.0:
         heat += BREEDER_EGG_HEAT_W_PER_KG * egg_mass_kg
     return heat
 
@@ -86,6 +88,16 @@ def house_sensible_fraction(t_inside_c: float) -> float:
     Сравнивать её с total_heat_factor(T), а не с 1: скрытое = factor − fraction.
     """
     s = (0.61 * (1000.0 + 20.0 * (20.0 - t_inside_c)) - 0.228 * t_inside_c ** 2) / 1000.0
+    return min(max(s, 0.0), total_heat_factor(t_inside_c))
+
+
+def layer_cage_sensible_fraction(t_inside_c: float) -> float:
+    """
+    Явное тепло клеточного зала несушек и молодняка в долях полного тепла ПРИ 20 °C
+    (CIGR 2002 §3.3.2, ур. 34, с. 26–27; Pedersen et al., 1998):
+      Φ_s = [0.67 · (1000 + 20·(20 − t)) − 9.8·10⁻⁸ · t⁶] / 1000.
+    """
+    s = (0.67 * (1000.0 + 20.0 * (20.0 - t_inside_c)) - 9.8e-8 * (t_inside_c ** 6)) / 1000.0
     return min(max(s, 0.0), total_heat_factor(t_inside_c))
 
 
@@ -126,5 +138,6 @@ def house_heat_per_bird(
     """Явное и скрытое тепло одной птицы массой weight_kg при температуре корпуса T."""
     q20 = total_heat_20c_w(weight_kg, species, egg_mass_kg)
     total = q20 * total_heat_factor(t_inside_c)
-    sensible = q20 * house_sensible_fraction(t_inside_c)
+    frac = layer_cage_sensible_fraction(t_inside_c) if species == LAYER else house_sensible_fraction(t_inside_c)
+    sensible = q20 * frac
     return HouseHeat(total_w=total, sensible_w=sensible, latent_w=total - sensible)

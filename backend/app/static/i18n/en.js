@@ -134,10 +134,10 @@
     phys_floor_area:     'Floor area',
     phys_volume:         'House volume',
     phys_cross_section:  'Cross-section (tunnel)',
-    phys_min_vent_check: 'Biological Qmin/m² (day 1)',
+    phys_min_vent_check: 'Biological Qmin/m² (day {day})',
     phys_min_fans_check: 'Min-vent fans installed/m²',
     phys_min_fans_norm:  '≥18 hot climate · 37–46 cold',
-    phys_max_vent_check: 'System cap/m² (day 42 tunnel)',
+    phys_max_vent_check: 'System cap/m² (day {day} tunnel)',
     phys_exchange_time:  'Air exchange at sys. max',
     phys_airspeed_tunnel:'Tunnel airspeed at sys. max',
     phys_airspeed_target:'target {min}–{max} m/s on day {day}',
@@ -621,6 +621,8 @@
     turkey_first_day_lbl:              'From day (placement)',
     turkey_last_day_lbl:               'To day',
     sum_turkey_days:                   'days {from}–{to}',
+    sum_breeder_males_tag:             '♀ (+ 10→7 % ♂ auto)',
+    breeder_males_auto_note:           'In the production stage, males are automatically added to the female flock according to the breed guide (10 → 7 % by age); body weight and ventilation rates reflect the combined flock.',
     gp_src_copied_from:               'copied from {id}',
 
     // ── Water supply note (pad cooling), house naming ──
@@ -686,4 +688,14 @@
     sum_tunnel_exchange:   'by air exchange {s} s ({ach} vol/h, v = {v} m/s)',
     sum_tunnel_max_speed:  'max of both → speed {v} m/s ({s} s / {ach} vol/h satisfied)',
     sum_tunnel_max_exch:   'max of both → air exchange {s} s ({ach} vol/h, v = {v} m/s)',
+
+    // ── Cage batteries and commercial layers in cages ──
+    label_cage_dims_grp:   'Cage batteries (for free tunnel cross-section)',
+    label_cage_rows_count: 'Battery rows, qty',
+    label_cage_row_width:  'Row width, m',
+    label_cage_row_height: 'Row height, m',
+    layer_stage_rearing:    'Pullet rearing (wk 1–17, days 1–119)',
+    layer_stage_production: 'Adult flock — laying (wk 18–72, days 120–504)',
+    gp_src_method_lohmann_cage_by_age: 'by age (Lohmann cage guide)',
+    gp_src_method_hyline_cage_by_age:  'by age (Hy-Line guide)',
 };

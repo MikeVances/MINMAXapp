@@ -34,7 +34,7 @@ from .growth_profiles import load_profile
 from .leakage_calc import INLET_SPECIFIC_M3H_M2, RHO_AIR_KG_M3, _TIGHTNESS_THRESHOLDS
 from .evap_cooling_calc import pad_curve_source
 from .tunnel_design import HIGH_TUNNEL_PRESSURE_PA, Pads, Resistance, pad_area_m2, select_fans
-from . import breeder_norms, turkey_norms
+from . import breeder_norms, layer_norms, turkey_norms
 from .psychro import dew_point_c, pressure_at_altitude_pa, site_pressure
 
 
@@ -394,6 +394,13 @@ def check_species(profile, housing: str, stage: Optional[str], last_day: int,
             raise CalcError("housing_not_for_species", species="broiler_breeder", housing=housing)
         if stage not in breeder_norms.STAGES:
             raise CalcError("turkey_stage_required")
+    elif profile.species == "layer":
+        if housing != "cages":
+            raise CalcError("housing_not_for_species", species="layer", housing=housing)
+        if stage not in layer_norms.STAGES:
+            raise CalcError("turkey_stage_required")
+        if last_day > layer_norms.MAX_PRODUCTION_DAYS:
+            raise CalcError("broiler_day_out_of_range", day=last_day, max_day=layer_norms.MAX_PRODUCTION_DAYS)
     else:
         if stage is not None:
             raise CalcError("stage_turkey_only", stage=stage)
@@ -462,6 +469,19 @@ def species_notes(profile, assumptions: list, source_ids: set, stage: Optional[s
             source_ids.add(sid)
             assumptions.append(Note("qmin_includes_guide_norm", {"norm": profile.min_vent_norm}, source_id=sid))
         source_ids.add("cobb_2021_9_7_age")
+        return
+
+    if profile.species == "layer":
+        source_ids.add("cigr_2002_layer_cages")
+        day0 = (profile.source or {}).get("weight_day0")
+        if isinstance(day0, dict) and profile.builtin:
+            assumptions.append(Note("layer_day0_weight", {"weight_g": day0.get("value_g")},
+                                    source_id="cigr_2002_layer_cages"))
+        if profile.min_vent_norm in layer_norms.GUIDE_NORMS:
+            sid = layer_norms.GUIDE_NORM_SOURCE[profile.min_vent_norm]
+            source_ids.add(sid)
+            assumptions.append(Note("qmin_includes_guide_norm", {"norm": profile.min_vent_norm}, source_id=sid))
+        source_ids.add("cobb_2021_9_7_age")
 
 
 def turkey_density_note(profile, stage: str, days: list[tuple[int, float]], findings: list,
@@ -512,9 +532,12 @@ def build_envelope(g: HouseGeometry, ua_w_per_k: Optional[float], walls: Optiona
     return env.ua_w_per_k, env
 
 
-def cage_notes(assumptions: list, source_ids: set) -> None:
-    source_ids |= {"aarnink_2018", "practice_cage_tunnel_2026"}
-    assumptions += [Note("cages_heat_split_bounded"), Note("cages_bird_speed_from_aisle"),
+def cage_notes(assumptions: list, source_ids: set, species: str = "broiler") -> None:
+    source_ids.add("practice_cage_tunnel_2026")
+    if species == "broiler":
+        source_ids.add("aarnink_2018")
+        assumptions.append(Note("cages_heat_split_bounded"))
+    assumptions += [Note("cages_bird_speed_from_aisle"),
                     Note("cage_through_flow_not_included")]
 
 
@@ -596,7 +619,7 @@ def _design(inp: DesignInput) -> DesignResult:
     section, speed_range, tunnel_range = target.section_m2, target.speed_ms, target.flow_m3h
     tunnel_source = target.source_id
     if cages:
-        cage_notes(assumptions, source_ids)
+        cage_notes(assumptions, source_ids, profile.species)
     source_ids.add(tunnel_source)
 
     # Параметры модели: падёж и цикл — из запроса; туннель в днях — на верхней
@@ -606,11 +629,12 @@ def _design(inp: DesignInput) -> DesignResult:
     winter_params = CalcParams(total_mortality_pct=inp.mortality_pct, cycle_days=inp.cycle_days,
                                v_tunnel_ms=speed_range[1], bird_speed_share=share,
                                placement_day=inp.first_day, stage=inp.stage, **rules)
-    # Клетки летом — явное тепло на уровне птицы (верхний край вилки): больше воздуха
+    # Клетки бройлера летом — явное тепло на уровне птицы (верхний край вилки): больше воздуха;
+    # у несушки в клетках CIGR 2002 §3.3.2 ур. 34 даёт явное тепло самого клеточного корпуса
     summer_params = CalcParams(total_mortality_pct=inp.mortality_pct, cycle_days=inp.cycle_days,
                                v_tunnel_ms=speed_range[1], bird_speed_share=share,
                                placement_day=inp.first_day, stage=inp.stage, **rules,
-                               bird_heat_model=animal_heat_per_bird if cages else house_heat_per_bird)
+                               bird_heat_model=animal_heat_per_bird if (cages and profile.species == "broiler") else house_heat_per_bird)
     winter_thermal = HouseThermal(ua_w_per_k=ua, heater=inp.heater)
     summer_thermal = HouseThermal(ua_w_per_k=ua)
 

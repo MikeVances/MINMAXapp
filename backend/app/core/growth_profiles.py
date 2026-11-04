@@ -54,7 +54,7 @@ PROFILE_ID_PATTERN = r"^[a-z0-9][a-z0-9_-]{0,63}$"
 
 DEFAULT_PROFILE_ID = "ross308"
 
-SPECIES = ("broiler", "turkey", "broiler_breeder")
+SPECIES = ("broiler", "turkey", "broiler_breeder", "layer")
 SEXES = ("male", "female")
 
 
@@ -116,11 +116,17 @@ class GrowthProfile:
         Значения на день цикла. За пределами профиля берётся ближайший край:
         расчёт на 60-й день по профилю до 56-го дня использует 56-й, а не падает.
         """
-        days = self.daily()
-        if not days:
+        if not self.points:
             raise CalcError("profile_no_points", id=self.id)
-        clamped = min(max(day, min(days)), max(days))
-        return days[clamped]
+        ordered = sorted(self.points, key=lambda p: p.day)
+        clamped = min(max(day, ordered[0].day), ordered[-1].day)
+        return GrowthPoint(
+            day=clamped,
+            body_weight_g=_lerp_field(ordered, "body_weight_g", clamped),
+            min_temp_c=_lerp_field(ordered, "min_temp_c", clamped),
+            rv_percent=_lerp_field(ordered, "rv_percent", clamped),
+            egg_mass_g=_lerp_field(ordered, "egg_mass_g", clamped),
+        )
 
 
 # ─── Интерполяция ────────────────────────────────────────────────────────────

@@ -295,3 +295,63 @@ def test_broiler_house_lists_broiler_profiles_only(browser, base_url):
         assert "ross308" in options and not options & TURKEY_IDS
     finally:
         ctx.close()
+
+
+BREEDER_IDS = {"ross308-ps-females", "ross308-ps-males", "cobb500-ff-females", "cobb-mx-males"}
+
+
+def test_broiler_breeder_line_defaults_to_females_and_calculates_stages(browser, base_url):
+    ctx, page = _house_page(browser, base_url, HOUSE)
+    try:
+        _open(page, "/")
+        page.wait_for_selector("#production option[value=broiler_breeders_floor]", state="attached")
+        page.select_option("#production", "broiler_breeders_floor")
+        page.click("#sumBtn")
+
+        _open(page, "/calculators.html", "profile")
+        assert _growth_options(page) == BREEDER_IDS
+        # По умолчанию для родительского стада выбирается женский профиль Ross 308 PS
+        assert page.input_value("#prof-growth-select") == "ross308-ps-females"
+        assert page.is_visible("#prof-turkey-stage")
+        assert page.input_value("#prof-stage") == "rearing"
+        assert page.input_value("#prof-first-day") == "1"
+        assert page.input_value("#prof-last-day") == "140"
+        _profile_calculated(page)
+
+        # В продуктивном периоде меняются дни (141..448), скорость туннеля (3.0 м/с) и добавляется пометка о петухах
+        page.select_option("#prof-stage", "production")
+        assert page.input_value("#prof-first-day") == "141"
+        assert page.input_value("#prof-last-day") == "448"
+        assert page.input_value("#prof-tunnel-speed") == "3"
+        _profile_calculated(page)
+        assert "♂" in page.text_content("#prof-summary")
+        assert page.errors == []
+    finally:
+        ctx.close()
+
+
+def test_tunnel_calculation_modes_and_live_sync(page):
+    _open(page, "/calculators.html", "profile")
+    assert page.input_value("#prof-tunnel-mode") == "speed"
+    assert page.is_visible("#prof-tunnel-speed-wrap")
+    assert page.is_hidden("#prof-tunnel-exch-s-wrap")
+
+    # Режим по воздухообмену: поля секунд и об/ч видны и синхронизированы (3600 / s = ach)
+    page.select_option("#prof-tunnel-mode", "exchange")
+    assert page.is_hidden("#prof-tunnel-speed-wrap")
+    assert page.is_visible("#prof-tunnel-exch-s-wrap")
+    assert page.is_visible("#prof-tunnel-ach-wrap")
+
+    page.fill("#prof-tunnel-exch-s", "45")
+    assert page.input_value("#prof-tunnel-ach") == "80"
+    page.fill("#prof-tunnel-ach", "72")
+    assert page.input_value("#prof-tunnel-exch-s") == "50"
+    _profile_calculated(page)
+
+    # Режим «по большему из двух»: видны все поля (скорость + с + об/ч)
+    page.select_option("#prof-tunnel-mode", "max_both")
+    assert page.is_visible("#prof-tunnel-speed-wrap")
+    assert page.is_visible("#prof-tunnel-exch-s-wrap")
+    assert page.is_visible("#prof-tunnel-ach-wrap")
+    _profile_calculated(page)
+    assert page.errors == []

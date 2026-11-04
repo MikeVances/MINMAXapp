@@ -148,6 +148,10 @@ PROFILE_METHOD = {
     "ross308-ps-males": ("ross_ps_by_age", "ross_ps_2023_t4"),
     "cobb500ff-females": ("cobb_breeder_by_age", "cobb_breeder_2021_temp"),
     "cobb-mx-males": ("cobb_breeder_by_age", "cobb_breeder_2021_temp"),
+    "lohmann-lsl-classic": ("lohmann_cage_by_age", "lohmann_cage_2019"),
+    "lohmann-brown-classic": ("lohmann_cage_by_age", "lohmann_cage_2019"),
+    "hyline-brown": ("hyline_cage_by_age", "hyline_cage_2025"),
+    "hyline-w36": ("hyline_cage_by_age", "hyline_cage_2025"),
 }
 
 

@@ -164,4 +164,8 @@ window.ProductionLines = {
     const line = catalog.lines.find(l => l.id === lineId);
     return line ? line.species : null;
   },
+  housingOf(lineId, catalog) {
+    const line = catalog.lines.find(l => l.id === lineId);
+    return line ? line.housing : 'floor_litter';
+  },
 };
