@@ -117,8 +117,11 @@ def _fill(page, values: dict):
 def _profile_calculated(page):
     """Результат, а не ошибка: блок #prof-summary показывается и с текстом ошибки
     (старый код ловил ReferenceError rhRaw в try и выводил его туда же) —
-    поэтому проверяется таблица по дням: при ошибке там только div.danger."""
+    поэтому проверяется таблица по дням: при ошибке там только div.danger.
+    Ждём окончания запроса (кнопка снова активна), чтобы повторный расчёт
+    не увидел старую таблицу от первого нажатия."""
     page.click("#prof-calc-btn")
+    page.wait_for_selector("#prof-calc-btn:not([disabled])", timeout=10_000)
     page.wait_for_selector("#prof-summary table", timeout=10_000)
 
 
@@ -297,7 +300,7 @@ def test_broiler_house_lists_broiler_profiles_only(browser, base_url):
         ctx.close()
 
 
-BREEDER_IDS = {"ross308-ps-females", "ross308-ps-males", "cobb500-ff-females", "cobb-mx-males"}
+BREEDER_IDS = {"ross308-ps-females", "ross308-ps-males", "cobb500ff-females", "cobb-mx-males"}
 
 
 def test_broiler_breeder_line_defaults_to_females_and_calculates_stages(browser, base_url):

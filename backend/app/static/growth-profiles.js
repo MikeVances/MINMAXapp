@@ -126,7 +126,7 @@
     const species = ProductionLines.speciesOf(houseLine(), linesCatalog);
     const list = species ? profilesList.filter(p => (p.species || 'broiler') === species) : profilesList;
     if (species === 'broiler_breeder') {
-      const order = ['ross308-ps-females', 'cobb500-ff-females', 'ross308-ps-males', 'cobb-mx-males'];
+      const order = ['ross308-ps-females', 'cobb500ff-females', 'ross308-ps-males', 'cobb-mx-males'];
       return [...list].sort((a, b) => {
         const ia = order.indexOf(a.id), ib = order.indexOf(b.id);
         return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
